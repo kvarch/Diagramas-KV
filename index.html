@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V02</title>
+<title>KV Axonometria — Beta V03</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -284,12 +284,22 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
   </section>
 </main>
 
-<footer class="app-footer">Beta - V02 · © 2026 Königsberger Vannucchi</footer>
+<footer class="app-footer">Beta - V03 · © 2026 Königsberger Vannucchi</footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V02 */
-const VERSION = 'V02';
+/* KV Axonometria — Beta V03 */
+/* V03: buffer de mensagens do Giraffe desde o carregamento (o SDK é importado depois) + replay;
+   troca automática demo → Giraffe; sonda RPC (getUrlParams) e fallback getProjectBundle. */
+const STATE_KEYS = new Set(['selected', 'lensSelection', 'mapView', 'mapContent', 'mapSelectCoord', 'projects', 'bakedSections', 'projectLayers', 'rawSections', 'flows', 'blocks', 'project', 'projectOrigin', 'projectAppsByAppID', 'layerTree', 'selectedProjectApp', 'mapHoverCoords', 'closingSignal', 'uiLayout', 'contextMenuClick', 'views', 'mapboxEvent', 'workspace', 'visibleScenarios']);
+const EARLY = []; const MSG = { n: 0, origins: {}, types: {}, replayed: 0 }; let SDK_READY = false;
+const allowedOrigin = (o) => { try { const h = new URL(o).hostname; return h === 'localhost' || h.endsWith('.giraffe.build'); } catch (e) { return false; } };
+window.addEventListener('message', (e) => {
+  MSG.n++; MSG.origins[e.origin] = (MSG.origins[e.origin] || 0) + 1;
+  try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
+  if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
+});
+const VERSION = 'V03';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -471,7 +481,8 @@ function pushFeature(list, f, src, P, opts = {}) {
 function ingestGiraffe() {
   const gs = S.gs; if (!gs) return;
   const baked = gs.get('bakedSections')?.features || [];
-  const raw = gs.get('rawSections')?.features || [];
+  let raw = gs.get('rawSections')?.features || [];
+  if (!raw.length && S.bundleRaw) raw = S.bundleRaw;
   const sample = firstCoord(baked[0]?.geometry) || firstCoord(raw[0]?.geometry);
   const P = ensureProjector(sample);
   if (!P) { S.items = []; log('Nenhuma geometria no projeto ainda.'); return; }
@@ -1287,7 +1298,7 @@ function wireUI() {
   $('#btnImportStyle').onclick = () => $('#fileStyle').click();
   $('#fileStyle').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { loadSnapshot(JSON.parse(await f.text())); syncUI(); buildGroupsUI(); render(); persist(); toast('Estilo importado.'); } catch (err) { toast('Arquivo de estilo inválido.'); } e.target.value = ''; };
   $('#btnCopyDiag').onclick = async () => {
-    const d = { app: 'KV Axonometria', version: VERSION, mode: S.mode, items: S.items.length, map: Object.fromEntries(Object.entries(S.mapItems).map(([k, v]) => [k, v.length])), ctx: S.ctxItems.length, raster: S.raster ? { W: S.raster.W, H: S.raster.H, bounds: S.raster.bounds } : null, view: S.view, crop: S.crop, log: S.log.slice(-80) };
+    const d = { app: 'KV Axonometria', version: VERSION, mode: S.mode, inFrame: window.parent !== window, msgs: MSG, stateKeys: S.gs ? Object.keys(S.gs.attr || {}) : null, items: S.items.length, map: Object.fromEntries(Object.entries(S.mapItems).map(([k, v]) => [k, v.length])), ctx: S.ctxItems.length, raster: S.raster ? { W: S.raster.W, H: S.raster.H, bounds: S.raster.bounds } : null, view: S.view, crop: S.crop, log: S.log.slice(-80) };
     try { await navigator.clipboard.writeText(JSON.stringify(d, null, 2)); toast('Diagnóstico copiado.'); } catch (err) { download('KV_axonometria_diagnostico.json', new Blob([JSON.stringify(d, null, 2)])); }
   };
 }
@@ -1378,36 +1389,79 @@ async function loadSDK() {
   if (!inFrame) return null;
   const urls = ['https://cdn.jsdelivr.net/npm/@gi-nx/iframe-sdk@0.0.15/+esm', 'https://esm.sh/@gi-nx/iframe-sdk@0.0.15'];
   for (const u of urls) {
-    try { const m = await Promise.race([import(u), sleep(8000).then(() => { throw new Error('timeout'); })]); const mod = m.rpc ? m : (m.default || m); if (mod.rpc && mod.giraffeState) { log('SDK carregado: ' + u.split('/')[2]); return mod; } } catch (e) { log(`SDK não carregou de ${u.split('/')[2]}: ${e.message}`, true); }
+    try { const m = await Promise.race([import(u), sleep(8000).then(() => { throw new Error('timeout'); })]); const mod = m.rpc ? m : (m.default || m); if (mod.rpc && mod.giraffeState) { log('SDK carregado: ' + u.split('/')[2]); return mod; } log('SDK sem rpc/giraffeState em ' + u.split('/')[2] + ': ' + Object.keys(m).join(','), true); } catch (e) { log(`SDK não carregou de ${u.split('/')[2]}: ${e.message}`, true); }
   }
   return null;
 }
+function replayEarly() {
+  const gs = S.gs; let n = 0;
+  for (const e of EARLY) {
+    try {
+      if (!allowedOrigin(e.origin)) continue;
+      const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (d?.type && STATE_KEYS.has(d.type)) { gs.set(d.type, d[d.type], e); n++; }
+    } catch (err) { /* ignore */ }
+  }
+  EARLY.length = 0; MSG.replayed = n; return n;
+}
+function hasGiraffeState() {
+  const gs = S.gs; if (!gs) return false;
+  return !!(gs.get('project') || gs.get('rawSections')?.features?.length || gs.get('bakedSections')?.features?.length || gs.get('projectLayers') || gs.get('projectOrigin'));
+}
+let giraffeEntered = false;
+function enterGiraffe(reason) {
+  if (giraffeEntered) return; giraffeEntered = true;
+  S.mode = 'giraffe'; S.projector = null; S.mapItems = {}; S.ctxItems = []; S.raster = null; S.items = [];
+  S.crop.drawn = null; S.crop.mapRect = null;
+  $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
+  log('Conectado ao Giraffe (' + reason + ')');
+  S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
+  S.gs.addListener(['projectLayers'], () => listLayers());
+  S.gs.addListener(['views'], () => listViews());
+  S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
+  restore(); sync(false); listLayers(); listViews(); renderSaved(); syncUI(); buildGroupsUI(); render();
+  if (!S.items.length) fetchBundleFallback();
+}
+async function fetchBundleFallback() {
+  try {
+    const b = await call('getProjectBundle', [], 30000);
+    if (!b || typeof b !== 'object') return;
+    log('getProjectBundle chaves: ' + Object.keys(b).slice(0, 20).join(', '));
+    const pick = (o) => { if (!o) return null; if (o.type === 'FeatureCollection') return o.features; if (Array.isArray(o)) return o; if (typeof o === 'object') return Object.values(o).flat(); return null; };
+    const raw = pick(b.rawSections) || pick(b.sections) || pick(b.features);
+    if (raw && raw.length && !S.gs.get('rawSections')?.features?.length) {
+      S.bundleRaw = raw.filter((f) => f && f.geometry); log(`Usando ${S.bundleRaw.length} feições do getProjectBundle`);
+      sync(false);
+    }
+  } catch (e) { /* logged */ }
+}
 async function boot() {
   wireUI();
+  const inFrame = window.parent && window.parent !== window;
   const sdk = await loadSDK();
   if (sdk) {
-    S.sdk = sdk; S.rpc = sdk.rpc; S.gs = sdk.giraffeState;
-    // Wait briefly for Giraffe to push state
-    for (let i = 0; i < 20 && !S.gs.get('project') && !S.gs.get('rawSections')?.features?.length; i++) await sleep(250);
-    const hasGiraffe = !!(S.gs.get('project') || S.gs.get('rawSections')?.features?.length || S.gs.get('projectLayers'));
-    if (hasGiraffe) {
-      S.mode = 'giraffe';
-      $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
-      S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
-      S.gs.addListener(['projectLayers'], () => listLayers());
-      S.gs.addListener(['views'], () => listViews());
-      S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
+    S.sdk = sdk; S.rpc = sdk.rpc; S.gs = sdk.giraffeState; SDK_READY = true;
+    const n = replayEarly();
+    log(`Mensagens recebidas antes do SDK: ${MSG.n} · reaplicadas: ${n} · origens: ${Object.keys(MSG.origins).join(', ') || 'nenhuma'}`);
+    // switch automatically as soon as Giraffe pushes any project state
+    S.gs.addListener(['project', 'rawSections', 'bakedSections', 'projectLayers', 'projectOrigin'], () => { if (!giraffeEntered && hasGiraffeState()) enterGiraffe('estado recebido'); });
+    for (let i = 0; i < 12 && !hasGiraffeState(); i++) await sleep(250);
+    if (hasGiraffeState()) enterGiraffe('estado do projeto');
+    else {
+      // RPC answers only inside Giraffe — prova de conexão mesmo sem estado
+      try { const u = await call('getUrlParams', [], 6000); if (u != null) enterGiraffe('RPC respondeu'); } catch (e) { /* not in Giraffe */ }
     }
   }
-  if (S.mode === 'demo') {
+  if (!giraffeEntered) {
     $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge">Demonstração</span>';
-    log('Fora do Giraffe: modo demonstração com dados sintéticos.');
-  }
-  restore();
-  sync(false); listLayers(); listViews(); renderSaved(); syncUI(); buildGroupsUI(); render();
-  if (S.mode === 'demo' && !Object.keys(S.mapItems).length) {
-    S.mapItems['Meio-fio'] = buildDemoLayer('Meio-fio');
-    S.ctxItems = DEMO.context(); S.raster = await DEMO.raster(); listLayers(); buildGroupsUI(); render();
+    log(inFrame ? `Sem resposta do Giraffe: demonstração (mensagens: ${MSG.n}, tipos: ${Object.keys(MSG.types).join(', ') || 'nenhum'})` : 'Fora do Giraffe: modo demonstração com dados sintéticos.');
+    restore();
+    sync(false); listLayers(); listViews(); renderSaved(); syncUI(); buildGroupsUI(); render();
+    if (!giraffeEntered && !Object.keys(S.mapItems).length) {
+      S.mapItems['Meio-fio'] = buildDemoLayer('Meio-fio');
+      S.ctxItems = DEMO.context(); S.raster = await DEMO.raster();
+      if (!giraffeEntered) { listLayers(); buildGroupsUI(); render(); }
+    }
   }
 }
 boot();
