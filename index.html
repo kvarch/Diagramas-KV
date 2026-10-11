@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V03</title>
+<title>KV Axonometria — Beta V04</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -15,12 +15,13 @@
 *,*::before,*::after{box-sizing:border-box;border-radius:0;box-shadow:none}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html,body{margin:0;background:var(--md-sys-color-background);color:var(--md-sys-color-on-background)}
-body{font-size:14px;line-height:1.45;min-height:100vh;display:flex;flex-direction:column}
+html,body{height:100%}
+body{font-size:14px;line-height:1.45;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 :focus-visible{outline:2px solid var(--md-sys-color-primary);outline-offset:2px}
 
 /* Header */
-.app-header{display:flex;align-items:center;gap:16px;padding:8px 8px 8px 16px;min-height:64px;background:var(--md-sys-color-surface-container-lowest);border-bottom:1px solid var(--md-sys-color-outline-variant);position:sticky;top:0;z-index:5}
+.app-header{display:flex;align-items:center;gap:16px;padding:4px 8px 4px 16px;min-height:56px;background:var(--md-sys-color-surface-container-lowest);border-bottom:1px solid var(--md-sys-color-outline-variant)}
 .logo-container{padding:8px 0;flex:0 0 auto;display:flex}
 .brand-logo{height:30px;width:auto;min-width:67px;display:block}
 .brand-logo.neg{display:none}
@@ -39,24 +40,8 @@ button[aria-pressed="true"]{background:var(--md-sys-color-primary);color:var(--m
 button:disabled{opacity:.45;cursor:not-allowed}
 svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:square}
 
-/* Stage */
-main{flex:1;display:flex;flex-direction:column}
-.stage-wrap{padding:12px 12px 0}
-.stage{position:relative;background:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline-variant);touch-action:none;cursor:grab;outline-offset:-2px}
-.stage:active{cursor:grabbing}
-.stage svg#drawing{display:block;width:100%;height:auto;max-height:62vh}
-.stage .hud{position:absolute;left:0;bottom:0;padding:4px 8px;font-size:12px;background:var(--md-sys-color-surface-container-lowest);color:var(--md-sys-color-on-surface-variant);border-top:1px solid var(--md-sys-color-outline-variant);border-right:1px solid var(--md-sys-color-outline-variant)}
-.stage .busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--md-sys-color-surface) 70%,transparent);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
-.stage.is-busy .busy{display:flex}
-.orbit{display:flex;gap:0;align-items:stretch;padding:8px 12px;flex-wrap:wrap}
-.orbit .quad{display:flex;border:1px solid var(--md-sys-color-outline-variant)}
-.orbit .quad button{border:0;border-right:1px solid var(--md-sys-color-outline-variant);padding:0 12px;letter-spacing:.08em}
-.orbit .quad button:last-child{border-right:0}
-.orbit .spacer{flex:1}
-.orbit .sync{margin-left:8px}
-
 /* Tabs */
-.tabs{display:flex;border-top:1px solid var(--md-sys-color-outline-variant);border-bottom:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-lowest);position:sticky;top:64px;z-index:4}
+.tabs{display:flex;border-top:1px solid var(--md-sys-color-outline-variant);border-bottom:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-lowest)}
 .tabs button{flex:1;border:0;border-bottom:3px solid transparent;padding:0 8px}
 .tabs button[aria-selected="true"]{border-bottom-color:var(--md-sys-color-primary);color:var(--md-sys-color-primary)}
 .panel{padding:16px 12px 24px}
@@ -120,12 +105,56 @@ input[type=color]{width:48px;height:48px;padding:6px;border:1px solid var(--md-s
 footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-surface-variant);border-top:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-lowest)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
+/* V04 layout: top fixed, panels scroll */
+.top{flex:0 0 auto;background:var(--md-sys-color-background);z-index:5}
+.scroll{flex:1 1 auto;overflow:auto;min-height:120px}
+.verbar{display:flex;align-items:center;gap:0;padding:6px 12px 0}
+.verbar .verlbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--md-sys-color-on-surface-variant);padding-right:12px}
+.verbar select{flex:1;border-right:0}
+.verbar button.icon{border:1px solid var(--md-sys-color-outline);border-left:0}
+.stage{position:relative;margin:8px 12px 0;aspect-ratio:16/10;max-height:46vh;background:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline-variant);touch-action:none;overflow:hidden;outline-offset:-2px}
+.stage svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage #overlay{pointer-events:none}
+.stage[data-tool=orbit]{cursor:grab}.stage[data-tool=orbit]:active{cursor:grabbing}
+.stage[data-tool=pan]{cursor:move}
+.stage[data-tool=crop]{cursor:crosshair}
+.stage .hud{position:absolute;left:0;bottom:0;padding:2px 8px;font-size:12px;background:var(--md-sys-color-surface-container-lowest);color:var(--md-sys-color-on-surface-variant);border-top:1px solid var(--md-sys-color-outline-variant);border-right:1px solid var(--md-sys-color-outline-variant);pointer-events:none}
+.stage .busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--md-sys-color-surface) 70%,transparent);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.stage.is-busy .busy{display:flex}
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px}
+.toolbar .spacer{flex:1}
+.seg{display:flex;border:1px solid var(--md-sys-color-outline-variant)}
+.seg button.icon{border:0;border-right:1px solid var(--md-sys-color-outline-variant)}
+.seg button.icon:last-child{border-right:0}
+.quadrow{display:flex;flex-wrap:wrap;border:1px solid var(--md-sys-color-outline-variant);margin-bottom:12px;width:max-content;max-width:100%}
+.quadrow button{border:0;border-right:1px solid var(--md-sys-color-outline-variant);padding:0 12px}
+.quadrow button:last-child{border-right:0}
+.out{font-size:13px;color:var(--md-sys-color-on-surface-variant);min-width:64px}
+.lyr-sec{margin-bottom:16px}
+.lyr-sec>h3{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin:0;padding:8px 12px;border:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-low);display:flex;justify-content:space-between;align-items:center;min-height:48px}
+.lyr{display:flex;align-items:center;border:1px solid var(--md-sys-color-outline-variant);border-top:0;background:var(--md-sys-color-surface-container-lowest)}
+.lyr .check{flex:1;min-width:0;padding-right:8px}
+.lyr .check span.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lyr .ct{font-size:12px;color:var(--md-sys-color-on-surface-variant);padding-right:8px;white-space:nowrap}
+.lyr button.icon{border:0;border-left:1px solid var(--md-sys-color-outline-variant)}
+.colors{border-top:1px solid var(--md-sys-color-outline-variant);margin-top:8px;padding-top:8px}
+.crow{display:flex;align-items:center;gap:8px;min-height:48px}
+.crow .orig{width:22px;height:22px;border:1px solid var(--md-sys-color-outline);flex:0 0 22px}
+.crow .arrow{color:var(--md-sys-color-on-surface-variant)}
+.crow .ct{flex:1;font-size:12px;color:var(--md-sys-color-on-surface-variant)}
+.saved-item input[type=text]{border:0;background:transparent;min-height:48px}
+.saved-item.on{background:var(--md-sys-color-surface-container-high)}
+.saved-item.on .name{font-weight:600}
+
+.stage[data-tool=crop] .hud{display:none}
+
 [hidden]{display:none!important}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
 </head>
 <body>
+<div class="top">
 <header class="app-header">
   <div class="logo-container">
     <img class="brand-logo pos" src="data:image/png;base64,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" alt="Königsberger Vannucchi Arquitetos Associados" width="206" height="80">
@@ -133,163 +162,172 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
   </div>
   <h1 class="app-title">Axonometria<small id="modeLabel">Conectando…</small></h1>
   <button class="icon" id="btnTheme" aria-label="Alternar tema claro/escuro" title="Tema">
-    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 5v14" /><path d="M12 5a7 7 0 0 1 0 14z" fill="currentColor"/></svg>
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 5a7 7 0 0 1 0 14z" fill="currentColor"/></svg>
   </button>
 </header>
 
-<main>
-  <section class="stage-wrap" aria-label="Pré-visualização do desenho">
-    <div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Arraste ou use as setas para girar.">
-      <svg id="drawing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000"></svg>
-      <div class="hud" id="hud" aria-live="polite"></div>
-      <div class="busy" id="busy">Processando…</div>
-    </div>
-  </section>
+<div class="verbar">
+  <label for="verSel" class="verlbl">Versão</label>
+  <select id="verSel" aria-label="Versão da vista"></select>
+  <button class="icon" id="btnVerPrev" aria-label="Versão anterior" title="Versão anterior"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="icon" id="btnVerNext" aria-label="Próxima versão" title="Próxima versão"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="icon" id="btnVerNew" aria-label="Nova versão a partir da atual" title="Nova versão (duplica a atual)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
 
-  <div class="orbit" role="toolbar" aria-label="Orientação rápida">
-    <div class="quad" role="group" aria-label="Observador posicionado em">
-      <button data-az="315" aria-label="Observador a noroeste">NO</button>
-      <button data-az="45" aria-label="Observador a nordeste">NE</button>
-      <button data-az="135" aria-label="Observador a sudeste">SE</button>
-      <button data-az="225" aria-label="Observador a sudoeste">SO</button>
-    </div>
-    <button class="icon" id="rotL" aria-label="Girar 15 graus à esquerda"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button>
-    <button class="icon" id="rotR" aria-label="Girar 15 graus à direita"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9a8 8 0 1 0-1 9"/><path d="M19 4v5h-5"/></svg></button>
-    <span class="spacer"></span>
-    <button class="primary sync" id="btnSync"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg>Atualizar</button>
+<div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Use as ferramentas Girar, Mover e Recortar; roda do mouse aproxima.">
+  <svg id="drawing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="overlay" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+  <div class="hud" id="hud" aria-live="polite"></div>
+  <div class="busy" id="busy">Processando…</div>
+</div>
+
+<div class="toolbar" role="toolbar" aria-label="Ferramentas da vista">
+  <div class="seg" role="group" aria-label="Ferramenta">
+    <button class="icon" data-tool="orbit" aria-pressed="true" aria-label="Girar" title="Girar (arrastar)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M12 3v18"/><path d="M18 9l3 3-3 3"/></svg></button>
+    <button class="icon" data-tool="pan" aria-pressed="false" aria-label="Mover" title="Mover (arrastar)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg></button>
+    <button class="icon" data-tool="crop" aria-pressed="false" aria-label="Recortar" title="Recortar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v15h15"/><path d="M2 7h15v15"/></svg></button>
   </div>
+  <div class="seg" role="group" aria-label="Zoom">
+    <button class="icon" id="zoomOut" aria-label="Afastar" title="Afastar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6M7 10h6"/></svg></button>
+    <button class="icon" id="zoomIn" aria-label="Aproximar" title="Aproximar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6M7 10h6M10 7v6"/></svg></button>
+    <button class="icon" id="zoomFit" aria-label="Enquadrar tudo" title="Enquadrar tudo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+  </div>
+  <span class="spacer"></span>
+  <button class="icon primary" id="btnSync" aria-label="Atualizar do Giraffe" title="Atualizar do Giraffe"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg></button>
+</div>
 
-  <nav class="tabs" role="tablist" aria-label="Seções">
-    <button role="tab" id="tab-vista" aria-controls="p-vista" aria-selected="true">Vista</button>
-    <button role="tab" id="tab-conteudo" aria-controls="p-conteudo" aria-selected="false" tabindex="-1">Conteúdo</button>
-    <button role="tab" id="tab-estilo" aria-controls="p-estilo" aria-selected="false" tabindex="-1">Estilo</button>
-    <button role="tab" id="tab-export" aria-controls="p-export" aria-selected="false" tabindex="-1">Exportar</button>
-  </nav>
+<nav class="tabs" role="tablist" aria-label="Seções">
+  <button role="tab" id="tab-vista" aria-controls="p-vista" aria-selected="true">Vista</button>
+  <button role="tab" id="tab-conteudo" aria-controls="p-conteudo" aria-selected="false" tabindex="-1">Conteúdo</button>
+  <button role="tab" id="tab-estilo" aria-controls="p-estilo" aria-selected="false" tabindex="-1">Estilo</button>
+  <button role="tab" id="tab-export" aria-controls="p-export" aria-selected="false" tabindex="-1">Exportar</button>
+</nav>
+</div>
 
+<div class="scroll" id="scroll">
   <!-- VISTA -->
   <section class="panel" id="p-vista" role="tabpanel" aria-labelledby="tab-vista">
+    <h2>Versões da vista</h2>
+    <p class="hint">Cada versão guarda só o ângulo, o zoom e quais layers estão ligados. Estilo e recorte são comuns a todas — ideal para diagramas em sequência.</p>
+    <div class="list" id="verList"></div>
+
     <h2>Projeção</h2>
     <div class="field"><label for="preset">Tipo</label><div class="ctl">
       <select id="preset">
-        <option value="iso">Isométrica</option>
-        <option value="dim">Dimétrica</option>
-        <option value="tri">Trimétrica</option>
-        <option value="bird">Vôo de pássaro</option>
-        <option value="mil">Militar 45°/45°</option>
-        <option value="plano">Planométrica 30°/60°</option>
-        <option value="elev">Elevação</option>
-        <option value="plan">Planta</option>
-        <option value="custom">Personalizada</option>
+        <option value="iso">Isométrica</option><option value="dim">Dimétrica</option><option value="tri">Trimétrica</option>
+        <option value="bird">Vôo de pássaro</option><option value="mil">Militar 45°/45°</option><option value="plano">Planométrica 30°/60°</option>
+        <option value="elev">Elevação</option><option value="plan">Planta</option><option value="custom">Personalizada</option>
       </select></div></div>
+    <div class="quadrow" role="group" aria-label="Observador posicionado em">
+      <button data-az="315" aria-label="Observador a noroeste">NO</button><button data-az="45" aria-label="Observador a nordeste">NE</button>
+      <button data-az="135" aria-label="Observador a sudeste">SE</button><button data-az="225" aria-label="Observador a sudoeste">SO</button>
+      <button class="icon" id="rotL" aria-label="Girar 15 graus à esquerda"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button>
+      <button class="icon" id="rotR" aria-label="Girar 15 graus à direita"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9a8 8 0 1 0-1 9"/><path d="M19 4v5h-5"/></svg></button>
+    </div>
     <div class="field"><label for="az">Azimute</label><div class="ctl"><input type="range" id="az" min="0" max="359" step="1"><input type="number" id="azN" min="0" max="359" step="1" aria-label="Azimute em graus"></div></div>
     <div class="field" id="fEl"><label for="el">Elevação</label><div class="ctl"><input type="range" id="el" min="0" max="90" step="0.5"><input type="number" id="elN" min="0" max="90" step="0.5" aria-label="Elevação em graus"></div></div>
     <div class="field" id="fK" hidden><label for="k">Fator vertical</label><div class="ctl"><input type="range" id="k" min="0.3" max="1.2" step="0.05"><input type="number" id="kN" min="0.3" max="1.2" step="0.05" aria-label="Fator vertical"></div></div>
-    <p class="hint">Arraste no desenho para girar (horizontal = azimute, vertical = elevação). Setas do teclado também funcionam com o desenho em foco.</p>
+    <div class="field"><label for="zoom">Zoom (%)</label><div class="ctl"><input type="range" id="zoom" min="25" max="800" step="5"><input type="number" id="zoomN" min="10" max="2000" step="5" aria-label="Zoom em porcentagem"></div></div>
 
-    <h2>Enquadramento</h2>
-    <div class="field"><label for="frame">Formato</label><div class="ctl">
-      <select id="frame">
-        <option value="fit">Ajustar ao conteúdo</option>
-        <option value="16:9">16:9 (apresentação)</option>
-        <option value="a3l">A3 paisagem</option>
-        <option value="a3p">A3 retrato</option>
-        <option value="1:1">Quadrado</option>
+    <h2>Recorte da imagem</h2>
+    <label class="check"><input type="checkbox" id="cropOn">Usar recorte na vista e na exportação</label>
+    <div class="field"><label for="cropRatio">Proporção</label><div class="ctl">
+      <select id="cropRatio">
+        <option value="free">Livre</option><option value="16:9">16:9</option><option value="4:3">4:3</option><option value="3:2">3:2</option><option value="1:1">1:1</option>
+        <option value="a4l">A4 paisagem</option><option value="a4p">A4 retrato</option><option value="a3l">A3 paisagem</option><option value="a3p">A3 retrato</option>
+        <option value="9:16">9:16</option><option value="custom">Personalizada</option>
       </select></div></div>
-    <div class="field"><label for="margin">Margem</label><div class="ctl"><input type="range" id="margin" min="0" max="20" step="1"><input type="number" id="marginN" min="0" max="20" step="1" aria-label="Margem em porcentagem"></div></div>
-
-    <h2>Recorte</h2>
-    <div class="field"><label for="cropMode">Área</label><div class="ctl">
-      <select id="cropMode">
-        <option value="all">Sem recorte</option>
-        <option value="project">Limite do projeto + entorno</option>
-        <option value="map">Área visível no mapa</option>
-        <option value="drawn">Área desenhada</option>
-      </select></div></div>
-    <div class="field" id="fBuffer"><label for="buffer">Entorno (m)</label><div class="ctl"><input type="range" id="buffer" min="0" max="500" step="5"><input type="number" id="bufferN" min="0" max="2000" step="5" aria-label="Entorno em metros"></div></div>
-    <div class="row"><button id="btnDrawCrop">Desenhar área no mapa</button><button id="btnMapCrop">Usar área visível</button></div>
-    <p class="hint">Camadas e contexto são cortados no limite, como num corte de maquete. Volumes do projeto nunca são cortados.</p>
-
-    <h2>Vistas salvas</h2>
-    <div class="field"><label for="saveName">Nome</label><div class="ctl"><input type="text" id="saveName" placeholder="Ex.: Implantação SO"><button id="btnSaveView" aria-label="Salvar vista atual">Salvar</button></div></div>
-    <div class="list" id="savedList"></div>
+    <div class="field" id="fCropCustom" hidden><span class="lbl">Personalizada</span><div class="ctl"><input type="number" id="cropCW" min="1" step="1" aria-label="Largura relativa"><span>×</span><input type="number" id="cropCH" min="1" step="1" aria-label="Altura relativa"></div></div>
+    <label class="check"><input type="checkbox" id="cropShowOut">Mostrar área fora do recorte (escurecida)</label>
+    <div class="row"><button id="btnCropTool">Ajustar recorte</button><button id="btnCropReset">Recorte máximo</button></div>
+    <p class="hint">Na ferramenta Recortar: arraste dentro para mover, nas alças para redimensionar ou fora para desenhar um novo recorte.</p>
   </section>
 
   <!-- CONTEÚDO -->
   <section class="panel" id="p-conteudo" role="tabpanel" aria-labelledby="tab-conteudo" hidden>
-    <h2>Desenho do projeto</h2>
-    <label class="check"><input type="checkbox" id="autoSync">Atualizar automaticamente quando o modelo mudar</label>
-    <div class="field"><label for="groupBy">Agrupar por</label><div class="ctl">
-      <select id="groupBy">
-        <option value="layer">Camada de desenho</option>
-        <option value="usage">Uso</option>
-        <option value="color">Cor original</option>
+    <h2>Layers</h2>
+    <p class="hint">Ligue e desligue o que aparece na versão atual. Camadas do Giraffe e mapa base são lidas ao ligar; use ↻ para ler de novo.</p>
+    <div id="layerUI"></div>
+    <label class="check"><input type="checkbox" id="autoSync">Atualizar o desenho do projeto automaticamente</label>
+
+    <h2>Área do modelo</h2>
+    <div class="field"><label for="areaMode">Limite</label><div class="ctl">
+      <select id="areaMode">
+        <option value="all">Sem limite</option><option value="project">Limite do projeto + entorno</option>
+        <option value="map">Área visível no mapa</option><option value="drawn">Área desenhada</option>
       </select></div></div>
-    <p class="hint">“Cor original” cria um grupo por cor do Giraffe — é o caminho mais direto para trocar cada cor por uma cor de desenho.</p>
-    <div class="card" id="srcSummary" aria-live="polite"></div>
+    <div class="field" id="fBuffer"><label for="buffer">Entorno (m)</label><div class="ctl"><input type="range" id="buffer" min="0" max="500" step="5"><input type="number" id="bufferN" min="0" max="2000" step="5" aria-label="Entorno em metros"></div></div>
+    <div class="row"><button id="btnDrawArea">Desenhar no mapa</button><button id="btnMapArea">Usar área visível</button></div>
+    <p class="hint">Camadas e entorno são cortados nesse limite, como numa maquete. Volumes do projeto nunca são cortados.</p>
 
-    <h2>Camadas do mapa</h2>
-    <p class="hint">Marque as camadas e capture. Só entra o que está visível na tela do Giraffe — enquadre a área antes.</p>
-    <div class="list" id="layerList"></div>
-    <div class="row"><button id="btnReloadLayers">Recarregar lista</button><button class="primary" id="btnCaptureLayers">Capturar camadas</button></div>
-
-    <h2>Contexto do mapa base</h2>
-    <div class="row"><button id="btnContext">Capturar edifícios do entorno</button><button id="btnClearContext">Limpar</button></div>
-
-    <h2>Raster de análise</h2>
-    <p class="hint">Traz para o desenho o que só existe como imagem no Giraffe (ex.: horas de sol, mapas de calor). Ative a análise, deixe a vista superior com norte para cima e capture. A imagem é aplicada no plano do terreno.</p>
+    <h2>Imagem do mapa / análise</h2>
+    <p class="hint">Para horas de sol ou o próprio mapa base: deixe a análise visível no Giraffe com norte para cima e capture. A imagem vai para o plano do terreno.</p>
     <div class="field"><label for="viewSel">Vista do Giraffe</label><div class="ctl"><select id="viewSel"><option value="">— nenhuma —</option></select><button id="btnActivateView">Ativar</button></div></div>
     <div class="row"><button class="primary" id="btnCaptureRaster">Capturar mapa visível</button><button id="btnImportRaster">Importar imagem</button><input type="file" id="fileRaster" accept="image/png,image/jpeg" hidden></div>
-    <div class="field"><label for="rasterOp">Opacidade</label><div class="ctl"><input type="range" id="rasterOp" min="0" max="1" step="0.05"><input type="number" id="rasterOpN" min="0" max="1" step="0.05" aria-label="Opacidade do raster"></div></div>
-    <label class="check"><input type="checkbox" id="drapeRoofs">Aplicar o raster também nas coberturas</label>
-    <div class="row"><button id="btnClearRaster">Remover raster</button></div>
+  </section>
 
+  <!-- ESTILO -->
+  <section class="panel" id="p-estilo" role="tabpanel" aria-labelledby="tab-estilo" hidden>
+    <h2>Padrão gráfico</h2>
+    <div class="field"><label for="palette">Paleta base</label><div class="ctl">
+      <select id="palette"><option value="paper">Papel — branco e preto</option><option value="kv">Destaque KV — projeto em ciano</option><option value="mono">Cinzas</option></select><button id="btnApplyPalette">Aplicar</button></div></div>
+    <div class="field"><label for="colorMode">Cor dos volumes</label><div class="ctl">
+      <select id="colorMode"><option value="paleta">Por layer (paleta)</option><option value="giraffe">Cores do Giraffe, por layer</option><option value="uso">Por uso</option></select></div></div>
+
+    <h2>Linhas e faces</h2>
+    <div class="field"><label for="contourW">Perfil (contorno)</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
+    <div class="field"><label for="shade">Sombreamento</label><div class="ctl"><input type="range" id="shade" min="0" max="0.8" step="0.02"><input type="number" id="shadeN" min="0" max="0.8" step="0.02" aria-label="Intensidade do sombreamento das fachadas"></div></div>
+
+    <h2>Sombra projetada</h2>
+    <label class="check"><input type="checkbox" id="shOn">Mostrar sombra projetada no terreno</label>
+    <div id="shBox">
+      <div class="field"><label for="shDay">Data</label><div class="ctl"><select id="shDay"><option value="06-21">Solstício de inverno (21/06)</option><option value="03-21">Equinócio (21/03)</option><option value="12-21">Solstício de verão (21/12)</option><option value="custom">Outra data</option></select></div></div>
+      <div class="field" id="fShDate" hidden><label for="shDate">Outra data</label><div class="ctl"><input type="date" id="shDate"></div></div>
+      <div class="field"><label for="shTime">Hora</label><div class="ctl"><input type="range" id="shTime" min="300" max="1200" step="5" aria-valuetext=""><output id="shTimeOut" for="shTime" class="out"></output></div></div>
+      <div class="field"><label for="shOp">Intensidade</label><div class="ctl"><input type="range" id="shOp" min="0.05" max="0.9" step="0.05"><input type="color" id="shColor" aria-label="Cor da sombra"></div></div>
+      <div class="field"><label for="shTz">Fuso (UTC)</label><div class="ctl"><input type="number" id="shTz" min="-12" max="14" step="1"><span class="out" id="sunInfo"></span></div></div>
+    </div>
+
+    <h2>Fundo e terreno</h2>
+    <div class="field"><label for="bg">Fundo</label><div class="ctl"><input type="color" id="bg" aria-label="Cor de fundo"><label class="check" style="flex:1"><input type="checkbox" id="bgT">Transparente</label></div></div>
+    <div class="field"><label for="groundFill">Terreno</label><div class="ctl"><input type="color" id="groundFill" aria-label="Cor do plano do terreno"><label class="check" style="flex:1"><input type="checkbox" id="ground">Plano na área</label></div></div>
+    <div class="field"><label for="rasterOp">Imagem do mapa</label><div class="ctl"><input type="range" id="rasterOp" min="0" max="1" step="0.05"><input type="number" id="rasterOpN" min="0" max="1" step="0.05" aria-label="Opacidade da imagem do mapa"></div></div>
+    <label class="check"><input type="checkbox" id="drapeRoofs">Aplicar a imagem também nas coberturas</label>
+    <label class="check"><input type="checkbox" id="north">Indicação de norte</label>
+
+    <h2>Layers</h2>
+    <p class="hint" id="styleHint"></p>
+    <div id="usageUI"></div>
+    <div id="styleUI"></div>
+  </section>
+
+  <!-- EXPORTAR -->
+  <section class="panel" id="p-export" role="tabpanel" aria-labelledby="tab-export" hidden>
+    <h2>Arquivo</h2>
+    <div class="field"><label for="pngW">Largura PNG</label><div class="ctl">
+      <select id="pngW"><option value="1920">1920 px</option><option value="3840" selected>3840 px</option><option value="5760">5760 px</option><option value="7680">7680 px</option></select></div></div>
+    <div class="row"><button class="primary" id="btnSVG">Baixar SVG</button><button class="primary" id="btnPNG">Baixar PNG</button></div>
+    <div class="row"><button id="btnAllPNG">PNG de todas as versões</button></div>
+    <p class="hint">Exporta exatamente o recorte. O SVG é vetorial e editável; cada layer vira um grupo nomeado.</p>
+    <h2>Estilo</h2>
+    <div class="row"><button id="btnExportStyle">Exportar configuração</button><button id="btnImportStyle">Importar</button><input type="file" id="fileStyle" accept="application/json" hidden></div>
+    <h2>Diagnóstico</h2>
+    <div class="log" id="log" role="log" aria-live="polite"></div>
+    <div class="row"><button id="btnCopyDiag">Copiar diagnóstico</button></div>
     <h2>Análise em fachadas — teste</h2>
     <p class="hint">Verifica se a exportação 3D do Giraffe (getGltf) carrega as cores da análise solar. Antes, ligue a análise de horas de sol nas fachadas no app Solar.</p>
     <label class="check"><input type="checkbox" id="gltfSave" checked>Baixar também o arquivo exportado</label>
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-
-  <!-- ESTILO -->
-  <section class="panel" id="p-estilo" role="tabpanel" aria-labelledby="tab-estilo" hidden>
-    <h2>Padrão gráfico</h2>
-    <div class="field"><label for="palette">Paleta</label><div class="ctl">
-      <select id="palette">
-        <option value="paper">Papel — branco e preto</option>
-        <option value="kv">Destaque KV — projeto em ciano</option>
-        <option value="giraffe">Cores do Giraffe</option>
-        <option value="mono">Cinzas</option>
-      </select><button id="btnApplyPalette">Aplicar</button></div></div>
-    <div class="field"><label for="contourW">Perfil (contorno)</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
-    <div class="field"><label for="shade">Sombreamento</label><div class="ctl"><input type="range" id="shade" min="0" max="0.8" step="0.02"><input type="number" id="shadeN" min="0" max="0.8" step="0.02" aria-label="Intensidade do sombreamento das fachadas"></div></div>
-    <div class="field"><label for="bg">Fundo</label><div class="ctl"><input type="color" id="bg" aria-label="Cor de fundo"><label class="check" style="flex:1"><input type="checkbox" id="bgT">Transparente</label></div></div>
-    <div class="field"><label for="groundFill">Terreno</label><div class="ctl"><input type="color" id="groundFill" aria-label="Cor do plano do terreno"><label class="check" style="flex:1"><input type="checkbox" id="ground">Plano no recorte</label></div></div>
-    <label class="check"><input type="checkbox" id="north">Indicação de norte</label>
-    <p class="hint">Espessuras em unidades do quadro (1600 de largura ≈ px em 1×). Cada grupo abaixo controla preenchimento, linha e traço.</p>
-    <div id="groupsUI"></div>
-  </section>
-
-  <!-- EXPORTAR -->
-  <section class="panel" id="p-export" role="tabpanel" aria-labelledby="tab-export" hidden>
-    <h2>Arquivo</h2>
-    <div class="field"><label for="pngScale">Resolução PNG</label><div class="ctl">
-      <select id="pngScale"><option value="1">1× (1600 px)</option><option value="2" selected>2× (3200 px)</option><option value="3">3× (4800 px)</option><option value="4">4× (6400 px)</option></select></div></div>
-    <div class="row"><button class="primary" id="btnSVG">Baixar SVG</button><button class="primary" id="btnPNG">Baixar PNG</button></div>
-    <p class="hint">O SVG é vetorial e editável (Illustrator, Inkscape, Affinity): cada grupo vira uma camada nomeada.</p>
-    <h2>Estilo</h2>
-    <div class="row"><button id="btnExportStyle">Exportar estilo (.json)</button><button id="btnImportStyle">Importar estilo</button><input type="file" id="fileStyle" accept="application/json" hidden></div>
-    <h2>Diagnóstico</h2>
-    <div class="log" id="log" role="log" aria-live="polite"></div>
-    <div class="row"><button id="btnCopyDiag">Copiar diagnóstico</button></div>
-  </section>
-</main>
-
-<footer class="app-footer">Beta - V03 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V04 · © 2026 Königsberger Vannucchi</footer>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V03 */
-/* V03: buffer de mensagens do Giraffe desde o carregamento (o SDK é importado depois) + replay;
+/* KV Axonometria — Beta V04 */
+/* V04: versões de vista, zoom/mover, recorte na vista, sombra projetada, cor por layer/Giraffe/uso, lista completa de layers.
+   V03: buffer de mensagens do Giraffe desde o carregamento (o SDK é importado depois) + replay;
    troca automática demo → Giraffe; sonda RPC (getUrlParams) e fallback getProjectBundle. */
 const STATE_KEYS = new Set(['selected', 'lensSelection', 'mapView', 'mapContent', 'mapSelectCoord', 'projects', 'bakedSections', 'projectLayers', 'rawSections', 'flows', 'blocks', 'project', 'projectOrigin', 'projectAppsByAppID', 'layerTree', 'selectedProjectApp', 'mapHoverCoords', 'closingSignal', 'uiLayout', 'contextMenuClick', 'views', 'mapboxEvent', 'workspace', 'visibleScenarios']);
 const EARLY = []; const MSG = { n: 0, origins: {}, types: {}, replayed: 0 }; let SDK_READY = false;
@@ -299,11 +337,12 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V03';
+const VERSION = 'V04';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 const PC = () => window.polygonClipping || null;
+
 
 /* ---------------- STATE ---------------- */
 const PRESETS = {
@@ -316,22 +355,91 @@ const PRESETS = {
   elev:  { proj: 'ortho', el: 0, azOff: 0 },
   plan:  { proj: 'ortho', el: 90, azOff: 0 },
 };
+
 const S = {
-  mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, origin: null,
-  items: [],           // normalized world features
-  mapItems: {},        // layerName -> items
+  mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, bundleRaw: null,
+  items: [],            // drawing (vol/flat)
+  mapItems: {},         // layerName -> items
   ctxItems: [],
-  raster: null,        // {href, W, H, bounds:[[w,s],[e,n]]}
-  groups: {},
-  view: { preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1 },
-  frame: { fmt: 'fit', margin: 6 },
-  crop: { mode: 'project', buffer: 60, drawn: null, mapRect: null },
-  style: { palette: 'paper', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false, groupBy: 'layer' },
-  autoSync: true,
-  saved: [],
-  log: [],
-  lastSVG: '', frameW: 1600, frameH: 1000,
+  raster: null,         // {href, W, H, bounds}
+  // per-version (active refs)
+  versions: [], av: 0, view: null, vis: null,
+  // common
+  area: { mode: 'project', buffer: 60, drawn: null, mapRect: null },
+  cropUI: { on: true, ratio: '16:9', cw: 16, ch: 9, showOut: true, rect: null },
+  style: { palette: 'paper', colorMode: 'paleta', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false,
+    sh: { on: false, day: '06-21', date: '', min: 720, tz: -3, op: 0.32, color: '#3A3F55' } },
+  lstyle: {}, colorMap: {}, usageMap: {},
+  autoSync: true, tool: 'orbit',
+  log: [], lastSVG: '', W: 1600, H: 1000, fit: null,
 };
+const newView = () => ({ preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1, zoom: 1, panX: 0, panY: 0, _off: 0 });
+function initVersions() { S.versions = [{ id: 'v' + Date.now(), name: 'Vista 1', view: newView(), vis: {} }]; setActive(0); }
+function setActive(i) { S.av = Math.max(0, Math.min(S.versions.length - 1, i)); S.view = S.versions[S.av].view; S.vis = S.versions[S.av].vis; }
+
+/* ---------------- LAYER KEYS & VISIBILITY ---------------- */
+function lkOf(src, layer) { return src === 'vol' || src === 'flat' ? 'draw|' + layer : src === 'map' ? 'map|' + layer : 'ctx|Entorno'; }
+function lkName(lk) { return lk === 'raster' ? 'Imagem do mapa' : lk.split('|').slice(1).join('|'); }
+function hasData(lk) { if (lk === 'raster') return !!S.raster; if (lk.startsWith('map|')) return !!S.mapItems[lk.slice(4)]; if (lk.startsWith('ctx|')) return S.ctxItems.length > 0; return true; }
+function isVis(lk) { const v = S.vis[lk]; if (v != null) return v; return !lk.startsWith('map|'); }
+function allItems() { return [...S.items, ...Object.values(S.mapItems).flat(), ...S.ctxItems]; }
+function drawLayers() { const m = {}; for (const it of S.items) { m[it.lk] = m[it.lk] || { n: 0, prism: 0, line: 0, poly: 0, colors: {} }; const o = m[it.lk]; o.n++; o[it.kind === 'prism' ? 'prism' : it.kind]++; o.colors[it.color] = (o.colors[it.color] || 0) + 1; } return m; }
+
+/* ---------------- STYLE ---------------- */
+function layerKind(lk) {
+  if (lk.startsWith('ctx|')) return 'ctx'; if (lk.startsWith('map|')) return 'map';
+  return S.items.some((i) => i.lk === lk && i.kind === 'prism') ? 'vol' : S.items.filter((i) => i.lk === lk).every((i) => i.kind === 'line') ? 'line' : 'flat';
+}
+function defaultLayerStyle(kind, pal = S.style.palette) {
+  const ink = '#1B1B1B', gray = '#747878';
+  const base = { fill: '#FFFFFF', fillOp: 1, stroke: ink, strokeW: 0.7, dash: 'solid' };
+  if (kind === 'vol') return pal === 'kv' ? { ...base, fill: '#00ACCD', stroke: '#003A47' } : pal === 'mono' ? { ...base, fill: '#C8C6C6' } : base;
+  if (kind === 'flat') return pal === 'kv' ? { ...base, fill: '#B1ECFF', fillOp: 0.9, stroke: '#00677C', strokeW: 1.1 } : { ...base, fill: '#E2E2E2', fillOp: 0.9, strokeW: 0.9 };
+  if (kind === 'line') return { ...base, fill: 'none', fillOp: 1, stroke: pal === 'kv' ? '#00677C' : ink, strokeW: 1 };
+  if (kind === 'map') return { ...base, fill: '#EEEEEE', fillOp: 0.7, stroke: gray, strokeW: 0.45 };
+  return { ...base, fill: pal === 'mono' ? '#E2E2E2' : '#F3F3F3', stroke: gray, strokeW: 0.45 };
+}
+function ensureStyles() {
+  const seen = new Set();
+  for (const it of allItems()) {
+    if (!seen.has(it.lk)) { seen.add(it.lk); if (!S.lstyle[it.lk]) S.lstyle[it.lk] = defaultLayerStyle(layerKind(it.lk)); }
+    if (it.lk.startsWith('draw|') && it.usage && !S.usageMap[it.usage]) S.usageMap[it.usage] = it.color || hashColor(it.usage);
+  }
+}
+function applyPalette(pal) {
+  S.style.palette = pal;
+  for (const lk of Object.keys(S.lstyle)) S.lstyle[lk] = defaultLayerStyle(layerKind(lk), pal);
+  S.colorMap = {};
+  if (pal === 'mono') S.style.shade = 0.25;
+}
+function fillOf(it) {
+  const L = S.lstyle[it.lk]; const cm = S.style.colorMode;
+  if (cm === 'giraffe' && it.color && !it.lk.startsWith('ctx|')) return S.colorMap[it.lk]?.[it.color] || it.color;
+  if (cm === 'uso' && it.lk.startsWith('draw|')) return S.usageMap[it.usage] || it.color || L.fill;
+  return L.fill;
+}
+
+/* ---------------- SUN ---------------- */
+function originLL() {
+  const o = S.gs?.get('projectOrigin'); if (Array.isArray(o) && o.length >= 2) return o;
+  try { if (S.projector?.inverse) { const p = S.projector.inverse([0, 0]); if (isFinite(p[0])) return p; } } catch (e) { /* */ }
+  return DEMO.origin;
+}
+function sunPos() {
+  const sh = S.style.sh; const [lon, lat] = originLL();
+  const yr = new Date().getFullYear();
+  const ds = sh.day === 'custom' && sh.date ? sh.date : `${yr}-${sh.day}`;
+  const [Y, M, D] = ds.split('-').map(Number); const h = Math.floor(sh.min / 60), mi = sh.min % 60;
+  const ms = Date.UTC(Y, M - 1, D, h, mi) - sh.tz * 3600e3; const d = ms / 86400000 + 2440587.5 - 2451545.0;
+  const g = (357.529 + 0.98560028 * d) * D2R; const q = 280.459 + 0.98564736 * d;
+  const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * D2R; const e = (23.439 - 0.00000036 * d) * D2R;
+  const RA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L)); const dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const GMST = ((18.697374558 + 24.06570982441908 * d) % 24 + 24) % 24; const H = (GMST * 15 + lon) * D2R - RA;
+  const f = lat * D2R;
+  const alt = Math.asin(Math.sin(f) * Math.sin(dec) + Math.cos(f) * Math.cos(dec) * Math.cos(H));
+  const az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(f) - Math.sin(f) * Math.cos(H));
+  return { az: ((az / D2R) + 360) % 360, alt: alt / D2R };
+}
 
 /* ---------------- LOG / UI HELPERS ---------------- */
 function log(msg, isErr) {
@@ -455,6 +563,7 @@ function geomToParts(g, P) {
   return out;
 }
 
+
 /* ---------------- INGEST (Giraffe features → items) ---------------- */
 function propColor(p) { return p.color ?? p._color ?? p.fill ?? p.fillColor ?? p.colour ?? p['fill-color'] ?? p.stroke ?? null; }
 function featId(f) { return String(f?.properties?.id ?? f?.id ?? ''); }
@@ -462,11 +571,12 @@ function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
   const meta = {
-    id: featId(f), src,
+    id: featId(f), src, lk: '',
     layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? 'Sem camada'),
     usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
     color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
   };
+  meta.lk = lkOf(src, meta.layer);
   let z0 = +(p._baseHeight ?? p.baseHeight ?? 0) || 0;
   let z1 = +(p._height ?? NaN);
   if (!isFinite(z1)) { const h = +(p.height ?? 0) || 0; z1 = z0 + h; }
@@ -504,52 +614,6 @@ function ingestGiraffe() {
   log(`Itens: ${items.filter((i) => i.kind === 'prism').length} volumes, ${items.filter((i) => i.kind !== 'prism').length} 2D (raw extras: ${rawAdded})`);
 }
 
-/* ---------------- GROUPS & STYLE ---------------- */
-function gkey(it) {
-  if (it.src === 'vol' || it.src === 'flat') {
-    const by = S.style.groupBy; const v = by === 'usage' ? it.usage : by === 'color' ? it.color : it.layer;
-    return `${it.src}|${v}`;
-  }
-  if (it.src === 'map') return `map|${it.layer}`;
-  return 'ctx|Edifícios do entorno';
-}
-function defaultStyle(key, orig, pal = S.style.palette) {
-  const kind = key.split('|')[0];
-  const ink = '#1B1B1B', gray = '#747878';
-  const base = { visible: true, fill: '#FFFFFF', fillOp: 1, stroke: ink, strokeW: 0.7, dash: 'solid' };
-  const giraffe = pal === 'giraffe';
-  if (kind === 'vol') {
-    if (giraffe) return { ...base, fill: orig || '#FFFFFF' };
-    if (pal === 'kv') return { ...base, fill: '#00ACCD', stroke: '#003A47' };
-    if (pal === 'mono') return { ...base, fill: '#C8C6C6' };
-    return base;
-  }
-  if (kind === 'flat') {
-    if (giraffe) return { ...base, fill: orig || '#E2E2E2', fillOp: 0.85, strokeW: 0.9 };
-    if (pal === 'kv') return { ...base, fill: '#B1ECFF', fillOp: 0.9, stroke: '#00677C', strokeW: 1.1 };
-    return { ...base, fill: '#E2E2E2', fillOp: 0.9, strokeW: 0.9 };
-  }
-  if (kind === 'map') return { ...base, fill: giraffe ? (orig || '#E2E2E2') : '#EEEEEE', fillOp: 0.7, stroke: gray, strokeW: 0.45 };
-  return { ...base, fill: pal === 'mono' ? '#E2E2E2' : '#F3F3F3', stroke: gray, strokeW: 0.45 };
-}
-function allItems() {
-  const m = Object.values(S.mapItems).flat();
-  return [...S.items, ...m, ...S.ctxItems];
-}
-function ensureGroups() {
-  const counts = {};
-  for (const it of allItems()) {
-    const k = (it.g = gkey(it));
-    counts[k] = (counts[k] || 0) + 1;
-    if (!S.groups[k]) S.groups[k] = { ...defaultStyle(k, it.color), orig: it.color };
-  }
-  S._counts = counts;
-}
-function applyPalette(pal) {
-  S.style.palette = pal;
-  for (const k of Object.keys(S.groups)) { const g = S.groups[k]; Object.assign(g, defaultStyle(k, g.orig, pal), { visible: g.visible }); }
-  if (pal === 'mono') S.style.shade = 0.25;
-}
 
 /* ---------------- VIEW TRANSFORM ---------------- */
 function makeView(v) {
@@ -563,9 +627,10 @@ function makeView(v) {
   };
 }
 
-/* ---------------- CROP ---------------- */
-function cropRect() {
-  const c = S.crop; const P = S.projector; if (!P) return null;
+
+/* ---------------- AREA (limite geográfico) ---------------- */
+function areaRect() {
+  const c = S.area; const P = S.projector; if (!P) return null;
   const buf = (b, d) => ({ minx: b.minx - d, miny: b.miny - d, maxx: b.maxx + d, maxy: b.maxy + d });
   if (c.mode === 'project') {
     const pg = projectGeom(); if (!pg) return null;
@@ -580,7 +645,7 @@ function projectGeom() {
   if (S.mode === 'demo') return DEMO.project.geometry;
   const p = S.gs?.get('project'); return p?.geometry || p?.features?.[0]?.geometry || null;
 }
-function applyCrop(items, R) {
+function applyArea(items, R) {
   if (!R) return items;
   const out = []; const pc = PC(); const rp = rectPoly(R);
   for (const it of items) {
@@ -597,162 +662,224 @@ function applyCrop(items, R) {
   return out;
 }
 
+
 /* ---------------- RENDER ---------------- */
 let rafId = 0, pendingFast = false;
-function scheduleRender(fast = false) {
-  pendingFast = fast; if (rafId) return;
-  rafId = requestAnimationFrame(() => { rafId = 0; render(pendingFast); });
-}
+function scheduleRender(fast = false) { pendingFast = fast; if (rafId) return; rafId = requestAnimationFrame(() => { rafId = 0; render(pendingFast); }); }
 const DASH = { solid: null, dash: '7 4', dot: '0.1 3.2', dashdot: '9 3 1 3' };
 const fmt = (n) => (Math.round(n * 10) / 10).toString();
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function fitBox(V, R) {
+  // stable framing: drawing layers (visible or not) + model area
+  const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+  let src = S.items; if (!src.length) src = allItems();
+  for (const it of src) {
+    if (it.kind === 'line') bboxOf(it.pts.map((p) => V.P(p[0], p[1], it.z || 0)), b);
+    else for (const r of it.poly) { bboxOf(r.map((p) => V.P(p[0], p[1], it.kind === 'prism' ? it.z0 : it.z || 0)), b); if (it.kind === 'prism') bboxOf(r.map((p) => V.P(p[0], p[1], it.z1)), b); }
+  }
+  if (R) bboxOf(rectPoly(R)[0].map((p) => V.P(p[0], p[1], 0)), b);
+  if (!isFinite(b.minx) && S.raster) { const m = rasterMatrix(V, 0); bboxOf([[0, 0], [S.raster.W, 0], [S.raster.W, S.raster.H], [0, S.raster.H]].map(([u, v]) => [m[0] * u + m[2] * v + m[4], m[1] * u + m[3] * v + m[5]]), b); }
+  return isFinite(b.minx) ? b : null;
+}
 
 function render(fast = false) {
-  ensureGroups();
-  const V = makeView(S.view); const R = cropRect();
-  const G = S.groups; const st = S.style;
-  let items = allItems().filter((it) => G[it.g]?.visible !== false);
-  items = applyCrop(items, R);
+  ensureStyles();
+  const V = makeView(S.view); const R = areaRect(); const st = S.style; const LS = S.lstyle;
+  const W = S.W, H = S.H;
+  const fb = fitBox(V, R);
+  if (!fb) { drawEmpty(); drawOverlay(); return; }
+  const bw = Math.max(fb.maxx - fb.minx, 1e-3), bh = Math.max(fb.maxy - fb.miny, 1e-3);
+  const s0 = Math.min((W * 0.88) / bw, (H * 0.88) / bh); const sc = s0 * S.view.zoom;
+  const cx = (fb.minx + fb.maxx) / 2, cy = (fb.miny + fb.maxy) / 2;
+  const ox = W / 2 - cx * sc + S.view.panX, oy = H / 2 - cy * sc + S.view.panY;
+  S.fit = { s0, cx, cy };
+  const T = (p) => fmt(p[0] * sc + ox) + ' ' + fmt(p[1] * sc + oy);
+  const ringD = (r) => 'M' + r.map(T).join('L') + 'Z';
 
-  const ops = []; const bb = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
-  const addBB = (pts) => bboxOf(pts, bb);
+  let items = allItems().filter((it) => isVis(it.lk));
+  items = applyArea(items, R);
+  const ops = [];
   const prj = (r, z) => r.map((p) => V.P(p[0], p[1], z));
-
-  // Light (screen upper-left)
+  const sun = st.sh.on ? sunPos() : null; const sunUp = sun && sun.alt > 1;
+  const shs = sunUp ? [Math.sin(sun.az * D2R), Math.cos(sun.az * D2R)] : null;
   const Lx = -0.8 * V.rx - 0.6 * V.fx, Ly = -0.8 * V.ry - 0.6 * V.fy; const Ll = Math.hypot(Lx, Ly) || 1;
 
-  // 0) ground plane
-  if (st.ground && R) { const r = prj(rectPoly(R)[0].slice(0, 4), 0); ops.push({ t: 'poly', g: '_ground', rings: [r], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 }); addBB(r); }
+  if (st.ground && R) ops.push({ t: 'poly', g: 'Terreno', rings: [prj(rectPoly(R)[0].slice(0, 4), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
+  if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ops.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null }); }
 
-  // 1) raster on ground
-  const rasterOp = S.raster ? rasterMatrix(V, 0) : null;
-  if (rasterOp) ops.push({ t: 'img', g: '_raster', m: rasterOp, href: S.raster.href, W: S.raster.W, H: S.raster.H, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null });
-
-  // 2) flats on the ground (sorted by z); elevated flats join the painter's list
   const emitFlat = (it) => {
-    const gs = G[it.g];
-    if (it.kind === 'line') { const pts = it.pts.map((p) => V.P(p[0], p[1], it.z || 0)); addBB(pts); ops.push({ t: 'line', g: it.g, pts, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash }); }
-    else { const rings = it.poly.map((r) => prj(r, it.z || 0)); rings.forEach(addBB); ops.push({ t: 'poly', g: it.g, rings, fill: gs.fill, fop: gs.fillOp, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash }); }
+    const L = LS[it.lk]; const g = lkName(it.lk);
+    if (it.kind === 'line') ops.push({ t: 'line', g, pts: it.pts.map((p) => V.P(p[0], p[1], it.z || 0)), stroke: L.stroke, sw: L.strokeW, dash: L.dash });
+    else ops.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, it.z || 0)), fill: fillOf(it), fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash });
   };
   const flats = items.filter((i) => i.kind !== 'prism');
   flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || (a.kind === 'line') - (b.kind === 'line')).forEach(emitFlat);
 
-  // 3) prisms (+ elevated flats), painter's algorithm
-  const prisms = items.filter((i) => i.kind === 'prism').map((it) => {
-    const b = itemBBox(it); const cx = (b.minx + b.maxx) / 2, cy = (b.miny + b.maxy) / 2;
-    return { it, d: V.depth(cx, cy, (it.z0 + it.z1) / 2) };
-  });
-  flats.filter((i) => (i.z || 0) > 0.05).forEach((it) => { const b = itemBBox(it); prisms.push({ it, flat: true, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, it.z + 0.05) }); });
-  prisms.sort((a, b) => b.d - a.d);
+  const prismsAll = items.filter((i) => i.kind === 'prism');
+  // projected shadows on the ground (world → z=0), drawn as one translucent group
+  if (sunUp) {
+    const t = Math.tan(sun.alt * D2R); const vx = -shs[0] / t, vy = -shs[1] / t; const polys = [];
+    for (const it of prismsAll) {
+      const sh = (p, z) => V.P(p[0] + vx * z, p[1] + vy * z, 0);
+      for (const ring of it.poly) {
+        polys.push(ring.map((p) => sh(p, it.z1))); if (it.z0 > 0.05) polys.push(ring.map((p) => sh(p, it.z0)));
+        for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; polys.push([sh(a, it.z0), sh(b, it.z0), sh(b, it.z1), sh(a, it.z1)]); }
+      }
+    }
+    ops.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op });
+  }
+
+  const order = prismsAll.map((it) => { const b = itemBBox(it); return { it, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, (it.z0 + it.z1) / 2) }; });
+  flats.filter((i) => (i.z || 0) > 0.05).forEach((it) => { const b = itemBBox(it); order.push({ it, flat: true, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, it.z + 0.05) }); });
+  order.sort((a, b) => b.d - a.d);
 
   let nVol = 0;
-  for (const { it, flat } of prisms) {
+  for (const { it, flat } of order) {
     if (flat) { emitFlat(it); continue; }
     nVol++;
-    const gs = G[it.g]; const faces = [];
-    const shadeOn = st.shade > 0;
+    const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const faces = [];
     if (!V.plan) {
       const walls = [];
-      for (const ring of it.poly) {
-        for (let i = 0; i < ring.length; i++) {
-          const a = ring[i], b = ring[(i + 1) % ring.length];
-          const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy); if (len < 1e-3) continue;
-          const nx = dy / len, ny = -dx / len;
-          const facing = nx * V.fx + ny * V.fy; if (facing > -1e-4) continue;
-          const q = [V.P(a[0], a[1], it.z0), V.P(b[0], b[1], it.z0), V.P(b[0], b[1], it.z1), V.P(a[0], a[1], it.z1)];
-          const lam = (nx * Lx + ny * Ly) / Ll; const tone = shadeOn ? st.shade * (1 - (lam + 1) / 2) * 1.25 : 0;
-          walls.push({ q, d: V.depth((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (it.z0 + it.z1) / 2), tone });
-        }
+      for (const ring of it.poly) for (let i = 0; i < ring.length; i++) {
+        const a = ring[i], b = ring[(i + 1) % ring.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy); if (len < 1e-3) continue;
+        const nx = dy / len, ny = -dx / len; if (nx * V.fx + ny * V.fy > -1e-4) continue;
+        let tone;
+        if (shs) { const lit = nx * shs[0] + ny * shs[1]; tone = st.shade * (lit > 0 ? (1 - lit) * 0.6 : 1); }
+        else { const lam = (nx * Lx + ny * Ly) / Ll; tone = st.shade * (1 - (lam + 1) / 2) * 1.25; }
+        walls.push({ q: [V.P(a[0], a[1], it.z0), V.P(b[0], b[1], it.z0), V.P(b[0], b[1], it.z1), V.P(a[0], a[1], it.z1)], d: V.depth((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (it.z0 + it.z1) / 2), tone });
       }
       walls.sort((a, b) => b.d - a.d);
-      for (const w of walls) {
-        addBB(w.q); faces.push([w.q]);
-        ops.push({ t: 'poly', g: it.g, rings: [w.q], fill: gs.fill === 'none' ? 'none' : mix(gs.fill, '#000000', Math.min(0.9, w.tone)), fop: gs.fillOp, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash, face: 'wall' });
-      }
+      for (const w of walls) { faces.push([w.q]); ops.push({ t: 'poly', g, rings: [w.q], fill: fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.9, Math.max(0, w.tone))), fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash }); }
     }
     if (!V.elev) {
-      const top = it.poly.map((r) => prj(r, it.z1)); top.forEach(addBB); faces.push(top);
-      ops.push({ t: 'poly', g: it.g, rings: top, fill: gs.fill, fop: gs.fillOp, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash, face: 'top' });
-      if (S.raster && st.drapeRoofs) { const m = rasterMatrix(V, it.z1); if (m) ops.push({ t: 'img', g: it.g, m, href: S.raster.href, W: S.raster.W, H: S.raster.H, op: st.rasterOp, clip: top }); }
+      const top = it.poly.map((r) => prj(r, it.z1)); faces.push(top);
+      ops.push({ t: 'poly', g, rings: top, fill, fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash });
+      if (S.raster && st.drapeRoofs && isVis('raster')) { const m = rasterMatrix(V, it.z1); if (m) ops.push({ t: 'img', g, m, op: st.rasterOp, clip: top }); }
     }
     if (!fast && st.contourW > 0 && PC() && faces.length) {
-      try {
-        const polys = faces.filter((f) => Math.abs(sArea(f[0])) > 1e-6).map((f) => f.map((r) => [...r, r[0]]));
-        if (polys.length) { const u = PC().union(...polys); ops.push({ t: 'contour', g: it.g, polys: u, stroke: gs.stroke, sw: st.contourW }); }
-      } catch (e) { /* skip contour */ }
+      try { const polys = faces.filter((f) => Math.abs(sArea(f[0])) > 1e-9).map((f) => f.map((r) => [...r, r[0]])); if (polys.length) ops.push({ t: 'contour', g, polys: PC().union(...polys), stroke: L.stroke, sw: st.contourW }); } catch (e) { /* skip */ }
     }
   }
 
-  if (!isFinite(bb.minx)) {
-    if (rasterOp) { const c = [[0, 0], [S.raster.W, 0], [S.raster.W, S.raster.H], [0, S.raster.H]].map(([u, v]) => [rasterOp[0] * u + rasterOp[2] * v + rasterOp[4], rasterOp[1] * u + rasterOp[3] * v + rasterOp[5]]); addBB(c); }
-    else { drawEmpty(); return; }
-  }
-  // crop rect corners keep framing stable
-  if (R) addBB(prj(rectPoly(R)[0], 0));
-
-  // Frame fit
-  const W = 1600; const bw = Math.max(bb.maxx - bb.minx, 1e-3), bh = Math.max(bb.maxy - bb.miny, 1e-3);
-  const AR = { fit: bw / bh, '16:9': 16 / 9, a3l: 420 / 297, a3p: 297 / 420, '1:1': 1 }[S.frame.fmt] || bw / bh;
-  const H = Math.round(W / AR); const m = S.frame.margin / 100;
-  const sc = Math.min((W * (1 - 2 * m)) / bw, (H * (1 - 2 * m)) / bh);
-  const ox = (W - bw * sc) / 2 - bb.minx * sc, oy = (H - bh * sc) / 2 - bb.miny * sc;
-  const T = (p) => fmt(p[0] * sc + ox) + ' ' + fmt(p[1] * sc + oy);
-  const ringD = (r) => 'M' + r.map(T).join('L') + 'Z';
-
-  // Serialize, grouped as named layers
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const PFX = { vol: 'Volumes', flat: '2D', map: 'Mapa', ctx: 'Entorno' };
-  const layerName = (g) => g === '_ground' ? 'Terreno' : g === '_raster' ? 'Raster' : g.startsWith('ctx|') ? 'Entorno' : `${PFX[g.split('|')[0]] || ''} - ${g.split('|').slice(1).join('|')}`;
+  // serialize
   const idUse = {};
   const safeId = (s) => { const b = 'L_' + s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_'); idUse[b] = (idUse[b] || 0) + 1; return idUse[b] > 1 ? `${b}_${idUse[b]}` : b; };
   let out = ''; let curG = null; let clipN = 0; const defs = [];
-  const open = (g) => { if (g === curG) return; if (curG !== null) out += '</g>'; const nm = layerName(g); out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">`; curG = g; };
+  const open = (g) => { if (g === curG) return; if (curG !== null) out += '</g>'; out += `<g id="${esc(safeId(g))}" data-name="${esc(g)}">`; curG = g; };
   for (const o of ops) {
     open(o.g);
-    const dash = DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : '';
-    const cap = o.dash === 'dot' ? ' stroke-linecap="round"' : '';
+    const dash = DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : ''; const cap = o.dash === 'dot' ? ' stroke-linecap="round"' : '';
     if (o.t === 'poly') {
-      const d = o.rings.map(ringD).join('');
+      const d = o.rings.map(ringD).join(''); const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
       const sw = o.sw > 0 && o.stroke !== 'none' ? ` stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap}` : ' stroke="none"';
-      const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
       out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${o.fop}"` : ''} fill-rule="evenodd"${sw} stroke-linejoin="round"/>`;
     } else if (o.t === 'line') {
-      if (o.sw > 0) out += `<path d="M${o.pts.map(T).join('L')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap || ' stroke-linecap="butt"'} stroke-linejoin="round"/>`;
+      if (o.sw > 0) out += `<path d="M${o.pts.map(T).join('L')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap} stroke-linejoin="round"/>`;
     } else if (o.t === 'contour') {
-      const d = o.polys.map((p) => p.map((r) => ringD(r.slice(0, -1))).join('')).join('');
-      out += `<path d="${d}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}" stroke-linejoin="round"/>`;
+      out += `<path d="${o.polys.map((p) => p.map((r) => ringD(r.slice(0, -1))).join('')).join('')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}" stroke-linejoin="round"/>`;
+    } else if (o.t === 'shadow') {
+      out += `<g opacity="${o.op}">` + o.polys.map((r) => `<path d="${ringD(r)}" fill="${o.color}"/>`).join('') + '</g>';
     } else if (o.t === 'img') {
       const M = o.m; const mm = [M[0] * sc, M[1] * sc, M[2] * sc, M[3] * sc, M[4] * sc + ox, M[5] * sc + oy].map((v) => +v.toFixed(5));
       let clip = '';
       if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}" clip-rule="evenodd"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
-      out += `<g${clip}><image href="${o.href}" width="${o.W}" height="${o.H}" preserveAspectRatio="none" transform="matrix(${mm.join(' ')})" opacity="${o.op}"/></g>`;
+      out += `<g${clip}><image href="${S.raster.href}" width="${S.raster.W}" height="${S.raster.H}" preserveAspectRatio="none" transform="matrix(${mm.join(' ')})" opacity="${o.op}"/></g>`;
     }
   }
   if (curG !== null) out += '</g>';
 
-  // North arrow
   let north = '';
   if (st.north && !V.elev) {
     const a = V.P(0, 0, 0), b = V.P(0, 1, 0); let vx = b[0] - a[0], vy = b[1] - a[1]; const l = Math.hypot(vx, vy) || 1; vx /= l; vy /= l;
-    const cx = W - 70, cy = H - 70, s = 34; const px = -vy, py = vx;
-    const tip = [cx + vx * s, cy + vy * s], bl = [cx - vx * s * 0.6 + px * s * 0.42, cy - vy * s * 0.6 + py * s * 0.42], br = [cx - vx * s * 0.6 - px * s * 0.42, cy - vy * s * 0.6 - py * s * 0.42], mid = [cx - vx * s * 0.25, cy - vy * s * 0.25];
+    const c = S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: W, h: H };
+    const cx2 = c.x + c.w - 64, cy2 = c.y + c.h - 64, s = 30; const px = -vy, py = vx;
     const P2 = (p) => fmt(p[0]) + ' ' + fmt(p[1]);
-    north = `<g id="L_Norte" data-name="Norte"><path d="M${P2(tip)}L${P2(bl)}L${P2(mid)}Z" fill="#1B1B1B"/><path d="M${P2(tip)}L${P2(br)}L${P2(mid)}Z" fill="#FFFFFF" stroke="#1B1B1B" stroke-width="1.2" stroke-linejoin="round"/><text x="${fmt(cx + vx * (s + 16))}" y="${fmt(cy + vy * (s + 16) + 6)}" text-anchor="middle" font-family="Hind, Arial, sans-serif" font-size="18" font-weight="600" fill="#1B1B1B">N</text></g>`;
+    const tip = [cx2 + vx * s, cy2 + vy * s], bl = [cx2 - vx * s * 0.6 + px * s * 0.45, cy2 - vy * s * 0.6 + py * s * 0.45], br = [cx2 - vx * s * 0.6 - px * s * 0.45, cy2 - vy * s * 0.6 - py * s * 0.45], mid = [cx2 - vx * s * 0.2, cy2 - vy * s * 0.2];
+    north = `<g id="L_Norte" data-name="Norte"><path d="M${P2(tip)}L${P2(bl)}L${P2(mid)}Z" fill="#1B1B1B"/><path d="M${P2(tip)}L${P2(br)}L${P2(mid)}Z" fill="#FFFFFF" stroke="#1B1B1B" stroke-width="1.2" stroke-linejoin="round"/><text x="${fmt(cx2 + vx * (s + 15))}" y="${fmt(cy2 + vy * (s + 15) + 6)}" text-anchor="middle" font-family="Hind, Arial, sans-serif" font-size="17" font-weight="600" fill="#1B1B1B">N</text></g>`;
   }
-  const bgRect = st.bgT ? '' : `<rect id="L_Fundo" width="${W}" height="${H}" fill="${st.bg}"/>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs><clipPath id="frameClip"><rect width="${W}" height="${H}"/></clipPath>${defs.join('')}</defs>${bgRect}<g clip-path="url(#frameClip)">${out}</g>${north}</svg>`;
-  S.lastSVG = svg; S.frameW = W; S.frameH = H;
-  const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  const bgRect = st.bgT ? '' : `<rect id="L_Fundo" x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${st.bg}"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join('')}</defs>${bgRect}${out}${north}</svg>`;
+  S.lastSVG = svg;
+  const host = $('#drawing'); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   host.style.background = st.bgT ? 'repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/16px 16px' : st.bg;
-  const nFlat = flats.length;
-  $('#hud').textContent = `${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${nVol} vol · ${nFlat} 2D${S.raster ? ' · raster' : ''}${fast ? ' · rápido' : ''}`;
+  $('#hud').textContent = `${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}`;
+  if (sun) $('#sunInfo').textContent = sunUp ? `Sol: az ${Math.round(sun.az)}°, alt ${Math.round(sun.alt)}°` : 'Sol abaixo do horizonte';
+  drawOverlay();
 }
 function drawEmpty() {
-  const host = $('#drawing'); host.setAttribute('viewBox', '0 0 1600 1000'); host.style.background = 'transparent';
-  host.innerHTML = `<text x="800" y="490" text-anchor="middle" font-family="Hind, sans-serif" font-size="34" fill="#747878">Nada para desenhar ainda</text><text x="800" y="540" text-anchor="middle" font-family="Hind, sans-serif" font-size="24" fill="#747878">Desenhe no Giraffe ou capture camadas na aba Conteúdo</text>`;
+  const host = $('#drawing'); host.style.background = 'transparent';
+  host.innerHTML = `<text x="800" y="490" text-anchor="middle" font-family="Hind, sans-serif" font-size="34" fill="#747878">Nada para desenhar ainda</text><text x="800" y="540" text-anchor="middle" font-family="Hind, sans-serif" font-size="24" fill="#747878">Desenhe no Giraffe ou ligue camadas na aba Conteúdo</text>`;
   S.lastSVG = ''; $('#hud').textContent = 'Sem conteúdo';
 }
 function presetName() { const o = $('#preset').selectedOptions[0]; return o ? o.textContent : ''; }
+
+/* ---------------- CROP OVERLAY ---------------- */
+const RATIOS = { '16:9': 16 / 9, '4:3': 4 / 3, '3:2': 3 / 2, '1:1': 1, a4l: 297 / 210, a4p: 210 / 297, a3l: 420 / 297, a3p: 297 / 420, '9:16': 9 / 16 };
+function cropAR() { const c = S.cropUI; if (c.ratio === 'free') return null; if (c.ratio === 'custom') return (c.cw || 1) / (c.ch || 1); return RATIOS[c.ratio]; }
+function maxCrop(ar, scale = 0.94) {
+  const W = S.W, H = S.H; let w = W * scale, h = H * scale;
+  if (ar) { if (w / h > ar) w = h * ar; else h = w / ar; }
+  return { x: (W - w) / 2, y: (H - h) / 2, w, h };
+}
+function fitRatio() {
+  const c = S.cropUI; const ar = cropAR(); if (!c.rect) { c.rect = maxCrop(ar); return; }
+  if (!ar) return;
+  const r = c.rect; const cx = r.x + r.w / 2, cy = r.y + r.h / 2; const area = r.w * r.h;
+  let w = Math.sqrt(area * ar), h = w / ar;
+  const m = maxCrop(ar, 1); if (w > m.w) { w = m.w; h = m.h; }
+  c.rect = clampRect({ x: cx - w / 2, y: cy - h / 2, w, h });
+}
+function clampRect(r) { r.w = Math.min(r.w, S.W); r.h = Math.min(r.h, S.H); r.x = Math.max(0, Math.min(S.W - r.w, r.x)); r.y = Math.max(0, Math.min(S.H - r.h, r.y)); return r; }
+function pxUnit() { const el = $('#overlay'); const b = el.getBoundingClientRect(); return Math.max(S.W / b.width, S.H / b.height) || 1; }
+function drawOverlay() {
+  const c = S.cropUI; const ov = $('#overlay'); const W = S.W, H = S.H;
+  if (!c.on || !c.rect) { ov.innerHTML = ''; return; }
+  const r = c.rect; const u = pxUnit(); const showH = S.tool === 'crop';
+  const maskFill = c.showOut ? 'rgba(0,0,0,0.5)' : (S.style.bgT ? 'var(--md-sys-color-surface-container)' : S.style.bg);
+  let h = `<path d="M-20 -20H${W + 20}V${H + 20}H-20Z M${r.x} ${r.y}v${r.h}h${r.w}v${-r.h}Z" fill="${maskFill}" fill-rule="evenodd"/>`;
+  h += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="#00ACCD" stroke-width="${2 * u}"${showH ? '' : ` stroke-dasharray="${6 * u} ${4 * u}"`}/>`;
+  if (showH) {
+    const hs = 10 * u;
+    for (const [hx, hy] of handlePts(r)) h += `<rect x="${hx - hs / 2}" y="${hy - hs / 2}" width="${hs}" height="${hs}" fill="#FFFFFF" stroke="#00677C" stroke-width="${1.5 * u}"/>`;
+    h += `<text x="${r.x + 6 * u}" y="${r.y - 6 * u > 14 * u ? r.y - 6 * u : r.y + 16 * u}" font-family="Hind, sans-serif" font-size="${12 * u}" fill="#00ACCD">${Math.round(r.w)}×${Math.round(r.h)}</text>`;
+  }
+  ov.innerHTML = h;
+}
+function handlePts(r) { return [[r.x, r.y], [r.x + r.w / 2, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h / 2], [r.x + r.w, r.y + r.h], [r.x + r.w / 2, r.y + r.h], [r.x, r.y + r.h], [r.x, r.y + r.h / 2]]; }
+const HANDLE_IDS = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+function toFrame(e) { const svg = $('#overlay'); const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const m = svg.getScreenCTM(); return m ? pt.matrixTransform(m.inverse()) : { x: 0, y: 0 }; }
+function cropHit(p) {
+  const r = S.cropUI.rect; if (!r) return 'new'; const tol = 24 * pxUnit();
+  const hp = handlePts(r); for (let i = 0; i < 8; i++) if (Math.abs(p.x - hp[i][0]) < tol && Math.abs(p.y - hp[i][1]) < tol) return HANDLE_IDS[i];
+  if (p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h) return 'move';
+  return 'new';
+}
+function cropDrag(st, p) {
+  const c = S.cropUI; const ar = cropAR(); const o = st.r0; let { x, y, w, h } = o;
+  const dx = p.x - st.p0.x, dy = p.y - st.p0.y; const min = 40;
+  if (st.mode === 'move') { c.rect = clampRect({ x: o.x + dx, y: o.y + dy, w: o.w, h: o.h }); return; }
+  if (st.mode === 'new') {
+    let x0 = st.p0.x, y0 = st.p0.y; let ww = p.x - x0, hh = p.y - y0;
+    if (ar) { const s = Math.max(Math.abs(ww), Math.abs(hh) * ar); ww = Math.sign(ww || 1) * s; hh = Math.sign(hh || 1) * s / ar; }
+    const r = { x: Math.min(x0, x0 + ww), y: Math.min(y0, y0 + hh), w: Math.max(min, Math.abs(ww)), h: Math.max(min / (ar || 1), Math.abs(hh)) };
+    c.rect = clampRect(r); return;
+  }
+  const m = st.mode;
+  let l = o.x, t = o.y, rr = o.x + o.w, b = o.y + o.h;
+  if (m.includes('w')) l = Math.min(rr - min, Math.max(0, o.x + dx));
+  if (m.includes('e')) rr = Math.max(l + min, Math.min(S.W, o.x + o.w + dx));
+  if (m.includes('n')) t = Math.min(b - min, Math.max(0, o.y + dy));
+  if (m.includes('s')) b = Math.max(t + min, Math.min(S.H, o.y + o.h + dy));
+  w = rr - l; h = b - t;
+  if (ar) {
+    if (m === 'n' || m === 's') { const nw = h * ar; l = o.x + o.w / 2 - nw / 2; w = nw; }
+    else if (m === 'e' || m === 'w') { const nh = w / ar; t = o.y + o.h / 2 - nh / 2; h = nh; }
+    else { if (w / h > ar) w = h * ar; else h = w / ar; if (m.includes('w')) l = rr - w; if (m.includes('n')) t = b - h; }
+  }
+  c.rect = clampRect({ x: l, y: t, w, h });
+}
+
 function rasterMatrix(V, z) {
   const r = S.raster; const P = S.projector; if (!r || !P) return null;
   const [[w, s], [e, n]] = r.bounds;
@@ -760,6 +887,7 @@ function rasterMatrix(V, z) {
   const s0 = V.P(p0[0], p0[1], z), s1 = V.P(p1[0], p1[1], z), s2 = V.P(p2[0], p2[1], z);
   return [(s1[0] - s0[0]) / r.W, (s1[1] - s0[1]) / r.W, (s2[0] - s0[0]) / r.H, (s2[1] - s0[1]) / r.H, s0[0], s0[1]];
 }
+
 
 /* ---------------- RPC ---------------- */
 async function call(name, args = [], ms = 20000) {
@@ -770,18 +898,59 @@ async function call(name, args = [], ms = 20000) {
   } catch (e) { log(`${name} ✕ ${e?.message || e}`, true); throw e; }
 }
 
+
 /* ---------------- MAP LAYERS ---------------- */
 function plName(pl) { return pl?.layer_full?.name ?? pl?.name ?? pl?.layer ?? pl?.layerName ?? pl?.id; }
-function listLayers() {
-  const box = $('#layerList'); let names = [];
-  if (S.mode === 'demo') names = Object.keys(DEMO.mapLayers);
-  else {
-    const pls = S.gs?.get('projectLayers') || [];
-    if (pls[0]) log('projectLayers[0] chaves: ' + Object.keys(pls[0]).join(', '));
-    names = [...new Set(pls.map(plName).filter(Boolean).map(String))];
+function projectLayerNames() {
+  if (S.mode === 'demo') return Object.keys(DEMO.mapLayers);
+  const pls = S.gs?.get('projectLayers') || [];
+  return [...new Set((Array.isArray(pls) ? pls : Object.values(pls)).map(plName).filter(Boolean).map(String))];
+}
+function toFeatures(r) {
+  if (!r) return [];
+  if (Array.isArray(r)) return r.flatMap((x) => (x?.type === 'FeatureCollection' ? x.features : [x]));
+  if (r.type === 'FeatureCollection') return r.features || [];
+  if (r.features) return r.features; if (r.data) return toFeatures(r.data); if (r.geojson) return toFeatures(r.geojson);
+  return [];
+}
+function logShape(tag, feats) {
+  const f = feats[0]; if (!f) { log(`${tag}: 0 feições`); return; }
+  log(`${tag}: ${feats.length} feições · chaves[0]: ${Object.keys(f).join(',')} · geometria: ${f.geometry ? f.geometry.type : 'AUSENTE'}`);
+}
+async function fetchLayerFeatures(n, SL) {
+  // 1) getLayerContents (GeoJSON do layer do projeto)
+  for (const args of [[n], [n, undefined]]) {
+    try { const feats = toFeatures(await call('getLayerContents', args, 45000)); logShape(`getLayerContents("${n}")`, feats); if (feats.some((f) => f?.geometry)) return feats; } catch (e) { /* next */ }
   }
-  const prev = new Set($$('#layerList input:checked').map((i) => i.value));
-  box.innerHTML = names.length ? names.map((n, i) => `<label class="check"><input type="checkbox" value="${n.replace(/"/g, '&quot;')}" ${prev.has(n) || S.mapItems[n] ? 'checked' : ''}>${n}${S.mapItems[n] ? ` <span class="badge">${S.mapItems[n].length}</span>` : ''}</label>`).join('') : '<div class="empty">Nenhuma camada no projeto.</div>';
+  // 2) queryRenderedFeatures (só o que está visível na tela)
+  let ids = [];
+  try { ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; } catch (e) { /* */ }
+  if (!ids.length) ids = SL.filter((l) => String(l.id).includes(n) || l.source === n).map((l) => l.id);
+  log(`Layers Mapbox de "${n}": ${ids.join(', ') || 'nenhuma'}`);
+  if (!ids.length) return [];
+  const feats = await queryFeatures(ids); logShape(`queryRenderedFeatures("${n}")`, feats);
+  return feats;
+}
+async function captureMapLayer(n) {
+  if (S.mode === 'demo') { S.mapItems[n] = DEMO.buildLayer(n); return; }
+  const SL = await styleLayers();
+  const feats = await fetchLayerFeatures(n, SL);
+  const styleById = Object.fromEntries(SL.map((l) => [l.id, l]));
+  let ext = null; try { const ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; ext = ids.map((i) => styleById[i]).find((l) => l?.type === 'fill-extrusion') || null; } catch (e) { /* */ }
+  const P = ensureProjector(firstCoord(feats.find((f) => f?.geometry)?.geometry)); const items = [];
+  for (const f of dedupe(feats)) {
+    if (!f?.geometry) continue;
+    const lid = f.layer?.id || f.layer; const sl = (typeof lid === 'string' && styleById[lid]) || ext || {};
+    let z1 = 0, z0 = 0;
+    if (sl.type === 'fill-extrusion') {
+      const h = evalExpr(sl.paint?.['fill-extrusion-height'], f.properties), b = evalExpr(sl.paint?.['fill-extrusion-base'], f.properties);
+      if (isFinite(h) && h > 0) { z1 = h; z0 = isFinite(b) ? b : 0; }
+    }
+    const color = sl.paint?.['fill-color'] || sl.paint?.['fill-extrusion-color'] || sl.paint?.['line-color'];
+    pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: f.properties?.color ?? (typeof color === 'string' ? color : null) } }, 'map', P, { layer: n, z0, z1 });
+  }
+  S.mapItems[n] = items; log(`Camada "${n}": ${feats.length} feições → ${items.length} itens`);
+  if (!items.length) toast(`"${n}": nada lido. Veja o diagnóstico.`);
 }
 async function styleLayers() {
   let L = S.gs?.get('mapContent')?.layers;
@@ -790,62 +959,24 @@ async function styleLayers() {
 }
 function evalExpr(e, p) {
   if (typeof e === 'number') return e; if (typeof e === 'string') return +e;
-  if (!Array.isArray(e)) return NaN; const [op, ...a] = e;
-  const ev = (x) => evalExpr(x, p);
+  if (!Array.isArray(e)) return NaN; const [op, ...a] = e; const ev = (x) => evalExpr(x, p);
   switch (op) {
     case 'get': return +(p?.[a[0]]);
-    case 'to-number': case 'number': for (const x of a) { const v = ev(x); if (isFinite(v)) return v; } return NaN;
-    case 'coalesce': for (const x of a) { const v = ev(x); if (isFinite(v)) return v; } return NaN;
+    case 'to-number': case 'number': case 'coalesce': for (const x of a) { const v = ev(x); if (isFinite(v)) return v; } return NaN;
     case '*': return a.reduce((s, x) => s * ev(x), 1);
     case '+': return a.reduce((s, x) => s + ev(x), 0);
     case '-': return a.length === 1 ? -ev(a[0]) : ev(a[0]) - ev(a[1]);
     case '/': return ev(a[0]) / ev(a[1]);
-    case 'interpolate': case 'step': return NaN;
     default: return NaN;
   }
 }
-async function captureLayers() {
-  const names = $$('#layerList input:checked').map((i) => i.value);
-  if (!names.length) { toast('Marque ao menos uma camada.'); return; }
-  busy(true, 'Capturando camadas…');
-  try {
-    if (S.mode === 'demo') { for (const n of names) S.mapItems[n] = buildDemoLayer(n); }
-    else {
-      const SL = await styleLayers();
-      for (const n of names) {
-        let ids = [];
-        try { ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; } catch (e) { /* fallback */ }
-        if (!ids.length) ids = SL.filter((l) => String(l.id).includes(n) || l.source === n).map((l) => l.id);
-        if (!ids.length) { log(`Sem layers Mapbox para "${n}"`, true); continue; }
-        const feats = await queryFeatures(ids);
-        const items = []; const P = ensureProjector(firstCoord(feats[0]?.geometry));
-        const styleById = Object.fromEntries(SL.map((l) => [l.id, l]));
-        for (const f of dedupe(feats)) {
-          const lid = f.layer?.id || f.layer; const sl = (typeof lid === 'string' && styleById[lid]) || f.layer || {};
-          let z1 = null, z0 = 0;
-          if (sl.type === 'fill-extrusion') {
-            const h = evalExpr(sl.paint?.['fill-extrusion-height'], f.properties), b = evalExpr(sl.paint?.['fill-extrusion-base'], f.properties);
-            if (isFinite(h) && h > 0) { z1 = h; z0 = isFinite(b) ? b : 0; }
-          }
-          const color = sl.paint?.['fill-color'] || sl.paint?.['fill-extrusion-color'] || sl.paint?.['line-color'];
-          pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: typeof color === 'string' ? color : null } }, 'map', P, { layer: n, z0, z1: z1 ?? 0 });
-        }
-        S.mapItems[n] = items; log(`Camada "${n}": ${feats.length} feições → ${items.length} itens`);
-      }
-    }
-    listLayers(); buildGroupsUI(); render();
-    toast('Camadas capturadas.');
-  } catch (e) { toast('Falha ao capturar: ' + e.message); }
-  busy(false);
-}
 async function queryFeatures(ids) {
   let r = null;
-  try { r = await call('queryRenderedFeatures', [{ layers: ids }]); } catch (e) { /* try alt */ }
-  if (!Array.isArray(r) && !(r && r.features)) { try { r = await call('queryRenderedFeatures', [undefined, { layers: ids }]); } catch (e) { r = []; } }
-  return Array.isArray(r) ? r : (r?.features || []);
+  try { r = await call('queryRenderedFeatures', [{ layers: ids }]); } catch (e) { /* alt */ }
+  if (!toFeatures(r).length) { try { r = await call('queryRenderedFeatures', [undefined, { layers: ids }]); } catch (e) { /* */ } }
+  return toFeatures(r);
 }
 function dedupe(feats) {
-  // merge tile-split pieces sharing an id (polygons only)
   const byId = new Map(); const rest = []; const pc = PC();
   for (const f of feats) {
     if (!f?.geometry) continue;
@@ -856,38 +987,35 @@ function dedupe(feats) {
   }
   for (const arr of byId.values()) {
     if (arr.length === 1) { rest.push(arr[0]); continue; }
-    try {
-      const geoms = arr.map((f) => (f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates));
-      const u = pc.union(...geoms);
-      rest.push({ ...arr[0], geometry: { type: 'MultiPolygon', coordinates: u } });
-    } catch (e) { rest.push(...arr); }
+    try { const u = pc.union(...arr.map((f) => (f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates))); rest.push({ ...arr[0], geometry: { type: 'MultiPolygon', coordinates: u } }); }
+    catch (e) { rest.push(...arr); }
   }
   return rest;
 }
 
 /* ---------------- CONTEXT (base map buildings) ---------------- */
 async function captureContext() {
-  busy(true, 'Capturando entorno…');
-  try {
-    if (S.mode === 'demo') S.ctxItems = DEMO.context();
-    else {
-      const SL = await styleLayers();
-      const ids = SL.filter((l) => l['source-layer'] === 'building' || /building/i.test(l.id)).map((l) => l.id);
-      log('Layers de edifícios: ' + (ids.join(', ') || 'nenhuma'));
-      if (!ids.length) throw new Error('Nenhuma camada de edifícios no mapa base.');
-      const feats = dedupe(await queryFeatures(ids));
-      const P = ensureProjector(firstCoord(feats[0]?.geometry)); const items = [];
-      for (const f of feats) {
-        const p = f.properties || {};
-        const h = +(p.height ?? p.render_height ?? 0) || 6, b = +(p.min_height ?? p.render_min_height ?? 0) || 0;
-        pushFeature(items, f, 'ctx', P, { z0: b, z1: Math.max(h, b + 0.5), layer: 'Entorno' });
-      }
-      S.ctxItems = items.filter((i) => i.kind === 'prism');
-      log(`Entorno: ${feats.length} feições → ${S.ctxItems.length} volumes`);
+  if (S.mode === 'demo') { S.ctxItems = DEMO.context(); return; }
+  const SL = await styleLayers();
+  const ids = SL.filter((l) => /build/i.test(l['source-layer'] || '') || /build/i.test(l.id)).map((l) => l.id);
+  log(`Estilo do mapa: ${SL.length} layers · edifícios: ${ids.join(', ') || 'nenhuma'}`);
+  let feats = [];
+  if (ids.length) feats = await queryFeatures(ids);
+  logShape('Entorno queryRenderedFeatures', feats);
+  if (!feats.some((f) => f?.geometry)) {
+    for (const args of [['building'], [{ sourceLayer: 'building' }]]) {
+      try { const d = await call('getSourceLayerDetails', args, 20000); const r = toFeatures(await call('getVectorLayerContents', [d], 60000)); logShape('getVectorLayerContents', r); if (r.some((f) => f?.geometry)) { feats = r; break; } } catch (e) { /* next */ }
     }
-    buildGroupsUI(); render(); toast(`Entorno: ${S.ctxItems.length} edifícios.`);
-  } catch (e) { toast(e.message); }
-  busy(false);
+  }
+  feats = dedupe(feats);
+  const P = ensureProjector(firstCoord(feats[0]?.geometry)); const items = [];
+  for (const f of feats) {
+    const p = f.properties || {}; const h = +(p.height ?? p.render_height ?? 0) || 6, b = +(p.min_height ?? p.render_min_height ?? 0) || 0;
+    pushFeature(items, f, 'ctx', P, { z0: b, z1: Math.max(h, b + 0.5), layer: 'Entorno' });
+  }
+  S.ctxItems = items.filter((i) => i.kind === 'prism');
+  log(`Entorno: ${S.ctxItems.length} volumes`);
+  if (!S.ctxItems.length) toast('Entorno: nada lido. Enquadre a área no Giraffe com os edifícios 3D visíveis e veja o diagnóstico.');
 }
 
 /* ---------------- RASTER ---------------- */
@@ -925,7 +1053,7 @@ async function captureRaster() {
       log(`Raster ${img.naturalWidth}×${img.naturalHeight}px · limites ${JSON.stringify(bounds)}`);
       ensureProjector(bounds[0]);
     }
-    render(); toast('Raster aplicado no terreno.');
+    S.vis.raster = true; render(); toast('Imagem do mapa aplicada no terreno.');
   } catch (e) { toast('Falha na captura: ' + e.message); }
   busy(false);
 }
@@ -935,7 +1063,7 @@ async function importRaster(file) {
     let bounds;
     if (S.mode === 'demo') bounds = DEMO.rasterBounds; else bounds = await currentMapBounds();
     S.raster = { href, W: img.naturalWidth, H: img.naturalHeight, bounds };
-    ensureProjector(bounds[0]); render();
+    ensureProjector(bounds[0]); S.vis.raster = true; buildLayerUI(); render();
     toast('Imagem posicionada nos limites atuais do mapa (norte para cima).');
   } catch (e) { toast('Falha ao importar: ' + e.message); }
 }
@@ -956,6 +1084,7 @@ async function activateView() {
     toast('Vista ativada. Confira norte para cima e capture.');
   } catch (e) { toast('Não foi possível ativar a vista.'); }
 }
+
 
 /* ---------------- GLTF PROBE (V02) — análise solar em fachadas? ---------------- */
 async function gltfSource(r) {
@@ -1052,267 +1181,341 @@ async function probeGltf() {
   busy(false);
 }
 
-/* ---------------- CROP ACTIONS ---------------- */
-async function useMapCrop() {
-  if (S.mode === 'demo') { S.crop.mapRect = { minx: -110, miny: -90, maxx: 110, maxy: 90 }; }
+
+/* ---------------- AREA ACTIONS ---------------- */
+async function useMapArea() {
+  if (S.mode === 'demo') { S.area.mapRect = { minx: -110, miny: -90, maxx: 110, maxy: 90 }; }
   else {
     const b = await currentMapBounds(); const P = ensureProjector(b[0]);
     const pts = [[b[0][0], b[0][1]], [b[1][0], b[0][1]], [b[1][0], b[1][1]], [b[0][0], b[1][1]]].map((c) => P.forward(c));
-    S.crop.mapRect = bboxOf(pts);
+    S.area.mapRect = bboxOf(pts);
   }
-  S.crop.mode = 'map'; syncUI(); render(); persist();
+  S.area.mode = 'map'; syncUI(); render(); persist();
 }
-async function drawCrop() {
-  if (S.mode === 'demo') { S.crop.drawn = { minx: -70, miny: -60, maxx: 80, maxy: 70 }; S.crop.mode = 'drawn'; syncUI(); render(); return; }
+async function drawArea() {
+  if (S.mode === 'demo') { S.area.drawn = { minx: -70, miny: -60, maxx: 80, maxy: 70 }; S.area.mode = 'drawn'; syncUI(); render(); return; }
   toast('Desenhe a área no mapa do Giraffe.');
   try {
     const r = await call('getUserDrawnPolygon', [], 180000);
     const g = r?.geometry || r?.features?.[0]?.geometry || (r?.type === 'Polygon' ? r : null);
     if (!g) throw new Error('nenhum polígono');
     const P = ensureProjector(firstCoord(g)); const parts = geomToParts(g, P);
-    S.crop.drawn = bboxOf(parts.polys[0][0]); S.crop.mode = 'drawn'; syncUI(); render(); persist();
+    S.area.drawn = bboxOf(parts.polys[0][0]); S.area.mode = 'drawn'; syncUI(); render(); persist();
   } catch (e) { toast('Desenho cancelado ou indisponível.'); }
 }
 
-/* ---------------- EXPORT ---------------- */
-function download(name, blob) {
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
-  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+
+/* ---------------- VERSIONS ---------------- */
+function renderVersions() {
+  $('#verSel').innerHTML = S.versions.map((v, i) => `<option value="${i}" ${i === S.av ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
+  $('#verList').innerHTML = S.versions.map((v, i) => `<div class="saved-item${i === S.av ? ' on' : ''}">
+    <input type="text" value="${esc(v.name)}" data-ren="${i}" aria-label="Nome da versão ${i + 1}">
+    <button class="icon" data-act="go" data-i="${i}" aria-label="Abrir ${esc(v.name)}" title="Abrir"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="icon" data-act="dup" data-i="${i}" aria-label="Duplicar ${esc(v.name)}" title="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
+    <button class="icon" data-act="del" data-i="${i}" aria-label="Excluir ${esc(v.name)}" title="Excluir" ${S.versions.length < 2 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('');
 }
-const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-function exportSVG() {
-  render(false); if (!S.lastSVG) { toast('Nada para exportar.'); return; }
-  const svg = S.lastSVG.replace('<svg ', '<svg data-generator="KV Axonometria Beta ' + VERSION + '" ');
-  download(`KV_axonometria_${stamp()}.svg`, new Blob([svg], { type: 'image/svg+xml' })); toast('SVG baixado.');
+function switchVersion(i) { setActive(i); renderVersions(); syncUI(); buildLayerUI(); render(); persist(); ensureCapturedForVisible(); }
+function duplicateVersion(i) {
+  const v = S.versions[i]; const n = S.versions.length + 1;
+  S.versions.splice(i + 1, 0, { id: 'v' + Date.now(), name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis } });
+  switchVersion(i + 1); toast(`Nova versão “Vista ${n}” criada a partir de “${v.name}”.`);
 }
-async function exportPNG() {
-  render(false); if (!S.lastSVG) { toast('Nada para exportar.'); return; }
-  busy(true, 'Gerando PNG…');
+
+/* ---------------- LAYERS UI (Conteúdo) ---------------- */
+const ICON_RELOAD = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg>';
+function lyrRow(lk, count, reload) {
+  const on = isVis(lk) && hasData(lk); const nm = esc(lkName(lk));
+  return `<div class="lyr"><label class="check"><input type="checkbox" data-vis="${esc(lk)}" ${on ? 'checked' : ''}><span class="nm">${nm}</span></label><span class="ct">${count}</span>${reload ? `<button class="icon" data-reload="${esc(lk)}" aria-label="Ler de novo ${nm}" title="Ler de novo">${ICON_RELOAD}</button>` : ''}</div>`;
+}
+function buildLayerUI() {
+  const dl = drawLayers(); let h = '';
+  const dkeys = Object.keys(dl).sort();
+  h += `<div class="lyr-sec"><h3><span>Desenho do projeto</span><span>${dkeys.length}</span></h3>${dkeys.map((k) => lyrRow(k, dl[k].n)).join('') || '<div class="lyr"><span class="check">Nenhum elemento desenhado</span></div>'}</div>`;
+  const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])];
+  h += `<div class="lyr-sec"><h3><span>Camadas do Giraffe</span><span>${names.length}</span></h3>${names.map((n) => lyrRow('map|' + n, S.mapItems[n] ? S.mapItems[n].length : '—', true)).join('') || '<div class="lyr"><span class="check">Nenhuma camada no projeto</span></div>'}</div>`;
+  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>2</span></h3>${lyrRow('ctx|Entorno', S.ctxItems.length ? S.ctxItems.length : '—', true).replace('>Entorno<', '>Edifícios do entorno<')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
+  $('#layerUI').innerHTML = h;
+}
+async function captureLk(lk) {
+  busy(true, 'Lendo ' + lkName(lk) + '…');
   try {
-    const k = +$('#pngScale').value; const W = S.frameW * k, H = S.frameH * k;
-    const img = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(S.lastSVG));
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0, W, H);
-    const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
-    download(`KV_axonometria_${stamp()}.png`, blob); toast(`PNG ${W}×${H} baixado.`);
-  } catch (e) { toast('Falha ao gerar PNG: ' + e.message); }
-  busy(false);
+    if (lk === 'raster') await captureRaster(true);
+    else if (lk.startsWith('ctx|')) await captureContext();
+    else if (lk.startsWith('map|')) await captureMapLayer(lk.slice(4));
+  } catch (e) { toast('Falha: ' + e.message); }
+  busy(false); buildLayerUI(); buildStyleUI(); render();
 }
-function styleSnapshot() { return { app: 'KV Axonometria', version: VERSION, view: S.view, frame: S.frame, style: S.style, groups: S.groups, crop: { mode: S.crop.mode, buffer: S.crop.buffer } }; }
-function loadSnapshot(o) {
-  if (!o) return;
-  if (o.view) Object.assign(S.view, o.view); if (o.frame) Object.assign(S.frame, o.frame);
-  if (o.style) Object.assign(S.style, o.style); if (o.groups) S.groups = { ...S.groups, ...o.groups };
-  if (o.crop) { S.crop.mode = o.crop.mode ?? S.crop.mode; S.crop.buffer = o.crop.buffer ?? S.crop.buffer; }
+async function ensureCapturedForVisible() {
+  for (const lk of Object.keys(S.vis)) if (S.vis[lk] && !hasData(lk) && lk !== 'raster' && !lk.startsWith('draw|')) await captureLk(lk);
 }
 
-/* ---------------- PERSISTENCE ---------------- */
-function storeKey() { const id = S.gs?.get('project')?.properties?.id ?? S.gs?.get('project')?.id ?? 'demo'; return 'kv-axono:' + id; }
-let persistT;
-function persist() {
-  clearTimeout(persistT);
-  persistT = setTimeout(() => { try { localStorage.setItem(storeKey(), JSON.stringify({ ...styleSnapshot(), saved: S.saved, autoSync: S.autoSync })); } catch (e) { /* storage blocked */ } }, 400);
-}
-function restore() {
-  try { const o = JSON.parse(localStorage.getItem(storeKey()) || 'null'); if (o) { loadSnapshot(o); S.saved = o.saved || []; S.autoSync = o.autoSync ?? true; log('Preferências restauradas'); } } catch (e) { /* ignore */ }
-}
-
-/* ---------------- UI ---------------- */
-function bindRange(id, get, set, after) {
-  const r = $('#' + id), n = $('#' + id + 'N');
-  const upd = (v, fast) => { set(+v); r.value = v; if (n) n.value = v; after?.(fast); };
-  r.addEventListener('input', () => upd(r.value, true));
-  r.addEventListener('change', () => upd(r.value, false));
-  n?.addEventListener('change', () => upd(n.value, false));
-  r._sync = () => { r.value = get(); if (n) n.value = get(); };
-}
-function syncUI() {
-  $('#preset').value = S.view.preset;
-  $$('input[type=range]').forEach((r) => r._sync?.());
-  $('#fEl').hidden = S.view.proj !== 'ortho'; $('#fK').hidden = S.view.proj === 'ortho';
-  $('#frame').value = S.frame.fmt; $('#cropMode').value = S.crop.mode;
-  $('#fBuffer').hidden = S.crop.mode !== 'project';
-  $('#groupBy').value = S.style.groupBy; $('#palette').value = S.style.palette;
-  $('#bg').value = S.style.bg; $('#bgT').checked = S.style.bgT; $('#ground').checked = S.style.ground; $('#groundFill').value = S.style.groundFill;
-  $('#north').checked = S.style.north; $('#drapeRoofs').checked = S.style.drapeRoofs; $('#autoSync').checked = S.autoSync;
-  $$('.quad button').forEach((b) => b.setAttribute('aria-pressed', String(Math.round(S.view.az) === +b.dataset.az)));
-}
-function setPreset(p) {
-  S.view.preset = p; const d = PRESETS[p]; if (!d) { syncUI(); return; }
-  S.view.proj = d.proj; if (d.el != null) S.view.el = d.el; if (d.k) S.view.k = d.k;
-  const quad = Math.round((S.view.az - (S.view._off || 0) - 45) / 90) * 90 + 45;
-  S.view._off = d.azOff; S.view.az = (((quad + d.azOff) % 360) + 360) % 360;
-  syncUI(); render(); persist();
-}
-function setAz(a) { S.view.az = ((a % 360) + 360) % 360; }
-function buildGroupsUI() {
-  ensureGroups();
-  const host = $('#groupsUI'); const secs = [['vol', 'Volumes do projeto'], ['flat', 'Elementos 2D'], ['map', 'Camadas do mapa'], ['ctx', 'Entorno']];
-  const openSet = new Set($$('#groupsUI details[open]').map((d) => d.dataset.g));
+/* ---------------- STYLE UI ---------------- */
+const DASH_OPTS = [['solid', 'Contínuo'], ['dash', 'Tracejado'], ['dot', 'Pontilhado'], ['dashdot', 'Traço-ponto']];
+function buildStyleUI() {
+  ensureStyles();
+  const cm = S.style.colorMode; const openSet = new Set($$('#styleUI details[open]').map((d) => d.dataset.lk));
+  $('#styleHint').textContent = cm === 'giraffe' ? 'Cada layer mostra as cores originais do Giraffe; troque cada uma. Opacidade, linha e traço valem para o layer todo.' : cm === 'uso' ? 'Volumes coloridos pelo uso (lista abaixo). Opacidade, linha e traço por layer.' : 'Cada layer tem sua cor de preenchimento, opacidade, linha e traço.';
+  // usages
+  if (cm === 'uso') {
+    const u = {}; S.items.forEach((i) => { u[i.usage] = (u[i.usage] || 0) + 1; });
+    $('#usageUI').innerHTML = `<div class="lyr-sec"><h3><span>Usos</span><span>${Object.keys(u).length}</span></h3><div class="card">${Object.keys(u).sort().map((k) => `<div class="crow"><input type="color" data-usage="${esc(k)}" value="${toHex(S.usageMap[k])}" aria-label="Cor do uso ${esc(k)}"><span class="ct">${esc(k)} · ${u[k]}</span></div>`).join('')}</div></div>`;
+  } else $('#usageUI').innerHTML = '';
+  const all = allItems(); const by = {}; all.forEach((i) => { (by[i.lk] = by[i.lk] || []).push(i); });
+  const secs = [['draw|', 'Desenho do projeto'], ['map|', 'Camadas do Giraffe'], ['ctx|', 'Mapa base']];
   let h = '';
-  for (const [k, title] of secs) {
-    const keys = Object.keys(S._counts || {}).filter((g) => g.startsWith(k + '|')).sort();
-    if (!keys.length) continue;
+  for (const [pfx, title] of secs) {
+    const keys = Object.keys(by).filter((k) => k.startsWith(pfx)).sort(); if (!keys.length) continue;
     h += `<div class="grp-sec"><h3><span>${title}</span><span>${keys.length}</span></h3>`;
-    for (const g of keys) {
-      const st = S.groups[g]; const name = g.split('|').slice(1).join('|'); const id = 'g' + Math.abs([...g].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
-      const isLineOnly = allItems().filter((i) => i.g === g).every((i) => i.kind === 'line');
-      const nm = name.replace(/</g, '&lt;');
-      h += `<div class="grp${st.visible ? '' : ' off'}">
-        <button class="eye" data-g="${g.replace(/"/g, '&quot;')}" aria-pressed="${st.visible}" aria-label="${st.visible ? 'Ocultar' : 'Mostrar'} ${nm}">${st.visible ? '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 20 20 4"/></svg>'}</button>
-        <details data-g="${g.replace(/"/g, '&quot;')}" ${openSet.has(g) ? 'open' : ''}><summary><span class="sw" style="background:${isLineOnly ? 'transparent' : st.fill};border-color:${st.stroke}"></span><span class="nm">${nm}</span><span class="ct">${S._counts[g]}</span></summary>
-        <div class="body">
-          ${isLineOnly ? '' : `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${st.fill}"><input type="range" data-k="fillOp" min="0" max="1" step="0.05" value="${st.fillOp}" aria-label="Opacidade do preenchimento"></div></div>`}
-          <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${st.stroke}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${st.strokeW}" aria-label="Espessura da linha"></div></div>
-          <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${[['solid', 'Contínuo'], ['dash', 'Tracejado'], ['dot', 'Pontilhado'], ['dashdot', 'Traço-ponto']].map(([v, l]) => `<option value="${v}" ${st.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
-          ${st.orig ? `<div class="row"><button data-act="orig">Usar cor original</button></div>` : ''}
-        </div></details></div>`;
+    for (const lk of keys) {
+      const L = S.lstyle[lk]; const its = by[lk]; const lineOnly = its.every((i) => i.kind === 'line'); const id = 'g' + Math.abs([...lk].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
+      const colors = {}; its.forEach((i) => { if (i.color) colors[i.color] = (colors[i.color] || 0) + 1; });
+      const showFill = !lineOnly && (cm === 'paleta' || lk.startsWith('ctx|') || (cm === 'uso' && lk.startsWith('map|')));
+      const sw = lineOnly ? 'transparent' : (cm === 'paleta' || lk.startsWith('ctx|') ? L.fill : fillOf(its[0]));
+      h += `<div class="grp${isVis(lk) ? '' : ' off'}"><details data-lk="${esc(lk)}" ${openSet.has(lk) ? 'open' : ''}><summary><span class="sw" style="background:${sw};border-color:${L.stroke}"></span><span class="nm">${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span><span class="ct">${its.length}</span></summary><div class="body">
+        ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
+        ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
+        <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
+        <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
+        ${cm === 'giraffe' && !lineOnly && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
+      </div></details></div>`;
     }
     h += '</div>';
   }
-  host.innerHTML = h || '<p class="hint">Os grupos aparecem aqui depois que houver conteúdo.</p>';
-  updateSummary();
-}
-function updateSummary() {
-  const it = S.items; const v = it.filter((i) => i.kind === 'prism').length; const f = it.length - v;
-  const m = Object.values(S.mapItems).reduce((a, b) => a + b.length, 0);
-  $('#srcSummary').innerHTML = `<strong>${v}</strong> volumes · <strong>${f}</strong> elementos 2D · <strong>${m}</strong> feições de camadas · <strong>${S.ctxItems.length}</strong> edifícios do entorno${S.raster ? ' · raster ativo' : ''}`;
-}
-function renderSaved() {
-  const box = $('#savedList');
-  box.innerHTML = S.saved.length ? S.saved.map((s, i) => `<div class="saved-item"><button class="name" data-i="${i}" aria-label="Aplicar vista ${s.name.replace(/"/g, '&quot;')}">${s.name.replace(/</g, '&lt;')}</button><button class="icon" data-del="${i}" aria-label="Excluir vista ${s.name.replace(/"/g, '&quot;')}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('') : '<div class="empty">Nenhuma vista salva.</div>';
+  $('#styleUI').innerHTML = h || '<p class="hint">Os layers aparecem aqui quando houver conteúdo.</p>';
 }
 
+/* ---------------- EXPORT ---------------- */
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+const fileBase = () => `KV_axonometria_${(S.versions[S.av]?.name || 'vista').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_')}_${stamp()}`;
+function croppedSVG() {
+  render(false); if (!S.lastSVG) return null;
+  const c = S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: S.W, h: S.H };
+  const r = { x: +c.x.toFixed(2), y: +c.y.toFixed(2), w: +c.w.toFixed(2), h: +c.h.toFixed(2) };
+  return { svg: S.lastSVG.replace(/^<svg[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-generator="KV Axonometria Beta ${VERSION}" viewBox="${r.x} ${r.y} ${r.w} ${r.h}" width="${Math.round(r.w)}" height="${Math.round(r.h)}">`), w: r.w, h: r.h };
+}
+function exportSVG() { const o = croppedSVG(); if (!o) { toast('Nada para exportar.'); return; } download(fileBase() + '.svg', new Blob([o.svg], { type: 'image/svg+xml' })); toast('SVG baixado.'); }
+async function pngBlob() {
+  const o = croppedSVG(); if (!o) return null; const W = +$('#pngW').value; const H = Math.round(W * o.h / o.w);
+  const img = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(o.svg));
+  const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').drawImage(img, 0, 0, W, H);
+  return new Promise((r) => c.toBlob(r, 'image/png'));
+}
+async function exportPNG() { busy(true, 'Gerando PNG…'); try { const b = await pngBlob(); if (b) { download(fileBase() + '.png', b); toast('PNG baixado.'); } } catch (e) { toast('Falha: ' + e.message); } busy(false); }
+async function exportAllPNG() {
+  busy(true, 'Gerando PNGs…'); const cur = S.av;
+  try { for (let i = 0; i < S.versions.length; i++) { setActive(i); await ensureCapturedForVisible(); syncUIQuick(); const b = await pngBlob(); if (b) download(fileBase() + '.png', b); await sleep(400); } }
+  catch (e) { toast('Falha: ' + e.message); }
+  setActive(cur); renderVersions(); syncUI(); buildLayerUI(); render(); busy(false); toast('PNGs de todas as versões baixados.');
+}
+
+/* ---------------- PERSISTENCE ---------------- */
+function snapshot() { return { app: 'KV Axonometria', version: VERSION, common: { style: S.style, lstyle: S.lstyle, colorMap: S.colorMap, usageMap: S.usageMap, cropUI: S.cropUI, area: { mode: S.area.mode, buffer: S.area.buffer }, autoSync: S.autoSync }, versions: S.versions, av: S.av }; }
+function loadSnapshot(o) {
+  if (!o) return; const c = o.common || {};
+  if (c.style) { const sh = { ...S.style.sh, ...(c.style.sh || {}) }; Object.assign(S.style, c.style, { sh }); }
+  if (c.lstyle) S.lstyle = { ...S.lstyle, ...c.lstyle }; if (c.colorMap) S.colorMap = c.colorMap; if (c.usageMap) S.usageMap = { ...S.usageMap, ...c.usageMap };
+  if (c.cropUI) Object.assign(S.cropUI, c.cropUI); if (c.area) Object.assign(S.area, c.area); if (c.autoSync != null) S.autoSync = c.autoSync;
+  if (Array.isArray(o.versions) && o.versions.length) { S.versions = o.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); setActive(o.av || 0); }
+}
+function storeKey() { const p = S.gs?.get('project'); const id = p?.properties?.id ?? p?.id ?? (S.mode === 'demo' ? 'demo' : 'sem-id'); return 'kv-axono:' + id; }
+let persistT;
+function persist() { clearTimeout(persistT); persistT = setTimeout(() => { try { localStorage.setItem(storeKey(), JSON.stringify(snapshot())); } catch (e) { /* */ } }, 400); }
+function restore() { try { const o = JSON.parse(localStorage.getItem(storeKey()) || 'null'); if (o && o.common) { loadSnapshot(o); log('Configuração restaurada (' + S.versions.length + ' versões)'); } } catch (e) { /* */ } }
+
+/* ---------------- UI WIRING ---------------- */
+function bindRange(id, get, set, after) {
+  const r = $('#' + id), n = $('#' + id + 'N');
+  const upd = (v, fast) => { set(+v); r.value = v; if (n) n.value = v; after?.(fast); };
+  r.addEventListener('input', () => upd(r.value, true)); r.addEventListener('change', () => upd(r.value, false));
+  n?.addEventListener('change', () => upd(n.value, false));
+  r._sync = () => { r.value = get(); if (n) n.value = get(); };
+}
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+function syncUI() {
+  const v = S.view, st = S.style, c = S.cropUI;
+  $('#preset').value = v.preset;
+  $$('input[type=range]').forEach((r) => r._sync?.());
+  $('#fEl').hidden = v.proj !== 'ortho'; $('#fK').hidden = v.proj === 'ortho';
+  $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
+  $('#palette').value = st.palette; $('#colorMode').value = st.colorMode;
+  $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
+  $('#north').checked = st.north; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
+  $('#cropOn').checked = c.on; $('#cropRatio').value = c.ratio; $('#cropShowOut').checked = c.showOut; $('#fCropCustom').hidden = c.ratio !== 'custom'; $('#cropCW').value = c.cw; $('#cropCH').value = c.ch;
+  $('#shOn').checked = st.sh.on; $('#shBox').hidden = !st.sh.on; $('#shDay').value = st.sh.day; $('#fShDate').hidden = st.sh.day !== 'custom'; $('#shDate').value = st.sh.date;
+  $('#shTimeOut').textContent = hhmm(st.sh.min); $('#shTime').setAttribute('aria-valuetext', hhmm(st.sh.min)); $('#shColor').value = st.sh.color; $('#shTz').value = st.sh.tz;
+  $$('.quadrow button[data-az]').forEach((b) => b.setAttribute('aria-pressed', String(Math.round(v.az - (v._off || 0)) === +b.dataset.az)));
+  $$('[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === S.tool))); $('#stage').dataset.tool = S.tool;
+}
+function syncUIQuick() {
+  $('#az').value = Math.round(S.view.az); $('#azN').value = Math.round(S.view.az);
+  $('#el').value = S.view.el; $('#elN').value = (+S.view.el).toFixed(1);
+  $('#zoom').value = Math.round(S.view.zoom * 100); $('#zoomN').value = Math.round(S.view.zoom * 100);
+  if ($('#preset').value !== S.view.preset) $('#preset').value = S.view.preset;
+}
+function setPreset(p) {
+  const v = S.view; v.preset = p; const d = PRESETS[p]; if (!d) { syncUI(); return; }
+  v.proj = d.proj; if (d.el != null) v.el = d.el; if (d.k) v.k = d.k;
+  const quad = Math.round((v.az - (v._off || 0) - 45) / 90) * 90 + 45;
+  v._off = d.azOff; v.az = (((quad + d.azOff) % 360) + 360) % 360;
+  syncUI(); render(); persist();
+}
+function setAz(a) { S.view.az = ((a % 360) + 360) % 360; }
+function setZoom(z, at) {
+  const v = S.view; const nz = Math.max(0.1, Math.min(20, z));
+  if (at) { const W2 = S.W / 2, H2 = S.H / 2; v.panX = at.x - W2 - (at.x - W2 - v.panX) * nz / v.zoom; v.panY = at.y - H2 - (at.y - H2 - v.panY) * nz / v.zoom; }
+  else { v.panX *= nz / v.zoom; v.panY *= nz / v.zoom; }
+  v.zoom = nz;
+}
+function setTool(t) { S.tool = t; syncUI(); drawOverlay(); }
+
 function wireUI() {
-  // Theme
   const root = document.documentElement;
   const setTheme = (d) => { root.classList.toggle('dark', d); root.classList.toggle('light', !d); try { localStorage.setItem('kv-axono-theme', d ? 'dark' : 'light'); } catch (e) { /* */ } };
   let th = null; try { th = localStorage.getItem('kv-axono-theme'); } catch (e) { /* */ }
   setTheme(th ? th === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
-  $('#btnTheme').onclick = () => setTheme(!root.classList.contains('dark'));
+  $('#btnTheme').onclick = () => { setTheme(!root.classList.contains('dark')); drawOverlay(); };
 
-  // Tabs
   const tabs = $$('[role=tab]');
-  const sel = (t) => { tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; $('#' + x.getAttribute('aria-controls')).hidden = !on; }); };
+  const sel = (t) => { tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; $('#' + x.getAttribute('aria-controls')).hidden = !on; }); $('#scroll').scrollTop = 0; };
   tabs.forEach((t, i) => { t.onclick = () => sel(t); t.onkeydown = (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; sel(n); n.focus(); } }; });
 
-  // View
+  // versions
+  $('#verSel').onchange = (e) => switchVersion(+e.target.value);
+  $('#btnVerPrev').onclick = () => switchVersion((S.av - 1 + S.versions.length) % S.versions.length);
+  $('#btnVerNext').onclick = () => switchVersion((S.av + 1) % S.versions.length);
+  $('#btnVerNew').onclick = () => duplicateVersion(S.av);
+  $('#verList').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-act]'); if (!b) return; const i = +b.dataset.i;
+    if (b.dataset.act === 'go') switchVersion(i);
+    else if (b.dataset.act === 'dup') duplicateVersion(i);
+    else if (b.dataset.act === 'del' && S.versions.length > 1) { const nm = S.versions[i].name; S.versions.splice(i, 1); switchVersion(Math.min(S.av, S.versions.length - 1)); toast(`“${nm}” excluída.`); }
+  });
+  $('#verList').addEventListener('change', (e) => { const i = e.target.dataset.ren; if (i == null) return; S.versions[+i].name = e.target.value.trim() || `Vista ${+i + 1}`; renderVersions(); render(); persist(); });
+
+  // view
   $('#preset').onchange = (e) => setPreset(e.target.value);
   const viewChanged = (fast) => { if (!fast) persist(); syncUIQuick(); scheduleRender(fast); };
   bindRange('az', () => Math.round(S.view.az), (v) => setAz(v), viewChanged);
-  bindRange('el', () => S.view.el, (v) => { S.view.el = v; S.view.preset = 'custom'; $('#preset').value = 'custom'; }, viewChanged);
+  bindRange('el', () => S.view.el, (v) => { S.view.el = v; S.view.preset = 'custom'; }, viewChanged);
   bindRange('k', () => S.view.k, (v) => { S.view.k = v; }, viewChanged);
-  bindRange('margin', () => S.frame.margin, (v) => { S.frame.margin = v; }, viewChanged);
-  bindRange('buffer', () => S.crop.buffer, (v) => { S.crop.buffer = v; }, viewChanged);
-  $('#frame').onchange = (e) => { S.frame.fmt = e.target.value; render(); persist(); };
-  $('#cropMode').onchange = async (e) => {
-    S.crop.mode = e.target.value; syncUI();
-    if (S.crop.mode === 'map' && !S.crop.mapRect) await useMapCrop().catch(() => toast('Área do mapa indisponível.'));
-    if (S.crop.mode === 'drawn' && !S.crop.drawn) await drawCrop();
-    render(); persist();
-  };
-  $('#btnMapCrop').onclick = () => useMapCrop().catch(() => toast('Área do mapa indisponível.'));
-  $('#btnDrawCrop').onclick = drawCrop;
-  $$('.quad button').forEach((b) => (b.onclick = () => { setAz(+b.dataset.az + (S.view._off || 0)); syncUI(); render(); persist(); }));
+  bindRange('zoom', () => Math.round(S.view.zoom * 100), (v) => setZoom(v / 100), viewChanged);
+  $$('.quadrow button[data-az]').forEach((b) => (b.onclick = () => { setAz(+b.dataset.az + (S.view._off || 0)); syncUI(); render(); persist(); }));
   $('#rotL').onclick = () => { setAz(S.view.az - 15); syncUI(); render(); persist(); };
   $('#rotR').onclick = () => { setAz(S.view.az + 15); syncUI(); render(); persist(); };
+  $('#zoomIn').onclick = () => { setZoom(S.view.zoom * 1.25); syncUIQuick(); render(); persist(); };
+  $('#zoomOut').onclick = () => { setZoom(S.view.zoom / 1.25); syncUIQuick(); render(); persist(); };
+  $('#zoomFit').onclick = () => { S.view.zoom = 1; S.view.panX = 0; S.view.panY = 0; syncUIQuick(); render(); persist(); };
+  $$('[data-tool]').forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
 
-  // Saved views
-  $('#btnSaveView').onclick = () => {
-    const name = $('#saveName').value.trim() || `Vista ${S.saved.length + 1}`;
-    S.saved.push({ name, view: { ...S.view }, frame: { ...S.frame }, crop: { ...S.crop } });
-    $('#saveName').value = ''; renderSaved(); persist(); toast(`Vista “${name}” salva.`);
-  };
-  $('#savedList').onclick = (e) => {
-    const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.del != null) { S.saved.splice(+b.dataset.del, 1); renderSaved(); persist(); return; }
-    const s = S.saved[+b.dataset.i]; if (!s) return;
-    Object.assign(S.view, s.view); Object.assign(S.frame, s.frame); Object.assign(S.crop, s.crop);
-    syncUI(); render(); persist();
-  };
+  // crop
+  $('#cropOn').onchange = (e) => { S.cropUI.on = e.target.checked; if (S.cropUI.on && !S.cropUI.rect) fitRatio(); render(); persist(); };
+  $('#cropRatio').onchange = (e) => { S.cropUI.ratio = e.target.value; S.cropUI.on = true; fitRatio(); syncUI(); render(); persist(); };
+  const custom = () => { S.cropUI.cw = Math.max(1, +$('#cropCW').value || 1); S.cropUI.ch = Math.max(1, +$('#cropCH').value || 1); fitRatio(); render(); persist(); };
+  $('#cropCW').onchange = custom; $('#cropCH').onchange = custom;
+  $('#cropShowOut').onchange = (e) => { S.cropUI.showOut = e.target.checked; drawOverlay(); persist(); };
+  $('#btnCropTool').onclick = () => { S.cropUI.on = true; if (!S.cropUI.rect) fitRatio(); setTool('crop'); syncUI(); render(); $('#stage').focus(); };
+  $('#btnCropReset').onclick = () => { S.cropUI.on = true; S.cropUI.rect = maxCrop(cropAR()); syncUI(); render(); persist(); };
 
-  // Stage orbit
+  // stage pointer
   const stage = $('#stage'); let drag = null;
-  stage.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, az: S.view.az, el: S.view.el }; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointerdown', (e) => {
+    const p = toFrame(e); stage.setPointerCapture(e.pointerId);
+    if (S.tool === 'crop') { if (!S.cropUI.on) { S.cropUI.on = true; syncUI(); } const mode = cropHit(p); drag = { kind: 'crop', mode, p0: p, r0: { ...(S.cropUI.rect || { x: p.x, y: p.y, w: 0, h: 0 }) } }; }
+    else drag = { kind: S.tool, x: e.clientX, y: e.clientY, az: S.view.az, el: S.view.el, px: S.view.panX, py: S.view.panY, u: pxUnit() };
+  });
   stage.addEventListener('pointermove', (e) => {
-    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag) { if (S.tool === 'crop') { const m = cropHit(toFrame(e)); stage.style.cursor = { move: 'move', new: 'crosshair', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize' }[m]; } else stage.style.cursor = ''; return; }
+    if (drag.kind === 'crop') { cropDrag(drag, toFrame(e)); drawOverlay(); return; }
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (drag.kind === 'pan') { S.view.panX = drag.px + dx * drag.u; S.view.panY = drag.py + dy * drag.u; scheduleRender(true); return; }
     setAz(drag.az - dx * 0.5);
-    if (S.view.proj === 'ortho') S.view.el = Math.max(0, Math.min(90, drag.el + dy * 0.3));
-    if (Math.abs(dy) > 2 && S.view.proj === 'ortho') S.view.preset = 'custom';
+    if (S.view.proj === 'ortho') { S.view.el = Math.max(0, Math.min(90, drag.el + dy * 0.3)); if (Math.abs(dy) > 2) S.view.preset = 'custom'; }
     syncUIQuick(); scheduleRender(true);
   });
-  const end = () => { if (!drag) return; drag = null; syncUI(); render(false); persist(); };
+  const end = () => { if (!drag) return; const k = drag.kind; drag = null; if (k === 'crop') { render(); } else { syncUI(); render(false); } persist(); };
   stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+  stage.addEventListener('wheel', (e) => { e.preventDefault(); setZoom(S.view.zoom * Math.exp(-e.deltaY * 0.0015), toFrame(e)); syncUIQuick(); scheduleRender(true); clearTimeout(stage._wt); stage._wt = setTimeout(() => { render(false); persist(); }, 250); }, { passive: false });
   stage.addEventListener('keydown', (e) => {
-    const k = e.key; let used = true;
-    if (k === 'ArrowLeft') setAz(S.view.az + 5); else if (k === 'ArrowRight') setAz(S.view.az - 5);
-    else if (k === 'ArrowUp' && S.view.proj === 'ortho') { S.view.el = Math.min(90, S.view.el + 2.5); S.view.preset = 'custom'; }
-    else if (k === 'ArrowDown' && S.view.proj === 'ortho') { S.view.el = Math.max(0, S.view.el - 2.5); S.view.preset = 'custom'; }
+    const k = e.key; let used = true; const v = S.view; const step = 40;
+    if (S.tool === 'pan') { if (k === 'ArrowLeft') v.panX += step; else if (k === 'ArrowRight') v.panX -= step; else if (k === 'ArrowUp') v.panY += step; else if (k === 'ArrowDown') v.panY -= step; else used = false; }
+    else if (k === 'ArrowLeft') setAz(v.az + 5); else if (k === 'ArrowRight') setAz(v.az - 5);
+    else if (k === 'ArrowUp' && v.proj === 'ortho') { v.el = Math.min(90, v.el + 2.5); v.preset = 'custom'; }
+    else if (k === 'ArrowDown' && v.proj === 'ortho') { v.el = Math.max(0, v.el - 2.5); v.preset = 'custom'; }
     else used = false;
+    if (k === '+' || k === '=') { setZoom(v.zoom * 1.25); used = true; } if (k === '-') { setZoom(v.zoom / 1.25); used = true; }
     if (used) { e.preventDefault(); syncUI(); render(); persist(); }
   });
+  new ResizeObserver(() => drawOverlay()).observe(stage);
 
-  // Content
+  // content
   $('#btnSync').onclick = () => sync(true);
   $('#autoSync').onchange = (e) => { S.autoSync = e.target.checked; persist(); };
-  $('#groupBy').onchange = (e) => { S.style.groupBy = e.target.value; buildGroupsUI(); render(); persist(); };
-  $('#btnReloadLayers').onclick = listLayers;
-  $('#btnCaptureLayers').onclick = captureLayers;
-  $('#btnContext').onclick = captureContext;
-  $('#btnClearContext').onclick = () => { S.ctxItems = []; buildGroupsUI(); render(); };
-  $('#btnCaptureRaster').onclick = captureRaster;
+  $('#layerUI').addEventListener('change', async (e) => {
+    const lk = e.target.dataset.vis; if (!lk) return; S.vis[lk] = e.target.checked; persist();
+    if (e.target.checked && !hasData(lk)) await captureLk(lk); else { buildStyleUI(); render(); }
+  });
+  $('#layerUI').addEventListener('click', (e) => { const b = e.target.closest('button[data-reload]'); if (b) { S.vis[b.dataset.reload] = true; captureLk(b.dataset.reload); } });
+  bindRange('buffer', () => S.area.buffer, (v) => { S.area.buffer = v; }, viewChanged);
+  $('#areaMode').onchange = async (e) => {
+    S.area.mode = e.target.value; syncUI();
+    if (S.area.mode === 'map' && !S.area.mapRect) await useMapArea().catch(() => toast('Área do mapa indisponível.'));
+    if (S.area.mode === 'drawn' && !S.area.drawn) await drawArea();
+    render(); persist();
+  };
+  $('#btnMapArea').onclick = () => useMapArea().catch(() => toast('Área do mapa indisponível.'));
+  $('#btnDrawArea').onclick = drawArea;
+  $('#btnCaptureRaster').onclick = () => { S.vis.raster = true; captureLk('raster'); };
   $('#btnActivateView').onclick = activateView;
   $('#btnImportRaster').onclick = () => $('#fileRaster').click();
   $('#fileRaster').onchange = (e) => { const f = e.target.files[0]; if (f) importRaster(f); e.target.value = ''; };
-  bindRange('rasterOp', () => S.style.rasterOp, (v) => { S.style.rasterOp = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
-  $('#drapeRoofs').onchange = (e) => { S.style.drapeRoofs = e.target.checked; render(); persist(); };
-  $('#btnClearRaster').onclick = () => { S.raster = null; render(); updateSummary(); };
-  $('#btnProbeGltf').onclick = probeGltf;
 
-  // Style
-  $('#btnApplyPalette').onclick = () => { applyPalette($('#palette').value); syncUI(); buildGroupsUI(); render(); persist(); };
-  bindRange('contourW', () => S.style.contourW, (v) => { S.style.contourW = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
-  bindRange('shade', () => S.style.shade, (v) => { S.style.shade = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
-  const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); persist(); });
-  sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); sty('north', 'north', 'checked');
-  const gui = $('#groupsUI');
-  gui.addEventListener('click', (e) => {
-    const eye = e.target.closest('button.eye');
-    if (eye) { const g = S.groups[eye.dataset.g]; g.visible = !g.visible; buildGroupsUI(); render(); persist(); return; }
-    const b = e.target.closest('button[data-act=orig]');
-    if (b) { const g = b.closest('details').dataset.g; S.groups[g].fill = S.groups[g].orig; buildGroupsUI(); render(); persist(); }
-  });
-  gui.addEventListener('input', (e) => {
-    const k = e.target.dataset.k; if (!k) return; const g = e.target.closest('details').dataset.g;
-    const v = e.target.type === 'range' || e.target.type === 'number' ? +e.target.value : e.target.value;
-    S.groups[g][k] = v;
-    const sw = e.target.closest('details').querySelector('.sw');
-    if (k === 'fill') sw.style.background = v; if (k === 'stroke') sw.style.borderColor = v;
+  // style
+  $('#btnApplyPalette').onclick = () => { applyPalette($('#palette').value); syncUI(); buildStyleUI(); render(); persist(); };
+  $('#colorMode').onchange = (e) => { S.style.colorMode = e.target.value; buildStyleUI(); render(); persist(); };
+  const after = (f) => { scheduleRender(f); if (!f) persist(); };
+  bindRange('contourW', () => S.style.contourW, (v) => { S.style.contourW = v; }, after);
+  bindRange('shade', () => S.style.shade, (v) => { S.style.shade = v; }, after);
+  bindRange('rasterOp', () => S.style.rasterOp, (v) => { S.style.rasterOp = v; }, after);
+  bindRange('shTime', () => S.style.sh.min, (v) => { S.style.sh.min = v; $('#shTimeOut').textContent = hhmm(v); $('#shTime').setAttribute('aria-valuetext', hhmm(v)); }, after);
+  bindRange('shOp', () => S.style.sh.op, (v) => { S.style.sh.op = v; }, after);
+  $('#shOn').onchange = (e) => { S.style.sh.on = e.target.checked; syncUI(); render(); persist(); };
+  $('#shDay').onchange = (e) => { S.style.sh.day = e.target.value; if (e.target.value === 'custom' && !S.style.sh.date) S.style.sh.date = new Date().toISOString().slice(0, 10); syncUI(); render(); persist(); };
+  $('#shDate').onchange = (e) => { S.style.sh.date = e.target.value; render(); persist(); };
+  $('#shTz').onchange = (e) => { S.style.sh.tz = +e.target.value || 0; render(); persist(); };
+  $('#shColor').oninput = (e) => { S.style.sh.color = e.target.value; scheduleRender(); persist(); };
+  const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); drawOverlay(); persist(); });
+  sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); sty('north', 'north', 'checked'); sty('drapeRoofs', 'drapeRoofs', 'checked');
+  const sui = $('#styleUI');
+  sui.addEventListener('input', (e) => {
+    const det = e.target.closest('details'); if (!det) return; const lk = det.dataset.lk;
+    if (e.target.dataset.cmap) { (S.colorMap[lk] = S.colorMap[lk] || {})[e.target.dataset.cmap] = e.target.value; scheduleRender(); persist(); return; }
+    const k = e.target.dataset.k; if (!k) return;
+    const v = e.target.type === 'range' || e.target.type === 'number' ? +e.target.value : e.target.value; S.lstyle[lk][k] = v;
+    const sw = det.querySelector('.sw'); if (k === 'fill') sw.style.background = v; if (k === 'stroke') sw.style.borderColor = v;
+    if (k === 'fillOp') { const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = Math.round(v * 100) + '%'; }
     scheduleRender(e.target.type === 'range'); persist();
   });
-  gui.addEventListener('change', (e) => { if (e.target.dataset.k) render(); });
+  sui.addEventListener('change', () => render());
+  sui.addEventListener('click', (e) => { const b = e.target.closest('button[data-creset]'); if (!b) return; const lk = b.closest('details').dataset.lk; if (S.colorMap[lk]) delete S.colorMap[lk][b.dataset.creset]; buildStyleUI(); render(); persist(); });
+  $('#usageUI').addEventListener('input', (e) => { const u = e.target.dataset.usage; if (u == null) return; S.usageMap[u] = e.target.value; scheduleRender(); persist(); });
 
-  // Export
-  $('#btnSVG').onclick = exportSVG; $('#btnPNG').onclick = exportPNG;
-  $('#btnExportStyle').onclick = () => download(`KV_axonometria_estilo_${stamp()}.json`, new Blob([JSON.stringify(styleSnapshot(), null, 2)], { type: 'application/json' }));
+  // export
+  $('#btnSVG').onclick = exportSVG; $('#btnPNG').onclick = exportPNG; $('#btnAllPNG').onclick = exportAllPNG;
+  $('#btnExportStyle').onclick = () => download(`KV_axonometria_config_${stamp()}.json`, new Blob([JSON.stringify(snapshot(), null, 2)], { type: 'application/json' }));
   $('#btnImportStyle').onclick = () => $('#fileStyle').click();
-  $('#fileStyle').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { loadSnapshot(JSON.parse(await f.text())); syncUI(); buildGroupsUI(); render(); persist(); toast('Estilo importado.'); } catch (err) { toast('Arquivo de estilo inválido.'); } e.target.value = ''; };
+  $('#fileStyle').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { loadSnapshot(JSON.parse(await f.text())); renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render(); persist(); toast('Configuração importada.'); } catch (err) { toast('Arquivo inválido.'); } e.target.value = ''; };
+  $('#btnProbeGltf').onclick = probeGltf;
   $('#btnCopyDiag').onclick = async () => {
-    const d = { app: 'KV Axonometria', version: VERSION, mode: S.mode, inFrame: window.parent !== window, msgs: MSG, stateKeys: S.gs ? Object.keys(S.gs.attr || {}) : null, items: S.items.length, map: Object.fromEntries(Object.entries(S.mapItems).map(([k, v]) => [k, v.length])), ctx: S.ctxItems.length, raster: S.raster ? { W: S.raster.W, H: S.raster.H, bounds: S.raster.bounds } : null, view: S.view, crop: S.crop, log: S.log.slice(-80) };
+    const d = { app: 'KV Axonometria', version: VERSION, mode: S.mode, inFrame: window.parent !== window, msgs: MSG, stateKeys: S.gs ? Object.keys(S.gs.attr || {}) : null, items: S.items.length, map: Object.fromEntries(Object.entries(S.mapItems).map(([k, v]) => [k, v.length])), ctx: S.ctxItems.length, raster: S.raster ? { W: S.raster.W, H: S.raster.H, bounds: S.raster.bounds } : null, versions: S.versions.map((v) => v.name), view: S.view, vis: S.vis, area: S.area, log: S.log.slice(-120) };
     try { await navigator.clipboard.writeText(JSON.stringify(d, null, 2)); toast('Diagnóstico copiado.'); } catch (err) { download('KV_axonometria_diagnostico.json', new Blob([JSON.stringify(d, null, 2)])); }
   };
-}
-function syncUIQuick() {
-  const a = $('#az'), aN = $('#azN'); a.value = Math.round(S.view.az); aN.value = Math.round(S.view.az);
-  const e = $('#el'), eN = $('#elN'); e.value = S.view.el; eN.value = (+S.view.el).toFixed(1);
-  if ($('#preset').value !== S.view.preset) $('#preset').value = S.view.preset;
 }
 
 /* ---------------- SYNC ---------------- */
 function sync(manual) {
-  if (S.mode === 'demo') { ingestDemo(); }
-  else ingestGiraffe();
-  buildGroupsUI(); render();
+  if (S.mode === 'demo') ingestDemo(); else ingestGiraffe();
+  buildLayerUI(); buildStyleUI(); render();
   if (manual) toast('Desenho atualizado.');
 }
 let autoT;
@@ -1383,7 +1586,9 @@ function ingestDemo() {
   S.items = items;
 }
 
+
 /* ---------------- BOOT ---------------- */
+
 async function loadSDK() {
   const inFrame = window.parent && window.parent !== window;
   if (!inFrame) return null;
@@ -1408,20 +1613,7 @@ function hasGiraffeState() {
   const gs = S.gs; if (!gs) return false;
   return !!(gs.get('project') || gs.get('rawSections')?.features?.length || gs.get('bakedSections')?.features?.length || gs.get('projectLayers') || gs.get('projectOrigin'));
 }
-let giraffeEntered = false;
-function enterGiraffe(reason) {
-  if (giraffeEntered) return; giraffeEntered = true;
-  S.mode = 'giraffe'; S.projector = null; S.mapItems = {}; S.ctxItems = []; S.raster = null; S.items = [];
-  S.crop.drawn = null; S.crop.mapRect = null;
-  $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
-  log('Conectado ao Giraffe (' + reason + ')');
-  S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
-  S.gs.addListener(['projectLayers'], () => listLayers());
-  S.gs.addListener(['views'], () => listViews());
-  S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
-  restore(); sync(false); listLayers(); listViews(); renderSaved(); syncUI(); buildGroupsUI(); render();
-  if (!S.items.length) fetchBundleFallback();
-}
+
 async function fetchBundleFallback() {
   try {
     const b = await call('getProjectBundle', [], 30000);
@@ -1435,35 +1627,47 @@ async function fetchBundleFallback() {
     }
   } catch (e) { /* logged */ }
 }
+
+let giraffeEntered = false;
+function enterGiraffe(reason) {
+  if (giraffeEntered) return; giraffeEntered = true;
+  S.mode = 'giraffe'; S.projector = null; S.mapItems = {}; S.ctxItems = []; S.raster = null; S.items = [];
+  S.area.drawn = null; S.area.mapRect = null;
+  $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
+  log('Conectado ao Giraffe (' + reason + ')');
+  S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
+  S.gs.addListener(['projectLayers'], () => buildLayerUI());
+  S.gs.addListener(['views'], () => listViews());
+  S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
+  initVersions(); S.lstyle = {}; S.colorMap = {}; S.usageMap = {};
+  restore(); if (!S.cropUI.rect) fitRatio();
+  sync(false); listViews(); renderVersions(); syncUI();
+  if (!S.items.length) fetchBundleFallback();
+  ensureCapturedForVisible();
+}
 async function boot() {
-  wireUI();
+  initVersions(); wireUI(); fitRatio();
   const inFrame = window.parent && window.parent !== window;
   const sdk = await loadSDK();
   if (sdk) {
     S.sdk = sdk; S.rpc = sdk.rpc; S.gs = sdk.giraffeState; SDK_READY = true;
     const n = replayEarly();
     log(`Mensagens recebidas antes do SDK: ${MSG.n} · reaplicadas: ${n} · origens: ${Object.keys(MSG.origins).join(', ') || 'nenhuma'}`);
-    // switch automatically as soon as Giraffe pushes any project state
     S.gs.addListener(['project', 'rawSections', 'bakedSections', 'projectLayers', 'projectOrigin'], () => { if (!giraffeEntered && hasGiraffeState()) enterGiraffe('estado recebido'); });
     for (let i = 0; i < 12 && !hasGiraffeState(); i++) await sleep(250);
     if (hasGiraffeState()) enterGiraffe('estado do projeto');
-    else {
-      // RPC answers only inside Giraffe — prova de conexão mesmo sem estado
-      try { const u = await call('getUrlParams', [], 6000); if (u != null) enterGiraffe('RPC respondeu'); } catch (e) { /* not in Giraffe */ }
-    }
+    else { try { const u = await call('getUrlParams', [], 6000); if (u != null) enterGiraffe('RPC respondeu'); } catch (e) { /* not in Giraffe */ } }
   }
   if (!giraffeEntered) {
     $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge">Demonstração</span>';
     log(inFrame ? `Sem resposta do Giraffe: demonstração (mensagens: ${MSG.n}, tipos: ${Object.keys(MSG.types).join(', ') || 'nenhum'})` : 'Fora do Giraffe: modo demonstração com dados sintéticos.');
-    restore();
-    sync(false); listLayers(); listViews(); renderSaved(); syncUI(); buildGroupsUI(); render();
-    if (!giraffeEntered && !Object.keys(S.mapItems).length) {
-      S.mapItems['Meio-fio'] = buildDemoLayer('Meio-fio');
-      S.ctxItems = DEMO.context(); S.raster = await DEMO.raster();
-      if (!giraffeEntered) { listLayers(); buildGroupsUI(); render(); }
-    }
+    restore(); if (!S.cropUI.rect) fitRatio();
+    S.mapItems['Meio-fio'] = DEMO.buildLayer('Meio-fio'); S.ctxItems = DEMO.context(); S.raster = await DEMO.raster();
+    if (S.vis['map|Meio-fio'] == null) S.vis['map|Meio-fio'] = true;
+    if (!giraffeEntered) { sync(false); listViews(); renderVersions(); syncUI(); }
   }
 }
+
 boot();
 
 </script>
