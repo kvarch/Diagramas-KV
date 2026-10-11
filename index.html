@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KV Axonometria — Beta V02</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
+:root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
+:root,.light{
+--md-sys-color-primary:rgb(0 103 124);--md-sys-color-surface-tint:rgb(0 103 124);--md-sys-color-on-primary:rgb(255 255 255);--md-sys-color-primary-container:rgb(0 172 205);--md-sys-color-on-primary-container:rgb(0 58 71);--md-sys-color-secondary:rgb(30 30 30);--md-sys-color-on-secondary:rgb(255 255 255);--md-sys-color-secondary-container:rgb(51 51 51);--md-sys-color-on-secondary-container:rgb(156 155 155);--md-sys-color-tertiary:rgb(38 39 125);--md-sys-color-on-tertiary:rgb(255 255 255);--md-sys-color-tertiary-container:rgb(62 64 149);--md-sys-color-on-tertiary-container:rgb(178 179 255);--md-sys-color-error:rgb(179 33 0);--md-sys-color-on-error:rgb(255 255 255);--md-sys-color-error-container:rgb(216 57 24);--md-sys-color-on-error-container:rgb(255 251 255);--md-sys-color-background:rgb(245 250 253);--md-sys-color-on-background:rgb(23 28 30);--md-sys-color-surface:rgb(249 249 249);--md-sys-color-on-surface:rgb(27 27 27);--md-sys-color-surface-variant:rgb(224 227 227);--md-sys-color-on-surface-variant:rgb(68 71 72);--md-sys-color-outline:rgb(116 120 120);--md-sys-color-outline-variant:rgb(196 199 199);--md-sys-color-shadow:rgb(0 0 0);--md-sys-color-scrim:rgb(0 0 0);--md-sys-color-inverse-surface:rgb(48 48 48);--md-sys-color-inverse-on-surface:rgb(241 241 241);--md-sys-color-inverse-primary:rgb(84 214 248);--md-sys-color-primary-fixed:rgb(177 236 255);--md-sys-color-on-primary-fixed:rgb(0 31 39);--md-sys-color-primary-fixed-dim:rgb(84 214 248);--md-sys-color-on-primary-fixed-variant:rgb(0 78 94);--md-sys-color-secondary-fixed:rgb(228 226 225);--md-sys-color-on-secondary-fixed:rgb(27 28 28);--md-sys-color-secondary-fixed-dim:rgb(200 198 198);--md-sys-color-on-secondary-fixed-variant:rgb(71 71 71);--md-sys-color-tertiary-fixed:rgb(225 224 255);--md-sys-color-on-tertiary-fixed:rgb(9 4 103);--md-sys-color-tertiary-fixed-dim:rgb(192 193 255);--md-sys-color-on-tertiary-fixed-variant:rgb(58 60 145);--md-sys-color-surface-dim:rgb(218 218 218);--md-sys-color-surface-bright:rgb(249 249 249);--md-sys-color-surface-container-lowest:rgb(255 255 255);--md-sys-color-surface-container-low:rgb(243 243 243);--md-sys-color-surface-container:rgb(238 238 238);--md-sys-color-surface-container-high:rgb(232 232 232);--md-sys-color-surface-container-highest:rgb(226 226 226);--md-extended-color-custom-color1-color:rgb(0 108 77);--md-extended-color-custom-color1-on-color:rgb(255 255 255);--md-extended-color-custom-color1-color-container:rgb(47 175 131);--md-extended-color-custom-color1-on-color-container:rgb(0 59 41);}
+.dark{
+--md-sys-color-primary:rgb(84 214 248);--md-sys-color-surface-tint:rgb(84 214 248);--md-sys-color-on-primary:rgb(0 54 66);--md-sys-color-primary-container:rgb(0 172 205);--md-sys-color-on-primary-container:rgb(0 58 71);--md-sys-color-secondary:rgb(200 198 198);--md-sys-color-on-secondary:rgb(48 48 48);--md-sys-color-secondary-container:rgb(51 51 51);--md-sys-color-on-secondary-container:rgb(156 155 155);--md-sys-color-tertiary:rgb(192 193 255);--md-sys-color-on-tertiary:rgb(35 36 122);--md-sys-color-tertiary-container:rgb(62 64 149);--md-sys-color-on-tertiary-container:rgb(178 179 255);--md-sys-color-error:rgb(255 180 164);--md-sys-color-on-error:rgb(99 14 0);--md-sys-color-error-container:rgb(255 86 50);--md-sys-color-on-error-container:rgb(38 2 0);--md-sys-color-background:rgb(15 20 22);--md-sys-color-on-background:rgb(222 227 230);--md-sys-color-surface:rgb(19 19 19);--md-sys-color-on-surface:rgb(226 226 226);--md-sys-color-surface-variant:rgb(68 71 72);--md-sys-color-on-surface-variant:rgb(196 199 199);--md-sys-color-outline:rgb(142 145 146);--md-sys-color-outline-variant:rgb(68 71 72);--md-sys-color-shadow:rgb(0 0 0);--md-sys-color-scrim:rgb(0 0 0);--md-sys-color-inverse-surface:rgb(226 226 226);--md-sys-color-inverse-on-surface:rgb(48 48 48);--md-sys-color-inverse-primary:rgb(0 103 124);--md-sys-color-primary-fixed:rgb(177 236 255);--md-sys-color-on-primary-fixed:rgb(0 31 39);--md-sys-color-primary-fixed-dim:rgb(84 214 248);--md-sys-color-on-primary-fixed-variant:rgb(0 78 94);--md-sys-color-secondary-fixed:rgb(228 226 225);--md-sys-color-on-secondary-fixed:rgb(27 28 28);--md-sys-color-secondary-fixed-dim:rgb(200 198 198);--md-sys-color-on-secondary-fixed-variant:rgb(71 71 71);--md-sys-color-tertiary-fixed:rgb(225 224 255);--md-sys-color-on-tertiary-fixed:rgb(9 4 103);--md-sys-color-tertiary-fixed-dim:rgb(192 193 255);--md-sys-color-on-tertiary-fixed-variant:rgb(58 60 145);--md-sys-color-surface-dim:rgb(19 19 19);--md-sys-color-surface-bright:rgb(57 57 57);--md-sys-color-surface-container-lowest:rgb(14 14 14);--md-sys-color-surface-container-low:rgb(27 27 27);--md-sys-color-surface-container:rgb(31 31 31);--md-sys-color-surface-container-high:rgb(42 42 42);--md-sys-color-surface-container-highest:rgb(53 53 53);--md-extended-color-custom-color1-color:rgb(100 220 172);--md-extended-color-custom-color1-on-color:rgb(0 56 39);--md-extended-color-custom-color1-color-container:rgb(47 175 131);--md-extended-color-custom-color1-on-color-container:rgb(0 59 41);}
+
+*,*::before,*::after{box-sizing:border-box;border-radius:0;box-shadow:none}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;background:var(--md-sys-color-background);color:var(--md-sys-color-on-background)}
+body{font-size:14px;line-height:1.45;min-height:100vh;display:flex;flex-direction:column}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+:focus-visible{outline:2px solid var(--md-sys-color-primary);outline-offset:2px}
+
+/* Header */
+.app-header{display:flex;align-items:center;gap:16px;padding:8px 8px 8px 16px;min-height:64px;background:var(--md-sys-color-surface-container-lowest);border-bottom:1px solid var(--md-sys-color-outline-variant);position:sticky;top:0;z-index:5}
+.logo-container{padding:8px 0;flex:0 0 auto;display:flex}
+.brand-logo{height:30px;width:auto;min-width:67px;display:block}
+.brand-logo.neg{display:none}
+.dark .brand-logo.pos{display:none}.dark .brand-logo.neg{display:block}
+.app-title{margin:0;flex:1;font-size:18px;font-weight:500;line-height:1.1;border-left:1px solid var(--md-sys-color-outline-variant);padding-left:16px}
+.app-title small{display:block;font-size:12px;font-weight:400;color:var(--md-sys-color-on-surface-variant)}
+
+/* Buttons */
+button,.btn{font-family:inherit;font-size:13px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;min-height:48px;min-width:48px;padding:0 16px;border:1px solid var(--md-sys-color-outline);background:transparent;color:var(--md-sys-color-on-surface);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+button:hover{background:var(--md-sys-color-surface-container-high)}
+button.primary{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:var(--md-sys-color-primary)}
+button.primary:hover{filter:brightness(1.08)}
+button.icon{padding:0;width:48px;border-color:transparent}
+button.icon:hover{border-color:var(--md-sys-color-outline-variant)}
+button[aria-pressed="true"]{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:var(--md-sys-color-primary)}
+button:disabled{opacity:.45;cursor:not-allowed}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:square}
+
+/* Stage */
+main{flex:1;display:flex;flex-direction:column}
+.stage-wrap{padding:12px 12px 0}
+.stage{position:relative;background:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline-variant);touch-action:none;cursor:grab;outline-offset:-2px}
+.stage:active{cursor:grabbing}
+.stage svg#drawing{display:block;width:100%;height:auto;max-height:62vh}
+.stage .hud{position:absolute;left:0;bottom:0;padding:4px 8px;font-size:12px;background:var(--md-sys-color-surface-container-lowest);color:var(--md-sys-color-on-surface-variant);border-top:1px solid var(--md-sys-color-outline-variant);border-right:1px solid var(--md-sys-color-outline-variant)}
+.stage .busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--md-sys-color-surface) 70%,transparent);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.stage.is-busy .busy{display:flex}
+.orbit{display:flex;gap:0;align-items:stretch;padding:8px 12px;flex-wrap:wrap}
+.orbit .quad{display:flex;border:1px solid var(--md-sys-color-outline-variant)}
+.orbit .quad button{border:0;border-right:1px solid var(--md-sys-color-outline-variant);padding:0 12px;letter-spacing:.08em}
+.orbit .quad button:last-child{border-right:0}
+.orbit .spacer{flex:1}
+.orbit .sync{margin-left:8px}
+
+/* Tabs */
+.tabs{display:flex;border-top:1px solid var(--md-sys-color-outline-variant);border-bottom:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-lowest);position:sticky;top:64px;z-index:4}
+.tabs button{flex:1;border:0;border-bottom:3px solid transparent;padding:0 8px}
+.tabs button[aria-selected="true"]{border-bottom-color:var(--md-sys-color-primary);color:var(--md-sys-color-primary)}
+.panel{padding:16px 12px 24px}
+.panel[hidden]{display:none}
+.panel h2{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin:24px 0 8px;color:var(--md-sys-color-on-surface-variant)}
+.panel h2:first-child{margin-top:0}
+.hint{font-size:12.5px;color:var(--md-sys-color-on-surface-variant);margin:4px 0 12px;max-width:62ch}
+.card{background:var(--md-sys-color-surface-container-lowest);border:1px solid var(--md-sys-color-outline-variant);padding:12px;margin-bottom:12px}
+
+/* Fields */
+.field{display:grid;grid-template-columns:minmax(96px,34%) 1fr;align-items:center;gap:8px 12px;margin-bottom:8px}
+.field>label,.field>.lbl{font-size:13px;color:var(--md-sys-color-on-surface-variant)}
+.field .ctl{display:flex;gap:8px;align-items:center;min-width:0}
+input,select{font-family:inherit;font-size:14px}
+select,input[type=number],input[type=text]{min-height:48px;padding:0 12px;background:var(--md-sys-color-surface-container-low);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline);width:100%;min-width:0}
+input[type=number]{width:84px;flex:0 0 84px;padding:0 8px}
+input[type=range]{flex:1;min-height:48px;accent-color:var(--md-sys-color-primary);min-width:0}
+input[type=color]{width:48px;height:48px;padding:6px;border:1px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container-low);cursor:pointer;flex:0 0 48px}
+.check{display:flex;align-items:center;gap:12px;min-height:48px;cursor:pointer;font-size:14px}
+.check input{width:20px;height:20px;margin:14px;accent-color:var(--md-sys-color-primary);flex:0 0 auto}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.row>button{flex:1 1 auto}
+
+/* Lists */
+.list{border:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-lowest);max-height:260px;overflow:auto}
+.list .check{padding-right:12px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.list .check:last-child{border-bottom:0}
+.list .empty{padding:12px;font-size:13px;color:var(--md-sys-color-on-surface-variant)}
+.saved-item{display:flex;align-items:center;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.saved-item:last-child{border-bottom:0}
+.saved-item .name{flex:1;padding:0 12px;min-height:48px;display:flex;align-items:center;border:0;justify-content:flex-start;text-transform:none;letter-spacing:0;font-weight:400;font-size:14px}
+
+/* Groups */
+.grp-sec{margin-bottom:16px}
+.grp-sec>h3{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin:0;padding:8px 12px;border:1px solid var(--md-sys-color-outline-variant);border-bottom:0;background:var(--md-sys-color-surface-container-low);display:flex;justify-content:space-between}
+.grp{display:flex;border:1px solid var(--md-sys-color-outline-variant);border-top:0;background:var(--md-sys-color-surface-container-lowest)}
+.grp-sec>h3+.grp{border-top:1px solid var(--md-sys-color-outline-variant)}
+.grp>button.eye{border:0;border-right:1px solid var(--md-sys-color-outline-variant);width:48px;padding:0;flex:0 0 48px;align-self:flex-start}
+.grp>button.eye[aria-pressed="true"]{background:transparent;color:var(--md-sys-color-on-surface)}
+.grp>button.eye[aria-pressed="false"]{color:var(--md-sys-color-outline)}
+.grp details{flex:1;min-width:0}
+.grp summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;cursor:pointer}
+.grp summary::-webkit-details-marker{display:none}
+.grp summary .sw{width:22px;height:22px;flex:0 0 22px;border:1.5px solid #1b1b1b}
+.grp summary .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp summary .ct{font-size:12px;color:var(--md-sys-color-on-surface-variant)}
+.grp summary::after{content:'';width:8px;height:8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:0 4px 4px}
+.grp details[open] summary::after{transform:rotate(-135deg);margin-bottom:-4px}
+.grp details[open] summary{border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.grp .body{padding:12px}
+.grp.off summary .nm{color:var(--md-sys-color-outline);text-decoration:line-through}
+
+/* Log */
+.log{font-size:12px;line-height:1.5;max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:var(--md-sys-color-surface-container-low);border:1px solid var(--md-sys-color-outline-variant);padding:8px 12px;margin:8px 0}
+.log .e{color:var(--md-sys-color-error)}
+.toast{position:fixed;left:12px;right:12px;bottom:56px;padding:12px 16px;background:var(--md-sys-color-inverse-surface);color:var(--md-sys-color-inverse-on-surface);font-size:13px;display:none;z-index:20}
+.toast.show{display:block}
+.badge{font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface-variant)}
+.badge.live{border-color:var(--md-extended-color-custom-color1-color-container);color:var(--md-extended-color-custom-color1-color)}
+
+footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-surface-variant);border-top:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-lowest)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+[hidden]{display:none!important}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
+</head>
+<body>
+<header class="app-header">
+  <div class="logo-container">
+    <img class="brand-logo pos" src="data:image/png;base64,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" alt="Königsberger Vannucchi Arquitetos Associados" width="206" height="80">
+    <img class="brand-logo neg" src="data:image/png;base64,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" alt="" aria-hidden="true" width="206" height="80">
+  </div>
+  <h1 class="app-title">Axonometria<small id="modeLabel">Conectando…</small></h1>
+  <button class="icon" id="btnTheme" aria-label="Alternar tema claro/escuro" title="Tema">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 5v14" /><path d="M12 5a7 7 0 0 1 0 14z" fill="currentColor"/></svg>
+  </button>
+</header>
+
+<main>
+  <section class="stage-wrap" aria-label="Pré-visualização do desenho">
+    <div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Arraste ou use as setas para girar.">
+      <svg id="drawing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000"></svg>
+      <div class="hud" id="hud" aria-live="polite"></div>
+      <div class="busy" id="busy">Processando…</div>
+    </div>
+  </section>
+
+  <div class="orbit" role="toolbar" aria-label="Orientação rápida">
+    <div class="quad" role="group" aria-label="Observador posicionado em">
+      <button data-az="315" aria-label="Observador a noroeste">NO</button>
+      <button data-az="45" aria-label="Observador a nordeste">NE</button>
+      <button data-az="135" aria-label="Observador a sudeste">SE</button>
+      <button data-az="225" aria-label="Observador a sudoeste">SO</button>
+    </div>
+    <button class="icon" id="rotL" aria-label="Girar 15 graus à esquerda"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button>
+    <button class="icon" id="rotR" aria-label="Girar 15 graus à direita"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9a8 8 0 1 0-1 9"/><path d="M19 4v5h-5"/></svg></button>
+    <span class="spacer"></span>
+    <button class="primary sync" id="btnSync"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg>Atualizar</button>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-vista" aria-controls="p-vista" aria-selected="true">Vista</button>
+    <button role="tab" id="tab-conteudo" aria-controls="p-conteudo" aria-selected="false" tabindex="-1">Conteúdo</button>
+    <button role="tab" id="tab-estilo" aria-controls="p-estilo" aria-selected="false" tabindex="-1">Estilo</button>
+    <button role="tab" id="tab-export" aria-controls="p-export" aria-selected="false" tabindex="-1">Exportar</button>
+  </nav>
+
+  <!-- VISTA -->
+  <section class="panel" id="p-vista" role="tabpanel" aria-labelledby="tab-vista">
+    <h2>Projeção</h2>
+    <div class="field"><label for="preset">Tipo</label><div class="ctl">
+      <select id="preset">
+        <option value="iso">Isométrica</option>
+        <option value="dim">Dimétrica</option>
+        <option value="tri">Trimétrica</option>
+        <option value="bird">Vôo de pássaro</option>
+        <option value="mil">Militar 45°/45°</option>
+        <option value="plano">Planométrica 30°/60°</option>
+        <option value="elev">Elevação</option>
+        <option value="plan">Planta</option>
+        <option value="custom">Personalizada</option>
+      </select></div></div>
+    <div class="field"><label for="az">Azimute</label><div class="ctl"><input type="range" id="az" min="0" max="359" step="1"><input type="number" id="azN" min="0" max="359" step="1" aria-label="Azimute em graus"></div></div>
+    <div class="field" id="fEl"><label for="el">Elevação</label><div class="ctl"><input type="range" id="el" min="0" max="90" step="0.5"><input type="number" id="elN" min="0" max="90" step="0.5" aria-label="Elevação em graus"></div></div>
+    <div class="field" id="fK" hidden><label for="k">Fator vertical</label><div class="ctl"><input type="range" id="k" min="0.3" max="1.2" step="0.05"><input type="number" id="kN" min="0.3" max="1.2" step="0.05" aria-label="Fator vertical"></div></div>
+    <p class="hint">Arraste no desenho para girar (horizontal = azimute, vertical = elevação). Setas do teclado também funcionam com o desenho em foco.</p>
+
+    <h2>Enquadramento</h2>
+    <div class="field"><label for="frame">Formato</label><div class="ctl">
+      <select id="frame">
+        <option value="fit">Ajustar ao conteúdo</option>
+        <option value="16:9">16:9 (apresentação)</option>
+        <option value="a3l">A3 paisagem</option>
+        <option value="a3p">A3 retrato</option>
+        <option value="1:1">Quadrado</option>
+      </select></div></div>
+    <div class="field"><label for="margin">Margem</label><div class="ctl"><input type="range" id="margin" min="0" max="20" step="1"><input type="number" id="marginN" min="0" max="20" step="1" aria-label="Margem em porcentagem"></div></div>
+
+    <h2>Recorte</h2>
+    <div class="field"><label for="cropMode">Área</label><div class="ctl">
+      <select id="cropMode">
+        <option value="all">Sem recorte</option>
+        <option value="project">Limite do projeto + entorno</option>
+        <option value="map">Área visível no mapa</option>
+        <option value="drawn">Área desenhada</option>
+      </select></div></div>
+    <div class="field" id="fBuffer"><label for="buffer">Entorno (m)</label><div class="ctl"><input type="range" id="buffer" min="0" max="500" step="5"><input type="number" id="bufferN" min="0" max="2000" step="5" aria-label="Entorno em metros"></div></div>
+    <div class="row"><button id="btnDrawCrop">Desenhar área no mapa</button><button id="btnMapCrop">Usar área visível</button></div>
+    <p class="hint">Camadas e contexto são cortados no limite, como num corte de maquete. Volumes do projeto nunca são cortados.</p>
+
+    <h2>Vistas salvas</h2>
+    <div class="field"><label for="saveName">Nome</label><div class="ctl"><input type="text" id="saveName" placeholder="Ex.: Implantação SO"><button id="btnSaveView" aria-label="Salvar vista atual">Salvar</button></div></div>
+    <div class="list" id="savedList"></div>
+  </section>
+
+  <!-- CONTEÚDO -->
+  <section class="panel" id="p-conteudo" role="tabpanel" aria-labelledby="tab-conteudo" hidden>
+    <h2>Desenho do projeto</h2>
+    <label class="check"><input type="checkbox" id="autoSync">Atualizar automaticamente quando o modelo mudar</label>
+    <div class="field"><label for="groupBy">Agrupar por</label><div class="ctl">
+      <select id="groupBy">
+        <option value="layer">Camada de desenho</option>
+        <option value="usage">Uso</option>
+        <option value="color">Cor original</option>
+      </select></div></div>
+    <p class="hint">“Cor original” cria um grupo por cor do Giraffe — é o caminho mais direto para trocar cada cor por uma cor de desenho.</p>
+    <div class="card" id="srcSummary" aria-live="polite"></div>
+
+    <h2>Camadas do mapa</h2>
+    <p class="hint">Marque as camadas e capture. Só entra o que está visível na tela do Giraffe — enquadre a área antes.</p>
+    <div class="list" id="layerList"></div>
+    <div class="row"><button id="btnReloadLayers">Recarregar lista</button><button class="primary" id="btnCaptureLayers">Capturar camadas</button></div>
+
+    <h2>Contexto do mapa base</h2>
+    <div class="row"><button id="btnContext">Capturar edifícios do entorno</button><button id="btnClearContext">Limpar</button></div>
+
+    <h2>Raster de análise</h2>
+    <p class="hint">Traz para o desenho o que só existe como imagem no Giraffe (ex.: horas de sol, mapas de calor). Ative a análise, deixe a vista superior com norte para cima e capture. A imagem é aplicada no plano do terreno.</p>
+    <div class="field"><label for="viewSel">Vista do Giraffe</label><div class="ctl"><select id="viewSel"><option value="">— nenhuma —</option></select><button id="btnActivateView">Ativar</button></div></div>
+    <div class="row"><button class="primary" id="btnCaptureRaster">Capturar mapa visível</button><button id="btnImportRaster">Importar imagem</button><input type="file" id="fileRaster" accept="image/png,image/jpeg" hidden></div>
+    <div class="field"><label for="rasterOp">Opacidade</label><div class="ctl"><input type="range" id="rasterOp" min="0" max="1" step="0.05"><input type="number" id="rasterOpN" min="0" max="1" step="0.05" aria-label="Opacidade do raster"></div></div>
+    <label class="check"><input type="checkbox" id="drapeRoofs">Aplicar o raster também nas coberturas</label>
+    <div class="row"><button id="btnClearRaster">Remover raster</button></div>
+
+    <h2>Análise em fachadas — teste</h2>
+    <p class="hint">Verifica se a exportação 3D do Giraffe (getGltf) carrega as cores da análise solar. Antes, ligue a análise de horas de sol nas fachadas no app Solar.</p>
+    <label class="check"><input type="checkbox" id="gltfSave" checked>Baixar também o arquivo exportado</label>
+    <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
+    <div class="card" id="gltfResult" hidden aria-live="polite"></div>
+  </section>
+
+  <!-- ESTILO -->
+  <section class="panel" id="p-estilo" role="tabpanel" aria-labelledby="tab-estilo" hidden>
+    <h2>Padrão gráfico</h2>
+    <div class="field"><label for="palette">Paleta</label><div class="ctl">
+      <select id="palette">
+        <option value="paper">Papel — branco e preto</option>
+        <option value="kv">Destaque KV — projeto em ciano</option>
+        <option value="giraffe">Cores do Giraffe</option>
+        <option value="mono">Cinzas</option>
+      </select><button id="btnApplyPalette">Aplicar</button></div></div>
+    <div class="field"><label for="contourW">Perfil (contorno)</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
+    <div class="field"><label for="shade">Sombreamento</label><div class="ctl"><input type="range" id="shade" min="0" max="0.8" step="0.02"><input type="number" id="shadeN" min="0" max="0.8" step="0.02" aria-label="Intensidade do sombreamento das fachadas"></div></div>
+    <div class="field"><label for="bg">Fundo</label><div class="ctl"><input type="color" id="bg" aria-label="Cor de fundo"><label class="check" style="flex:1"><input type="checkbox" id="bgT">Transparente</label></div></div>
+    <div class="field"><label for="groundFill">Terreno</label><div class="ctl"><input type="color" id="groundFill" aria-label="Cor do plano do terreno"><label class="check" style="flex:1"><input type="checkbox" id="ground">Plano no recorte</label></div></div>
+    <label class="check"><input type="checkbox" id="north">Indicação de norte</label>
+    <p class="hint">Espessuras em unidades do quadro (1600 de largura ≈ px em 1×). Cada grupo abaixo controla preenchimento, linha e traço.</p>
+    <div id="groupsUI"></div>
+  </section>
+
+  <!-- EXPORTAR -->
+  <section class="panel" id="p-export" role="tabpanel" aria-labelledby="tab-export" hidden>
+    <h2>Arquivo</h2>
+    <div class="field"><label for="pngScale">Resolução PNG</label><div class="ctl">
+      <select id="pngScale"><option value="1">1× (1600 px)</option><option value="2" selected>2× (3200 px)</option><option value="3">3× (4800 px)</option><option value="4">4× (6400 px)</option></select></div></div>
+    <div class="row"><button class="primary" id="btnSVG">Baixar SVG</button><button class="primary" id="btnPNG">Baixar PNG</button></div>
+    <p class="hint">O SVG é vetorial e editável (Illustrator, Inkscape, Affinity): cada grupo vira uma camada nomeada.</p>
+    <h2>Estilo</h2>
+    <div class="row"><button id="btnExportStyle">Exportar estilo (.json)</button><button id="btnImportStyle">Importar estilo</button><input type="file" id="fileStyle" accept="application/json" hidden></div>
+    <h2>Diagnóstico</h2>
+    <div class="log" id="log" role="log" aria-live="polite"></div>
+    <div class="row"><button id="btnCopyDiag">Copiar diagnóstico</button></div>
+  </section>
+</main>
+
+<footer class="app-footer">Beta - V02 · © 2026 Königsberger Vannucchi</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+/* KV Axonometria — Beta V02 */
+const VERSION = 'V02';
+const D2R = Math.PI / 180;
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const PC = () => window.polygonClipping || null;
+
+/* ---------------- STATE ---------------- */
+const PRESETS = {
+  iso:   { proj: 'ortho', el: 35.264, azOff: 0 },
+  dim:   { proj: 'ortho', el: 20.705, azOff: 0 },
+  tri:   { proj: 'ortho', el: 30, azOff: 15 },
+  bird:  { proj: 'ortho', el: 52, azOff: 0 },
+  mil:   { proj: 'oblique', k: 1, azOff: 0 },
+  plano: { proj: 'oblique', k: 1, azOff: 15 },
+  elev:  { proj: 'ortho', el: 0, azOff: 0 },
+  plan:  { proj: 'ortho', el: 90, azOff: 0 },
+};
+const S = {
+  mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, origin: null,
+  items: [],           // normalized world features
+  mapItems: {},        // layerName -> items
+  ctxItems: [],
+  raster: null,        // {href, W, H, bounds:[[w,s],[e,n]]}
+  groups: {},
+  view: { preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1 },
+  frame: { fmt: 'fit', margin: 6 },
+  crop: { mode: 'project', buffer: 60, drawn: null, mapRect: null },
+  style: { palette: 'paper', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false, groupBy: 'layer' },
+  autoSync: true,
+  saved: [],
+  log: [],
+  lastSVG: '', frameW: 1600, frameH: 1000,
+};
+
+/* ---------------- LOG / UI HELPERS ---------------- */
+function log(msg, isErr) {
+  const t = new Date().toLocaleTimeString('pt-BR');
+  S.log.push({ t, msg: String(msg), err: !!isErr });
+  if (S.log.length > 300) S.log.shift();
+  const el = $('#log');
+  if (el) {
+    const d = document.createElement('div');
+    if (isErr) d.className = 'e';
+    d.textContent = `${t}  ${msg}`;
+    el.appendChild(d); el.scrollTop = el.scrollHeight;
+  }
+  (isErr ? console.warn : console.log)('[KV Axo]', msg);
+}
+let toastT;
+function toast(msg) {
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 3800);
+}
+function busy(on, txt) { $('#stage').classList.toggle('is-busy', !!on); if (txt) $('#busy').textContent = txt; }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function summarize(v) {
+  if (v == null) return String(v);
+  if (typeof v === 'string') return `string(${v.length}) ${v.slice(0, 40)}`;
+  if (Array.isArray(v)) return `array(${v.length})`;
+  if (v instanceof Blob) return `Blob ${v.type} ${v.size}`;
+  if (typeof v === 'object') return `obj{${Object.keys(v).slice(0, 8).join(',')}}`;
+  return typeof v;
+}
+
+/* ---------------- COLOR ---------------- */
+const _cx = document.createElement('canvas').getContext('2d');
+function toHex(c, fb = '#9E9E9E') {
+  if (Array.isArray(c) && c.length >= 3) {
+    const [r, g, b] = c.map((v) => (v <= 1 && c.every((x) => x <= 1) ? Math.round(v * 255) : Math.round(v)));
+    return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+  }
+  if (typeof c !== 'string' || !c.trim()) return fb;
+  _cx.fillStyle = '#010203'; _cx.fillStyle = c;
+  const v = _cx.fillStyle;
+  if (v === '#010203' && c.toLowerCase() !== '#010203') return fb;
+  if (v.startsWith('#')) return v.toUpperCase();
+  const m = v.match(/[\d.]+/g); if (!m) return fb;
+  return '#' + m.slice(0, 3).map((x) => (+x | 0).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function hex2rgb(h) { h = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)); }
+function mix(a, b, t) {
+  const A = hex2rgb(a), B = hex2rgb(b);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+const FALLBACK = ['#5B8DEF', '#E8A33D', '#2FAF83', '#D83918', '#3E4095', '#00ACCD', '#9C6ADE', '#B5895B'];
+function hashColor(s) { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return FALLBACK[Math.abs(h) % FALLBACK.length]; }
+
+/* ---------------- GEOMETRY ---------------- */
+function openRing(r) { const n = r.length; return n > 1 && r[0][0] === r[n - 1][0] && r[0][1] === r[n - 1][1] ? r.slice(0, -1) : r.slice(); }
+function sArea(r) { let a = 0; for (let i = 0, n = r.length; i < n; i++) { const p = r[i], q = r[(i + 1) % n]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; }
+function orientPoly(poly) {
+  return poly.map((r, i) => { r = openRing(r); const ccw = sArea(r) > 0; return (i === 0) === ccw ? r : r.reverse(); }).filter((r) => r.length >= 3);
+}
+function bboxOf(pts, b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity }) {
+  for (const p of pts) { if (p[0] < b.minx) b.minx = p[0]; if (p[1] < b.miny) b.miny = p[1]; if (p[0] > b.maxx) b.maxx = p[0]; if (p[1] > b.maxy) b.maxy = p[1]; }
+  return b;
+}
+function itemBBox(it) {
+  if (it._bb) return it._bb;
+  const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+  if (it.kind === 'line') bboxOf(it.pts, b); else for (const r of it.poly) bboxOf(r, b);
+  return (it._bb = b);
+}
+const bbHit = (a, b) => a.minx <= b.maxx && a.maxx >= b.minx && a.miny <= b.maxy && a.maxy >= b.miny;
+function rectPoly(R) { return [[[R.minx, R.miny], [R.maxx, R.miny], [R.maxx, R.maxy], [R.minx, R.maxy], [R.minx, R.miny]]]; }
+function clipSeg(a, b, R) {
+  let t0 = 0, t1 = 1; const dx = b[0] - a[0], dy = b[1] - a[1];
+  const P = [-dx, dx, -dy, dy], Q = [a[0] - R.minx, R.maxx - a[0], a[1] - R.miny, R.maxy - a[1]];
+  for (let i = 0; i < 4; i++) {
+    if (P[i] === 0) { if (Q[i] < 0) return null; }
+    else { const t = Q[i] / P[i]; if (P[i] < 0) { if (t > t1) return null; if (t > t0) t0 = t; } else { if (t < t0) return null; if (t < t1) t1 = t; } }
+  }
+  return [[a[0] + t0 * dx, a[1] + t0 * dy], [a[0] + t1 * dx, a[1] + t1 * dy], t1 < 1];
+}
+function clipLine(pts, R) {
+  const out = []; let cur = null;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const s = clipSeg(pts[i], pts[i + 1], R);
+    if (!s) { if (cur) { out.push(cur); cur = null; } continue; }
+    if (!cur) cur = [s[0]]; else { const l = cur[cur.length - 1]; if (Math.hypot(l[0] - s[0][0], l[1] - s[0][1]) > 1e-6) { out.push(cur); cur = [s[0]]; } }
+    cur.push(s[1]);
+    if (s[2]) { out.push(cur); cur = null; }
+  }
+  if (cur) out.push(cur);
+  return out.filter((l) => l.length >= 2);
+}
+
+/* ---------------- PROJECTION (geo → world meters) ---------------- */
+function equirect(origin) {
+  const [lon0, lat0] = origin; const kx = Math.cos(lat0 * D2R) * 111320, ky = 110540;
+  return { forward: ([lon, lat]) => [(lon - lon0) * kx, (lat - lat0) * ky], inverse: ([x, y]) => [lon0 + x / kx, lat0 + y / ky] };
+}
+function ensureProjector(sampleCoord) {
+  if (S.projector) return S.projector;
+  try { if (S.sdk && S.sdk.getProjector) { const p = S.sdk.getProjector(); if (p) { S.projector = p; log('Projetor: getProjector() do SDK (LCC)'); return p; } } } catch (e) { log('getProjector falhou: ' + e.message, true); }
+  if (sampleCoord) { S.projector = equirect(sampleCoord); log('Projetor: equiretangular local (fallback)'); }
+  return S.projector;
+}
+function firstCoord(g) {
+  if (!g) return null; let c = g.coordinates;
+  while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
+  return Array.isArray(c) && typeof c[0] === 'number' ? c : null;
+}
+function geomToParts(g, P) {
+  // returns {polys:[[ring...]], lines:[[pt...]]} in world meters
+  const out = { polys: [], lines: [] }; if (!g) return out;
+  const f = (c) => P.forward([c[0], c[1]]);
+  const T = g.type, C = g.coordinates;
+  if (T === 'Polygon') out.polys.push(C.map((r) => r.map(f)));
+  else if (T === 'MultiPolygon') C.forEach((p) => out.polys.push(p.map((r) => r.map(f))));
+  else if (T === 'LineString') out.lines.push(C.map(f));
+  else if (T === 'MultiLineString') C.forEach((l) => out.lines.push(l.map(f)));
+  else if (T === 'GeometryCollection') (g.geometries || []).forEach((gg) => { const o = geomToParts(gg, P); out.polys.push(...o.polys); out.lines.push(...o.lines); });
+  return out;
+}
+
+/* ---------------- INGEST (Giraffe features → items) ---------------- */
+function propColor(p) { return p.color ?? p._color ?? p.fill ?? p.fillColor ?? p.colour ?? p['fill-color'] ?? p.stroke ?? null; }
+function featId(f) { return String(f?.properties?.id ?? f?.id ?? ''); }
+function pushFeature(list, f, src, P, opts = {}) {
+  const p = f.properties || {};
+  const parts = geomToParts(f.geometry, P);
+  const meta = {
+    id: featId(f), src,
+    layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? 'Sem camada'),
+    usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
+    color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
+  };
+  let z0 = +(p._baseHeight ?? p.baseHeight ?? 0) || 0;
+  let z1 = +(p._height ?? NaN);
+  if (!isFinite(z1)) { const h = +(p.height ?? 0) || 0; z1 = z0 + h; }
+  if (opts.z0 != null) z0 = opts.z0; if (opts.z1 != null) z1 = opts.z1;
+  for (const poly of parts.polys) {
+    const o = orientPoly(poly); if (!o.length || Math.abs(sArea(o[0])) < 0.01) continue;
+    if (z1 - z0 > 0.05) list.push({ ...meta, kind: 'prism', poly: o, z0, z1 });
+    else list.push({ ...meta, kind: 'poly', poly: o, z: z0 });
+  }
+  for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, kind: 'line', pts: l, z: z0 });
+}
+function ingestGiraffe() {
+  const gs = S.gs; if (!gs) return;
+  const baked = gs.get('bakedSections')?.features || [];
+  const raw = gs.get('rawSections')?.features || [];
+  const sample = firstCoord(baked[0]?.geometry) || firstCoord(raw[0]?.geometry);
+  const P = ensureProjector(sample);
+  if (!P) { S.items = []; log('Nenhuma geometria no projeto ainda.'); return; }
+  const items = []; const bakedIds = new Set();
+  for (const f of baked) {
+    bakedIds.add(featId(f));
+    pushFeature(items, f, 'vol', P);
+  }
+  let rawAdded = 0;
+  for (const f of raw) {
+    if (bakedIds.has(featId(f))) continue;
+    const t = f.geometry?.type; if (!t || t.includes('Point')) continue;
+    pushFeature(items, f, 'flat', P, { z1: 0, z0: +(f.properties?.baseHeight ?? 0) || 0 }); rawAdded++;
+  }
+  // baked 2D (no height) and lines belong to the 2D source
+  items.forEach((it) => { if (it.src === 'vol' && it.kind !== 'prism') it.src = 'flat'; });
+  S.items = items;
+  if (baked[0]) log(`bakedSections: ${baked.length} · chaves: ${Object.keys(baked[0].properties || {}).slice(0, 14).join(', ')}`);
+  log(`Itens: ${items.filter((i) => i.kind === 'prism').length} volumes, ${items.filter((i) => i.kind !== 'prism').length} 2D (raw extras: ${rawAdded})`);
+}
+
+/* ---------------- GROUPS & STYLE ---------------- */
+function gkey(it) {
+  if (it.src === 'vol' || it.src === 'flat') {
+    const by = S.style.groupBy; const v = by === 'usage' ? it.usage : by === 'color' ? it.color : it.layer;
+    return `${it.src}|${v}`;
+  }
+  if (it.src === 'map') return `map|${it.layer}`;
+  return 'ctx|Edifícios do entorno';
+}
+function defaultStyle(key, orig, pal = S.style.palette) {
+  const kind = key.split('|')[0];
+  const ink = '#1B1B1B', gray = '#747878';
+  const base = { visible: true, fill: '#FFFFFF', fillOp: 1, stroke: ink, strokeW: 0.7, dash: 'solid' };
+  const giraffe = pal === 'giraffe';
+  if (kind === 'vol') {
+    if (giraffe) return { ...base, fill: orig || '#FFFFFF' };
+    if (pal === 'kv') return { ...base, fill: '#00ACCD', stroke: '#003A47' };
+    if (pal === 'mono') return { ...base, fill: '#C8C6C6' };
+    return base;
+  }
+  if (kind === 'flat') {
+    if (giraffe) return { ...base, fill: orig || '#E2E2E2', fillOp: 0.85, strokeW: 0.9 };
+    if (pal === 'kv') return { ...base, fill: '#B1ECFF', fillOp: 0.9, stroke: '#00677C', strokeW: 1.1 };
+    return { ...base, fill: '#E2E2E2', fillOp: 0.9, strokeW: 0.9 };
+  }
+  if (kind === 'map') return { ...base, fill: giraffe ? (orig || '#E2E2E2') : '#EEEEEE', fillOp: 0.7, stroke: gray, strokeW: 0.45 };
+  return { ...base, fill: pal === 'mono' ? '#E2E2E2' : '#F3F3F3', stroke: gray, strokeW: 0.45 };
+}
+function allItems() {
+  const m = Object.values(S.mapItems).flat();
+  return [...S.items, ...m, ...S.ctxItems];
+}
+function ensureGroups() {
+  const counts = {};
+  for (const it of allItems()) {
+    const k = (it.g = gkey(it));
+    counts[k] = (counts[k] || 0) + 1;
+    if (!S.groups[k]) S.groups[k] = { ...defaultStyle(k, it.color), orig: it.color };
+  }
+  S._counts = counts;
+}
+function applyPalette(pal) {
+  S.style.palette = pal;
+  for (const k of Object.keys(S.groups)) { const g = S.groups[k]; Object.assign(g, defaultStyle(k, g.orig, pal), { visible: g.visible }); }
+  if (pal === 'mono') S.style.shade = 0.25;
+}
+
+/* ---------------- VIEW TRANSFORM ---------------- */
+function makeView(v) {
+  const az = v.az * D2R; const fx = -Math.sin(az), fy = -Math.cos(az); const rx = fy, ry = -fx;
+  const ortho = v.proj === 'ortho'; const el = Math.max(0, Math.min(90, v.el)) * D2R;
+  const se = Math.sin(el), ce = Math.cos(el), k = v.k || 1;
+  return {
+    ortho, plan: ortho && v.el >= 89.5, elev: ortho && v.el <= 0.5, fx, fy, rx, ry,
+    P(x, y, z) { const X = x * rx + y * ry, Y = x * fx + y * fy; return ortho ? [X, -(Y * se + z * ce)] : [X, -(Y + k * z)]; },
+    depth(x, y, z) { const Y = x * fx + y * fy; return ortho ? Y * ce - z * se : k * Y - z; },
+  };
+}
+
+/* ---------------- CROP ---------------- */
+function cropRect() {
+  const c = S.crop; const P = S.projector; if (!P) return null;
+  const buf = (b, d) => ({ minx: b.minx - d, miny: b.miny - d, maxx: b.maxx + d, maxy: b.maxy + d });
+  if (c.mode === 'project') {
+    const pg = projectGeom(); if (!pg) return null;
+    const parts = geomToParts(pg, P); const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+    parts.polys.forEach((p) => bboxOf(p[0], b)); if (!isFinite(b.minx)) return null; return buf(b, c.buffer);
+  }
+  if (c.mode === 'map' && c.mapRect) return c.mapRect;
+  if (c.mode === 'drawn' && c.drawn) return c.drawn;
+  return null;
+}
+function projectGeom() {
+  if (S.mode === 'demo') return DEMO.project.geometry;
+  const p = S.gs?.get('project'); return p?.geometry || p?.features?.[0]?.geometry || null;
+}
+function applyCrop(items, R) {
+  if (!R) return items;
+  const out = []; const pc = PC(); const rp = rectPoly(R);
+  for (const it of items) {
+    const b = itemBBox(it); if (!bbHit(b, R)) continue;
+    const inside = b.minx >= R.minx && b.maxx <= R.maxx && b.miny >= R.miny && b.maxy <= R.maxy;
+    if (it.src === 'vol' || it.src === 'flat' || inside) { out.push(it); continue; }
+    if (it.kind === 'line') { clipLine(it.pts, R).forEach((pts) => out.push({ ...it, pts, _bb: null })); continue; }
+    if (!pc) { out.push(it); continue; }
+    try {
+      const res = pc.intersection(it.poly.map((r) => [...r, r[0]]), rp);
+      res.forEach((mp) => { const o = orientPoly(mp); if (o.length) out.push({ ...it, poly: o, _bb: null }); });
+    } catch (e) { out.push(it); }
+  }
+  return out;
+}
+
+/* ---------------- RENDER ---------------- */
+let rafId = 0, pendingFast = false;
+function scheduleRender(fast = false) {
+  pendingFast = fast; if (rafId) return;
+  rafId = requestAnimationFrame(() => { rafId = 0; render(pendingFast); });
+}
+const DASH = { solid: null, dash: '7 4', dot: '0.1 3.2', dashdot: '9 3 1 3' };
+const fmt = (n) => (Math.round(n * 10) / 10).toString();
+
+function render(fast = false) {
+  ensureGroups();
+  const V = makeView(S.view); const R = cropRect();
+  const G = S.groups; const st = S.style;
+  let items = allItems().filter((it) => G[it.g]?.visible !== false);
+  items = applyCrop(items, R);
+
+  const ops = []; const bb = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+  const addBB = (pts) => bboxOf(pts, bb);
+  const prj = (r, z) => r.map((p) => V.P(p[0], p[1], z));
+
+  // Light (screen upper-left)
+  const Lx = -0.8 * V.rx - 0.6 * V.fx, Ly = -0.8 * V.ry - 0.6 * V.fy; const Ll = Math.hypot(Lx, Ly) || 1;
+
+  // 0) ground plane
+  if (st.ground && R) { const r = prj(rectPoly(R)[0].slice(0, 4), 0); ops.push({ t: 'poly', g: '_ground', rings: [r], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 }); addBB(r); }
+
+  // 1) raster on ground
+  const rasterOp = S.raster ? rasterMatrix(V, 0) : null;
+  if (rasterOp) ops.push({ t: 'img', g: '_raster', m: rasterOp, href: S.raster.href, W: S.raster.W, H: S.raster.H, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null });
+
+  // 2) flats on the ground (sorted by z); elevated flats join the painter's list
+  const emitFlat = (it) => {
+    const gs = G[it.g];
+    if (it.kind === 'line') { const pts = it.pts.map((p) => V.P(p[0], p[1], it.z || 0)); addBB(pts); ops.push({ t: 'line', g: it.g, pts, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash }); }
+    else { const rings = it.poly.map((r) => prj(r, it.z || 0)); rings.forEach(addBB); ops.push({ t: 'poly', g: it.g, rings, fill: gs.fill, fop: gs.fillOp, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash }); }
+  };
+  const flats = items.filter((i) => i.kind !== 'prism');
+  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || (a.kind === 'line') - (b.kind === 'line')).forEach(emitFlat);
+
+  // 3) prisms (+ elevated flats), painter's algorithm
+  const prisms = items.filter((i) => i.kind === 'prism').map((it) => {
+    const b = itemBBox(it); const cx = (b.minx + b.maxx) / 2, cy = (b.miny + b.maxy) / 2;
+    return { it, d: V.depth(cx, cy, (it.z0 + it.z1) / 2) };
+  });
+  flats.filter((i) => (i.z || 0) > 0.05).forEach((it) => { const b = itemBBox(it); prisms.push({ it, flat: true, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, it.z + 0.05) }); });
+  prisms.sort((a, b) => b.d - a.d);
+
+  let nVol = 0;
+  for (const { it, flat } of prisms) {
+    if (flat) { emitFlat(it); continue; }
+    nVol++;
+    const gs = G[it.g]; const faces = [];
+    const shadeOn = st.shade > 0;
+    if (!V.plan) {
+      const walls = [];
+      for (const ring of it.poly) {
+        for (let i = 0; i < ring.length; i++) {
+          const a = ring[i], b = ring[(i + 1) % ring.length];
+          const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy); if (len < 1e-3) continue;
+          const nx = dy / len, ny = -dx / len;
+          const facing = nx * V.fx + ny * V.fy; if (facing > -1e-4) continue;
+          const q = [V.P(a[0], a[1], it.z0), V.P(b[0], b[1], it.z0), V.P(b[0], b[1], it.z1), V.P(a[0], a[1], it.z1)];
+          const lam = (nx * Lx + ny * Ly) / Ll; const tone = shadeOn ? st.shade * (1 - (lam + 1) / 2) * 1.25 : 0;
+          walls.push({ q, d: V.depth((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (it.z0 + it.z1) / 2), tone });
+        }
+      }
+      walls.sort((a, b) => b.d - a.d);
+      for (const w of walls) {
+        addBB(w.q); faces.push([w.q]);
+        ops.push({ t: 'poly', g: it.g, rings: [w.q], fill: gs.fill === 'none' ? 'none' : mix(gs.fill, '#000000', Math.min(0.9, w.tone)), fop: gs.fillOp, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash, face: 'wall' });
+      }
+    }
+    if (!V.elev) {
+      const top = it.poly.map((r) => prj(r, it.z1)); top.forEach(addBB); faces.push(top);
+      ops.push({ t: 'poly', g: it.g, rings: top, fill: gs.fill, fop: gs.fillOp, stroke: gs.stroke, sw: gs.strokeW, dash: gs.dash, face: 'top' });
+      if (S.raster && st.drapeRoofs) { const m = rasterMatrix(V, it.z1); if (m) ops.push({ t: 'img', g: it.g, m, href: S.raster.href, W: S.raster.W, H: S.raster.H, op: st.rasterOp, clip: top }); }
+    }
+    if (!fast && st.contourW > 0 && PC() && faces.length) {
+      try {
+        const polys = faces.filter((f) => Math.abs(sArea(f[0])) > 1e-6).map((f) => f.map((r) => [...r, r[0]]));
+        if (polys.length) { const u = PC().union(...polys); ops.push({ t: 'contour', g: it.g, polys: u, stroke: gs.stroke, sw: st.contourW }); }
+      } catch (e) { /* skip contour */ }
+    }
+  }
+
+  if (!isFinite(bb.minx)) {
+    if (rasterOp) { const c = [[0, 0], [S.raster.W, 0], [S.raster.W, S.raster.H], [0, S.raster.H]].map(([u, v]) => [rasterOp[0] * u + rasterOp[2] * v + rasterOp[4], rasterOp[1] * u + rasterOp[3] * v + rasterOp[5]]); addBB(c); }
+    else { drawEmpty(); return; }
+  }
+  // crop rect corners keep framing stable
+  if (R) addBB(prj(rectPoly(R)[0], 0));
+
+  // Frame fit
+  const W = 1600; const bw = Math.max(bb.maxx - bb.minx, 1e-3), bh = Math.max(bb.maxy - bb.miny, 1e-3);
+  const AR = { fit: bw / bh, '16:9': 16 / 9, a3l: 420 / 297, a3p: 297 / 420, '1:1': 1 }[S.frame.fmt] || bw / bh;
+  const H = Math.round(W / AR); const m = S.frame.margin / 100;
+  const sc = Math.min((W * (1 - 2 * m)) / bw, (H * (1 - 2 * m)) / bh);
+  const ox = (W - bw * sc) / 2 - bb.minx * sc, oy = (H - bh * sc) / 2 - bb.miny * sc;
+  const T = (p) => fmt(p[0] * sc + ox) + ' ' + fmt(p[1] * sc + oy);
+  const ringD = (r) => 'M' + r.map(T).join('L') + 'Z';
+
+  // Serialize, grouped as named layers
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const PFX = { vol: 'Volumes', flat: '2D', map: 'Mapa', ctx: 'Entorno' };
+  const layerName = (g) => g === '_ground' ? 'Terreno' : g === '_raster' ? 'Raster' : g.startsWith('ctx|') ? 'Entorno' : `${PFX[g.split('|')[0]] || ''} - ${g.split('|').slice(1).join('|')}`;
+  const idUse = {};
+  const safeId = (s) => { const b = 'L_' + s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_'); idUse[b] = (idUse[b] || 0) + 1; return idUse[b] > 1 ? `${b}_${idUse[b]}` : b; };
+  let out = ''; let curG = null; let clipN = 0; const defs = [];
+  const open = (g) => { if (g === curG) return; if (curG !== null) out += '</g>'; const nm = layerName(g); out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">`; curG = g; };
+  for (const o of ops) {
+    open(o.g);
+    const dash = DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : '';
+    const cap = o.dash === 'dot' ? ' stroke-linecap="round"' : '';
+    if (o.t === 'poly') {
+      const d = o.rings.map(ringD).join('');
+      const sw = o.sw > 0 && o.stroke !== 'none' ? ` stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap}` : ' stroke="none"';
+      const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
+      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${o.fop}"` : ''} fill-rule="evenodd"${sw} stroke-linejoin="round"/>`;
+    } else if (o.t === 'line') {
+      if (o.sw > 0) out += `<path d="M${o.pts.map(T).join('L')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap || ' stroke-linecap="butt"'} stroke-linejoin="round"/>`;
+    } else if (o.t === 'contour') {
+      const d = o.polys.map((p) => p.map((r) => ringD(r.slice(0, -1))).join('')).join('');
+      out += `<path d="${d}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}" stroke-linejoin="round"/>`;
+    } else if (o.t === 'img') {
+      const M = o.m; const mm = [M[0] * sc, M[1] * sc, M[2] * sc, M[3] * sc, M[4] * sc + ox, M[5] * sc + oy].map((v) => +v.toFixed(5));
+      let clip = '';
+      if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}" clip-rule="evenodd"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
+      out += `<g${clip}><image href="${o.href}" width="${o.W}" height="${o.H}" preserveAspectRatio="none" transform="matrix(${mm.join(' ')})" opacity="${o.op}"/></g>`;
+    }
+  }
+  if (curG !== null) out += '</g>';
+
+  // North arrow
+  let north = '';
+  if (st.north && !V.elev) {
+    const a = V.P(0, 0, 0), b = V.P(0, 1, 0); let vx = b[0] - a[0], vy = b[1] - a[1]; const l = Math.hypot(vx, vy) || 1; vx /= l; vy /= l;
+    const cx = W - 70, cy = H - 70, s = 34; const px = -vy, py = vx;
+    const tip = [cx + vx * s, cy + vy * s], bl = [cx - vx * s * 0.6 + px * s * 0.42, cy - vy * s * 0.6 + py * s * 0.42], br = [cx - vx * s * 0.6 - px * s * 0.42, cy - vy * s * 0.6 - py * s * 0.42], mid = [cx - vx * s * 0.25, cy - vy * s * 0.25];
+    const P2 = (p) => fmt(p[0]) + ' ' + fmt(p[1]);
+    north = `<g id="L_Norte" data-name="Norte"><path d="M${P2(tip)}L${P2(bl)}L${P2(mid)}Z" fill="#1B1B1B"/><path d="M${P2(tip)}L${P2(br)}L${P2(mid)}Z" fill="#FFFFFF" stroke="#1B1B1B" stroke-width="1.2" stroke-linejoin="round"/><text x="${fmt(cx + vx * (s + 16))}" y="${fmt(cy + vy * (s + 16) + 6)}" text-anchor="middle" font-family="Hind, Arial, sans-serif" font-size="18" font-weight="600" fill="#1B1B1B">N</text></g>`;
+  }
+  const bgRect = st.bgT ? '' : `<rect id="L_Fundo" width="${W}" height="${H}" fill="${st.bg}"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs><clipPath id="frameClip"><rect width="${W}" height="${H}"/></clipPath>${defs.join('')}</defs>${bgRect}<g clip-path="url(#frameClip)">${out}</g>${north}</svg>`;
+  S.lastSVG = svg; S.frameW = W; S.frameH = H;
+  const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  host.style.background = st.bgT ? 'repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/16px 16px' : st.bg;
+  const nFlat = flats.length;
+  $('#hud').textContent = `${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${nVol} vol · ${nFlat} 2D${S.raster ? ' · raster' : ''}${fast ? ' · rápido' : ''}`;
+}
+function drawEmpty() {
+  const host = $('#drawing'); host.setAttribute('viewBox', '0 0 1600 1000'); host.style.background = 'transparent';
+  host.innerHTML = `<text x="800" y="490" text-anchor="middle" font-family="Hind, sans-serif" font-size="34" fill="#747878">Nada para desenhar ainda</text><text x="800" y="540" text-anchor="middle" font-family="Hind, sans-serif" font-size="24" fill="#747878">Desenhe no Giraffe ou capture camadas na aba Conteúdo</text>`;
+  S.lastSVG = ''; $('#hud').textContent = 'Sem conteúdo';
+}
+function presetName() { const o = $('#preset').selectedOptions[0]; return o ? o.textContent : ''; }
+function rasterMatrix(V, z) {
+  const r = S.raster; const P = S.projector; if (!r || !P) return null;
+  const [[w, s], [e, n]] = r.bounds;
+  const p0 = P.forward([w, n]), p1 = P.forward([e, n]), p2 = P.forward([w, s]);
+  const s0 = V.P(p0[0], p0[1], z), s1 = V.P(p1[0], p1[1], z), s2 = V.P(p2[0], p2[1], z);
+  return [(s1[0] - s0[0]) / r.W, (s1[1] - s0[1]) / r.W, (s2[0] - s0[0]) / r.H, (s2[1] - s0[1]) / r.H, s0[0], s0[1]];
+}
+
+/* ---------------- RPC ---------------- */
+async function call(name, args = [], ms = 20000) {
+  if (!S.rpc) throw new Error('SDK indisponível (modo demonstração)');
+  try {
+    const r = await Promise.race([S.rpc.invoke(name, args), sleep(ms).then(() => { throw new Error('tempo esgotado'); })]);
+    log(`${name} → ${summarize(r)}`); return r;
+  } catch (e) { log(`${name} ✕ ${e?.message || e}`, true); throw e; }
+}
+
+/* ---------------- MAP LAYERS ---------------- */
+function plName(pl) { return pl?.layer_full?.name ?? pl?.name ?? pl?.layer ?? pl?.layerName ?? pl?.id; }
+function listLayers() {
+  const box = $('#layerList'); let names = [];
+  if (S.mode === 'demo') names = Object.keys(DEMO.mapLayers);
+  else {
+    const pls = S.gs?.get('projectLayers') || [];
+    if (pls[0]) log('projectLayers[0] chaves: ' + Object.keys(pls[0]).join(', '));
+    names = [...new Set(pls.map(plName).filter(Boolean).map(String))];
+  }
+  const prev = new Set($$('#layerList input:checked').map((i) => i.value));
+  box.innerHTML = names.length ? names.map((n, i) => `<label class="check"><input type="checkbox" value="${n.replace(/"/g, '&quot;')}" ${prev.has(n) || S.mapItems[n] ? 'checked' : ''}>${n}${S.mapItems[n] ? ` <span class="badge">${S.mapItems[n].length}</span>` : ''}</label>`).join('') : '<div class="empty">Nenhuma camada no projeto.</div>';
+}
+async function styleLayers() {
+  let L = S.gs?.get('mapContent')?.layers;
+  if (!L || !L.length) { try { const st = await call('getMapStyle'); L = st?.layers; } catch (e) { L = []; } }
+  return L || [];
+}
+function evalExpr(e, p) {
+  if (typeof e === 'number') return e; if (typeof e === 'string') return +e;
+  if (!Array.isArray(e)) return NaN; const [op, ...a] = e;
+  const ev = (x) => evalExpr(x, p);
+  switch (op) {
+    case 'get': return +(p?.[a[0]]);
+    case 'to-number': case 'number': for (const x of a) { const v = ev(x); if (isFinite(v)) return v; } return NaN;
+    case 'coalesce': for (const x of a) { const v = ev(x); if (isFinite(v)) return v; } return NaN;
+    case '*': return a.reduce((s, x) => s * ev(x), 1);
+    case '+': return a.reduce((s, x) => s + ev(x), 0);
+    case '-': return a.length === 1 ? -ev(a[0]) : ev(a[0]) - ev(a[1]);
+    case '/': return ev(a[0]) / ev(a[1]);
+    case 'interpolate': case 'step': return NaN;
+    default: return NaN;
+  }
+}
+async function captureLayers() {
+  const names = $$('#layerList input:checked').map((i) => i.value);
+  if (!names.length) { toast('Marque ao menos uma camada.'); return; }
+  busy(true, 'Capturando camadas…');
+  try {
+    if (S.mode === 'demo') { for (const n of names) S.mapItems[n] = buildDemoLayer(n); }
+    else {
+      const SL = await styleLayers();
+      for (const n of names) {
+        let ids = [];
+        try { ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; } catch (e) { /* fallback */ }
+        if (!ids.length) ids = SL.filter((l) => String(l.id).includes(n) || l.source === n).map((l) => l.id);
+        if (!ids.length) { log(`Sem layers Mapbox para "${n}"`, true); continue; }
+        const feats = await queryFeatures(ids);
+        const items = []; const P = ensureProjector(firstCoord(feats[0]?.geometry));
+        const styleById = Object.fromEntries(SL.map((l) => [l.id, l]));
+        for (const f of dedupe(feats)) {
+          const lid = f.layer?.id || f.layer; const sl = (typeof lid === 'string' && styleById[lid]) || f.layer || {};
+          let z1 = null, z0 = 0;
+          if (sl.type === 'fill-extrusion') {
+            const h = evalExpr(sl.paint?.['fill-extrusion-height'], f.properties), b = evalExpr(sl.paint?.['fill-extrusion-base'], f.properties);
+            if (isFinite(h) && h > 0) { z1 = h; z0 = isFinite(b) ? b : 0; }
+          }
+          const color = sl.paint?.['fill-color'] || sl.paint?.['fill-extrusion-color'] || sl.paint?.['line-color'];
+          pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: typeof color === 'string' ? color : null } }, 'map', P, { layer: n, z0, z1: z1 ?? 0 });
+        }
+        S.mapItems[n] = items; log(`Camada "${n}": ${feats.length} feições → ${items.length} itens`);
+      }
+    }
+    listLayers(); buildGroupsUI(); render();
+    toast('Camadas capturadas.');
+  } catch (e) { toast('Falha ao capturar: ' + e.message); }
+  busy(false);
+}
+async function queryFeatures(ids) {
+  let r = null;
+  try { r = await call('queryRenderedFeatures', [{ layers: ids }]); } catch (e) { /* try alt */ }
+  if (!Array.isArray(r) && !(r && r.features)) { try { r = await call('queryRenderedFeatures', [undefined, { layers: ids }]); } catch (e) { r = []; } }
+  return Array.isArray(r) ? r : (r?.features || []);
+}
+function dedupe(feats) {
+  // merge tile-split pieces sharing an id (polygons only)
+  const byId = new Map(); const rest = []; const pc = PC();
+  for (const f of feats) {
+    if (!f?.geometry) continue;
+    const id = f.id ?? f.properties?.id; const poly = /Polygon/.test(f.geometry.type);
+    if (id == null || !poly || !pc) { rest.push(f); continue; }
+    const k = String(id) + '|' + (f.layer?.id || f.sourceLayer || '');
+    if (!byId.has(k)) byId.set(k, []); byId.get(k).push(f);
+  }
+  for (const arr of byId.values()) {
+    if (arr.length === 1) { rest.push(arr[0]); continue; }
+    try {
+      const geoms = arr.map((f) => (f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates));
+      const u = pc.union(...geoms);
+      rest.push({ ...arr[0], geometry: { type: 'MultiPolygon', coordinates: u } });
+    } catch (e) { rest.push(...arr); }
+  }
+  return rest;
+}
+
+/* ---------------- CONTEXT (base map buildings) ---------------- */
+async function captureContext() {
+  busy(true, 'Capturando entorno…');
+  try {
+    if (S.mode === 'demo') S.ctxItems = DEMO.context();
+    else {
+      const SL = await styleLayers();
+      const ids = SL.filter((l) => l['source-layer'] === 'building' || /building/i.test(l.id)).map((l) => l.id);
+      log('Layers de edifícios: ' + (ids.join(', ') || 'nenhuma'));
+      if (!ids.length) throw new Error('Nenhuma camada de edifícios no mapa base.');
+      const feats = dedupe(await queryFeatures(ids));
+      const P = ensureProjector(firstCoord(feats[0]?.geometry)); const items = [];
+      for (const f of feats) {
+        const p = f.properties || {};
+        const h = +(p.height ?? p.render_height ?? 0) || 6, b = +(p.min_height ?? p.render_min_height ?? 0) || 0;
+        pushFeature(items, f, 'ctx', P, { z0: b, z1: Math.max(h, b + 0.5), layer: 'Entorno' });
+      }
+      S.ctxItems = items.filter((i) => i.kind === 'prism');
+      log(`Entorno: ${feats.length} feições → ${S.ctxItems.length} volumes`);
+    }
+    buildGroupsUI(); render(); toast(`Entorno: ${S.ctxItems.length} edifícios.`);
+  } catch (e) { toast(e.message); }
+  busy(false);
+}
+
+/* ---------------- RASTER ---------------- */
+function blobToDataURL(b) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); }); }
+async function anyToDataURL(r) {
+  if (!r) throw new Error('getPng não retornou imagem');
+  if (typeof r === 'string') {
+    if (r.startsWith('data:')) return r;
+    if (/^(https?:|blob:|\/api)/.test(r)) { let u = r; if (r.startsWith('/api')) { try { u = await call('getTempUrl', [r]); } catch (e) { /* use raw */ } } const resp = await fetch(u); return blobToDataURL(await resp.blob()); }
+    return 'data:image/png;base64,' + r;
+  }
+  if (r instanceof Blob) return blobToDataURL(r);
+  if (r instanceof ArrayBuffer || ArrayBuffer.isView(r)) return blobToDataURL(new Blob([r], { type: 'image/png' }));
+  for (const k of ['dataUrl', 'dataURL', 'url', 'data', 'png', 'image', 'blob']) if (r[k]) return anyToDataURL(r[k]);
+  throw new Error('Formato de imagem não reconhecido: ' + summarize(r));
+}
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('imagem inválida')); i.src = src; }); }
+async function currentMapBounds() {
+  const mv = S.gs?.get('mapView'); if (mv?.bounds) return mv.bounds;
+  const fc = await call('getMapBounds'); const g = fc?.features?.[0]?.geometry || fc?.geometry;
+  if (!g) throw new Error('Limites do mapa indisponíveis');
+  const b = bboxOf(g.coordinates[0]); return [[b.minx, b.miny], [b.maxx, b.maxy]];
+}
+async function captureRaster() {
+  busy(true, 'Capturando mapa…');
+  try {
+    if (S.mode === 'demo') { S.raster = await DEMO.raster(); }
+    else {
+      try { await call('setTopView', [true]); } catch (e) { /* user may already be in 2D */ }
+      await sleep(1500);
+      const bounds = await currentMapBounds();
+      const href = await anyToDataURL(await call('getPng', [], 60000));
+      const img = await loadImg(href);
+      S.raster = { href, W: img.naturalWidth, H: img.naturalHeight, bounds };
+      log(`Raster ${img.naturalWidth}×${img.naturalHeight}px · limites ${JSON.stringify(bounds)}`);
+      ensureProjector(bounds[0]);
+    }
+    render(); toast('Raster aplicado no terreno.');
+  } catch (e) { toast('Falha na captura: ' + e.message); }
+  busy(false);
+}
+async function importRaster(file) {
+  try {
+    const href = await blobToDataURL(file); const img = await loadImg(href);
+    let bounds;
+    if (S.mode === 'demo') bounds = DEMO.rasterBounds; else bounds = await currentMapBounds();
+    S.raster = { href, W: img.naturalWidth, H: img.naturalHeight, bounds };
+    ensureProjector(bounds[0]); render();
+    toast('Imagem posicionada nos limites atuais do mapa (norte para cima).');
+  } catch (e) { toast('Falha ao importar: ' + e.message); }
+}
+function listViews() {
+  const sel = $('#viewSel'); const vs = S.mode === 'demo' ? [{ name: 'Horas de sol — inverno (demo)' }] : (S.gs?.get('views') || []);
+  if (vs[0] && S.mode !== 'demo') log('views[0] chaves: ' + Object.keys(vs[0]).join(', '));
+  sel.innerHTML = '<option value="">— nenhuma —</option>' + vs.map((v, i) => `<option value="${i}">${(v.name || v.title || 'Vista ' + (i + 1)).replace(/</g, '&lt;')}</option>`).join('');
+}
+async function activateView() {
+  const i = $('#viewSel').value; if (i === '') { toast('Escolha uma vista.'); return; }
+  if (S.mode === 'demo') { toast('Demonstração: vista ativada.'); return; }
+  const v = (S.gs.get('views') || [])[+i];
+  try {
+    await call('activateViewLayers', [v]);
+    const cam = v.camera || v.mapView || v;
+    const center = cam.center || cam.mapCenter; const zoom = cam.zoom;
+    if (center && zoom != null) { try { await call('flyTo', [{ center, zoom, bearing: 0, pitch: 0 }]); } catch (e) { /* ignore */ } }
+    toast('Vista ativada. Confira norte para cima e capture.');
+  } catch (e) { toast('Não foi possível ativar a vista.'); }
+}
+
+/* ---------------- GLTF PROBE (V02) — análise solar em fachadas? ---------------- */
+async function gltfSource(r) {
+  if (r == null) throw new Error('getGltf não retornou nada');
+  if (typeof r === 'string') {
+    const s = r.trim();
+    if (s.startsWith('{')) return { json: JSON.parse(s), raw: new Blob([s], { type: 'model/gltf+json' }) };
+    if (/^(data:|https?:|blob:|\/api)/.test(s)) {
+      let u = s; if (s.startsWith('/api')) { try { u = await call('getTempUrl', [s]); } catch (e) { /* raw */ } }
+      const b = await (await fetch(u)).blob(); return { buf: await b.arrayBuffer(), raw: b };
+    }
+    const bin = atob(s); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return { buf: u8.buffer, raw: new Blob([u8]) };
+  }
+  if (r instanceof Blob) return { buf: await r.arrayBuffer(), raw: r };
+  if (r instanceof ArrayBuffer) return { buf: r, raw: new Blob([r]) };
+  if (ArrayBuffer.isView(r)) { const b = r.buffer.slice(r.byteOffset, r.byteOffset + r.byteLength); return { buf: b, raw: new Blob([b]) }; }
+  if (r.asset && (r.meshes || r.nodes || r.scenes)) { const s = JSON.stringify(r); return { json: r, raw: new Blob([s], { type: 'model/gltf+json' }) }; }
+  for (const k of ['glb', 'gltf', 'data', 'url', 'file', 'blob', 'result', 'model']) if (r[k]) return gltfSource(r[k]);
+  throw new Error('Formato não reconhecido: ' + summarize(r));
+}
+function parseGltfBuffer(buf) {
+  const dv = new DataView(buf);
+  if (buf.byteLength >= 12 && dv.getUint32(0, true) === 0x46546C67) {
+    let off = 12, json = null, bin = null;
+    while (off + 8 <= buf.byteLength) {
+      const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true); const data = buf.slice(off + 8, off + 8 + len);
+      if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(data)); else if (type === 0x004E4942) bin = data;
+      off += 8 + len;
+    }
+    return { json, bin, glb: true };
+  }
+  return { json: JSON.parse(new TextDecoder().decode(new Uint8Array(buf))), bin: null, glb: false };
+}
+function gltfBuffers(gl, bin) {
+  return (gl.buffers || []).map((b, i) => {
+    if (!b.uri) return i === 0 ? bin : null;
+    if (b.uri.startsWith('data:')) { const s = atob(b.uri.split(',')[1]); const u8 = new Uint8Array(s.length); for (let k = 0; k < s.length; k++) u8[k] = s.charCodeAt(k); return u8.buffer; }
+    return null;
+  });
+}
+function sampleAccessor(gl, bufs, ai, max = 4000) {
+  const a = gl.accessors?.[ai]; if (!a || a.bufferView == null) return [];
+  const bv = gl.bufferViews[a.bufferView]; const buf = bufs[bv.buffer]; if (!buf) return [];
+  const nc = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[a.type] || 1;
+  const cs = { 5126: 4, 5123: 2, 5121: 1, 5125: 4, 5122: 2, 5120: 1 }[a.componentType] || 4;
+  const stride = bv.byteStride || nc * cs; const base = (bv.byteOffset || 0) + (a.byteOffset || 0);
+  const dv = new DataView(buf); const out = []; const step = Math.max(1, Math.floor(a.count / max));
+  const rd = (o) => a.componentType === 5126 ? dv.getFloat32(o, true) : a.componentType === 5123 ? dv.getUint16(o, true) / 65535 : a.componentType === 5121 ? dv.getUint8(o) / 255 : dv.getFloat32(o, true);
+  for (let i = 0; i < a.count; i += step) { const o = base + i * stride; if (o + nc * cs > buf.byteLength) break; const v = []; for (let c = 0; c < Math.min(nc, 3); c++) v.push(rd(o + c * cs)); out.push(v); }
+  return out;
+}
+async function probeGltf() {
+  const box = $('#gltfResult');
+  if (S.mode === 'demo') { box.hidden = false; box.innerHTML = 'Disponível apenas dentro do Giraffe.'; return; }
+  busy(true, 'Exportando cena 3D…');
+  const lines = []; let verdict = '';
+  try {
+    const r = await call('getGltf', [], 120000);
+    const src = await gltfSource(r);
+    const { json: gl, bin, glb } = src.json ? { json: src.json, bin: null, glb: false } : parseGltfBuffer(src.buf);
+    if (!gl) throw new Error('GLTF sem cabeçalho JSON');
+    const bufs = gltfBuffers(gl, bin);
+    const prims = (gl.meshes || []).flatMap((m) => m.primitives || []);
+    const attrs = {}; prims.forEach((p) => Object.keys(p.attributes || {}).forEach((k) => (attrs[k] = (attrs[k] || 0) + 1)));
+    const verts = prims.reduce((s, p) => s + (gl.accessors?.[p.attributes?.POSITION]?.count || 0), 0);
+    // vertex colors
+    const qs = new Set(); let colPrims = 0;
+    for (const p of prims) { if (p.attributes?.COLOR_0 == null) continue; colPrims++; if (qs.size < 500) sampleAccessor(gl, bufs, p.attributes.COLOR_0, 1500).forEach((c) => qs.add(c.map((v) => Math.round(v * 15)).join(','))); }
+    // materials
+    const mats = gl.materials || []; const mq = new Set(); let texMats = 0;
+    mats.forEach((m) => { const f = m.pbrMetallicRoughness?.baseColorFactor; if (f) mq.add(f.slice(0, 3).map((v) => Math.round(v * 15)).join(',')); if (m.pbrMetallicRoughness?.baseColorTexture || m.emissiveTexture) texMats++; });
+    const names = [...new Set([...(gl.nodes || []), ...(gl.meshes || [])].map((n) => n.name).filter(Boolean))].slice(0, 12);
+    const extrasKeys = [...new Set([...(gl.nodes || []), ...(gl.meshes || []), ...mats].flatMap((n) => Object.keys(n.extras || {})))].slice(0, 12);
+    lines.push(`Formato: ${glb ? 'GLB (binário)' : 'GLTF (JSON)'} · ${(src.raw.size / 1024).toFixed(0)} KB`);
+    lines.push(`Malhas: ${gl.meshes?.length || 0} · primitivas: ${prims.length} · vértices: ${verts.toLocaleString('pt-BR')}`);
+    lines.push(`Atributos: ${Object.entries(attrs).map(([k, v]) => `${k}(${v})`).join(', ') || '—'}`);
+    lines.push(`Cor por vértice (COLOR_0): ${colPrims} primitivas · ${qs.size} tons distintos`);
+    lines.push(`Materiais: ${mats.length} · cores distintas: ${mq.size} · com textura: ${texMats} · imagens: ${gl.images?.length || 0}`);
+    if (names.length) lines.push(`Nomes: ${names.join(', ')}`);
+    if (extrasKeys.length) lines.push(`Extras: ${extrasKeys.join(', ')}`);
+    if (colPrims && qs.size > 8) verdict = 'A análise parece vir como cor por vértice. Dá para pintar as fachadas no desenho vetorial.';
+    else if (texMats && (gl.images?.length || 0)) verdict = 'Há texturas nos materiais. A análise pode vir como imagem aplicada às faces — precisa de inspeção do arquivo.';
+    else if (mq.size > 8) verdict = 'Muitas cores de material. Pode ser a análise discretizada por face — precisa de inspeção do arquivo.';
+    else verdict = 'Nenhum sinal da análise no GLTF. O caminho será o cálculo próprio de horas de sol nas fachadas.';
+    lines.forEach((l) => log('GLTF · ' + l));
+    log('GLTF · Veredito: ' + verdict);
+    if ($('#gltfSave').checked) download(`KV_axonometria_cena_${stamp()}.${glb ? 'glb' : 'gltf'}`, src.raw);
+    box.hidden = false;
+    box.innerHTML = `<strong>${verdict}</strong><br>` + lines.map((l) => l.replace(/</g, '&lt;')).join('<br>');
+  } catch (e) {
+    box.hidden = false; box.textContent = 'Falha no teste: ' + e.message;
+  }
+  busy(false);
+}
+
+/* ---------------- CROP ACTIONS ---------------- */
+async function useMapCrop() {
+  if (S.mode === 'demo') { S.crop.mapRect = { minx: -110, miny: -90, maxx: 110, maxy: 90 }; }
+  else {
+    const b = await currentMapBounds(); const P = ensureProjector(b[0]);
+    const pts = [[b[0][0], b[0][1]], [b[1][0], b[0][1]], [b[1][0], b[1][1]], [b[0][0], b[1][1]]].map((c) => P.forward(c));
+    S.crop.mapRect = bboxOf(pts);
+  }
+  S.crop.mode = 'map'; syncUI(); render(); persist();
+}
+async function drawCrop() {
+  if (S.mode === 'demo') { S.crop.drawn = { minx: -70, miny: -60, maxx: 80, maxy: 70 }; S.crop.mode = 'drawn'; syncUI(); render(); return; }
+  toast('Desenhe a área no mapa do Giraffe.');
+  try {
+    const r = await call('getUserDrawnPolygon', [], 180000);
+    const g = r?.geometry || r?.features?.[0]?.geometry || (r?.type === 'Polygon' ? r : null);
+    if (!g) throw new Error('nenhum polígono');
+    const P = ensureProjector(firstCoord(g)); const parts = geomToParts(g, P);
+    S.crop.drawn = bboxOf(parts.polys[0][0]); S.crop.mode = 'drawn'; syncUI(); render(); persist();
+  } catch (e) { toast('Desenho cancelado ou indisponível.'); }
+}
+
+/* ---------------- EXPORT ---------------- */
+function download(name, blob) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+function exportSVG() {
+  render(false); if (!S.lastSVG) { toast('Nada para exportar.'); return; }
+  const svg = S.lastSVG.replace('<svg ', '<svg data-generator="KV Axonometria Beta ' + VERSION + '" ');
+  download(`KV_axonometria_${stamp()}.svg`, new Blob([svg], { type: 'image/svg+xml' })); toast('SVG baixado.');
+}
+async function exportPNG() {
+  render(false); if (!S.lastSVG) { toast('Nada para exportar.'); return; }
+  busy(true, 'Gerando PNG…');
+  try {
+    const k = +$('#pngScale').value; const W = S.frameW * k, H = S.frameH * k;
+    const img = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(S.lastSVG));
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, W, H);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+    download(`KV_axonometria_${stamp()}.png`, blob); toast(`PNG ${W}×${H} baixado.`);
+  } catch (e) { toast('Falha ao gerar PNG: ' + e.message); }
+  busy(false);
+}
+function styleSnapshot() { return { app: 'KV Axonometria', version: VERSION, view: S.view, frame: S.frame, style: S.style, groups: S.groups, crop: { mode: S.crop.mode, buffer: S.crop.buffer } }; }
+function loadSnapshot(o) {
+  if (!o) return;
+  if (o.view) Object.assign(S.view, o.view); if (o.frame) Object.assign(S.frame, o.frame);
+  if (o.style) Object.assign(S.style, o.style); if (o.groups) S.groups = { ...S.groups, ...o.groups };
+  if (o.crop) { S.crop.mode = o.crop.mode ?? S.crop.mode; S.crop.buffer = o.crop.buffer ?? S.crop.buffer; }
+}
+
+/* ---------------- PERSISTENCE ---------------- */
+function storeKey() { const id = S.gs?.get('project')?.properties?.id ?? S.gs?.get('project')?.id ?? 'demo'; return 'kv-axono:' + id; }
+let persistT;
+function persist() {
+  clearTimeout(persistT);
+  persistT = setTimeout(() => { try { localStorage.setItem(storeKey(), JSON.stringify({ ...styleSnapshot(), saved: S.saved, autoSync: S.autoSync })); } catch (e) { /* storage blocked */ } }, 400);
+}
+function restore() {
+  try { const o = JSON.parse(localStorage.getItem(storeKey()) || 'null'); if (o) { loadSnapshot(o); S.saved = o.saved || []; S.autoSync = o.autoSync ?? true; log('Preferências restauradas'); } } catch (e) { /* ignore */ }
+}
+
+/* ---------------- UI ---------------- */
+function bindRange(id, get, set, after) {
+  const r = $('#' + id), n = $('#' + id + 'N');
+  const upd = (v, fast) => { set(+v); r.value = v; if (n) n.value = v; after?.(fast); };
+  r.addEventListener('input', () => upd(r.value, true));
+  r.addEventListener('change', () => upd(r.value, false));
+  n?.addEventListener('change', () => upd(n.value, false));
+  r._sync = () => { r.value = get(); if (n) n.value = get(); };
+}
+function syncUI() {
+  $('#preset').value = S.view.preset;
+  $$('input[type=range]').forEach((r) => r._sync?.());
+  $('#fEl').hidden = S.view.proj !== 'ortho'; $('#fK').hidden = S.view.proj === 'ortho';
+  $('#frame').value = S.frame.fmt; $('#cropMode').value = S.crop.mode;
+  $('#fBuffer').hidden = S.crop.mode !== 'project';
+  $('#groupBy').value = S.style.groupBy; $('#palette').value = S.style.palette;
+  $('#bg').value = S.style.bg; $('#bgT').checked = S.style.bgT; $('#ground').checked = S.style.ground; $('#groundFill').value = S.style.groundFill;
+  $('#north').checked = S.style.north; $('#drapeRoofs').checked = S.style.drapeRoofs; $('#autoSync').checked = S.autoSync;
+  $$('.quad button').forEach((b) => b.setAttribute('aria-pressed', String(Math.round(S.view.az) === +b.dataset.az)));
+}
+function setPreset(p) {
+  S.view.preset = p; const d = PRESETS[p]; if (!d) { syncUI(); return; }
+  S.view.proj = d.proj; if (d.el != null) S.view.el = d.el; if (d.k) S.view.k = d.k;
+  const quad = Math.round((S.view.az - (S.view._off || 0) - 45) / 90) * 90 + 45;
+  S.view._off = d.azOff; S.view.az = (((quad + d.azOff) % 360) + 360) % 360;
+  syncUI(); render(); persist();
+}
+function setAz(a) { S.view.az = ((a % 360) + 360) % 360; }
+function buildGroupsUI() {
+  ensureGroups();
+  const host = $('#groupsUI'); const secs = [['vol', 'Volumes do projeto'], ['flat', 'Elementos 2D'], ['map', 'Camadas do mapa'], ['ctx', 'Entorno']];
+  const openSet = new Set($$('#groupsUI details[open]').map((d) => d.dataset.g));
+  let h = '';
+  for (const [k, title] of secs) {
+    const keys = Object.keys(S._counts || {}).filter((g) => g.startsWith(k + '|')).sort();
+    if (!keys.length) continue;
+    h += `<div class="grp-sec"><h3><span>${title}</span><span>${keys.length}</span></h3>`;
+    for (const g of keys) {
+      const st = S.groups[g]; const name = g.split('|').slice(1).join('|'); const id = 'g' + Math.abs([...g].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
+      const isLineOnly = allItems().filter((i) => i.g === g).every((i) => i.kind === 'line');
+      const nm = name.replace(/</g, '&lt;');
+      h += `<div class="grp${st.visible ? '' : ' off'}">
+        <button class="eye" data-g="${g.replace(/"/g, '&quot;')}" aria-pressed="${st.visible}" aria-label="${st.visible ? 'Ocultar' : 'Mostrar'} ${nm}">${st.visible ? '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 20 20 4"/></svg>'}</button>
+        <details data-g="${g.replace(/"/g, '&quot;')}" ${openSet.has(g) ? 'open' : ''}><summary><span class="sw" style="background:${isLineOnly ? 'transparent' : st.fill};border-color:${st.stroke}"></span><span class="nm">${nm}</span><span class="ct">${S._counts[g]}</span></summary>
+        <div class="body">
+          ${isLineOnly ? '' : `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${st.fill}"><input type="range" data-k="fillOp" min="0" max="1" step="0.05" value="${st.fillOp}" aria-label="Opacidade do preenchimento"></div></div>`}
+          <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${st.stroke}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${st.strokeW}" aria-label="Espessura da linha"></div></div>
+          <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${[['solid', 'Contínuo'], ['dash', 'Tracejado'], ['dot', 'Pontilhado'], ['dashdot', 'Traço-ponto']].map(([v, l]) => `<option value="${v}" ${st.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
+          ${st.orig ? `<div class="row"><button data-act="orig">Usar cor original</button></div>` : ''}
+        </div></details></div>`;
+    }
+    h += '</div>';
+  }
+  host.innerHTML = h || '<p class="hint">Os grupos aparecem aqui depois que houver conteúdo.</p>';
+  updateSummary();
+}
+function updateSummary() {
+  const it = S.items; const v = it.filter((i) => i.kind === 'prism').length; const f = it.length - v;
+  const m = Object.values(S.mapItems).reduce((a, b) => a + b.length, 0);
+  $('#srcSummary').innerHTML = `<strong>${v}</strong> volumes · <strong>${f}</strong> elementos 2D · <strong>${m}</strong> feições de camadas · <strong>${S.ctxItems.length}</strong> edifícios do entorno${S.raster ? ' · raster ativo' : ''}`;
+}
+function renderSaved() {
+  const box = $('#savedList');
+  box.innerHTML = S.saved.length ? S.saved.map((s, i) => `<div class="saved-item"><button class="name" data-i="${i}" aria-label="Aplicar vista ${s.name.replace(/"/g, '&quot;')}">${s.name.replace(/</g, '&lt;')}</button><button class="icon" data-del="${i}" aria-label="Excluir vista ${s.name.replace(/"/g, '&quot;')}"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('') : '<div class="empty">Nenhuma vista salva.</div>';
+}
+
+function wireUI() {
+  // Theme
+  const root = document.documentElement;
+  const setTheme = (d) => { root.classList.toggle('dark', d); root.classList.toggle('light', !d); try { localStorage.setItem('kv-axono-theme', d ? 'dark' : 'light'); } catch (e) { /* */ } };
+  let th = null; try { th = localStorage.getItem('kv-axono-theme'); } catch (e) { /* */ }
+  setTheme(th ? th === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+  $('#btnTheme').onclick = () => setTheme(!root.classList.contains('dark'));
+
+  // Tabs
+  const tabs = $$('[role=tab]');
+  const sel = (t) => { tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; $('#' + x.getAttribute('aria-controls')).hidden = !on; }); };
+  tabs.forEach((t, i) => { t.onclick = () => sel(t); t.onkeydown = (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; sel(n); n.focus(); } }; });
+
+  // View
+  $('#preset').onchange = (e) => setPreset(e.target.value);
+  const viewChanged = (fast) => { if (!fast) persist(); syncUIQuick(); scheduleRender(fast); };
+  bindRange('az', () => Math.round(S.view.az), (v) => setAz(v), viewChanged);
+  bindRange('el', () => S.view.el, (v) => { S.view.el = v; S.view.preset = 'custom'; $('#preset').value = 'custom'; }, viewChanged);
+  bindRange('k', () => S.view.k, (v) => { S.view.k = v; }, viewChanged);
+  bindRange('margin', () => S.frame.margin, (v) => { S.frame.margin = v; }, viewChanged);
+  bindRange('buffer', () => S.crop.buffer, (v) => { S.crop.buffer = v; }, viewChanged);
+  $('#frame').onchange = (e) => { S.frame.fmt = e.target.value; render(); persist(); };
+  $('#cropMode').onchange = async (e) => {
+    S.crop.mode = e.target.value; syncUI();
+    if (S.crop.mode === 'map' && !S.crop.mapRect) await useMapCrop().catch(() => toast('Área do mapa indisponível.'));
+    if (S.crop.mode === 'drawn' && !S.crop.drawn) await drawCrop();
+    render(); persist();
+  };
+  $('#btnMapCrop').onclick = () => useMapCrop().catch(() => toast('Área do mapa indisponível.'));
+  $('#btnDrawCrop').onclick = drawCrop;
+  $$('.quad button').forEach((b) => (b.onclick = () => { setAz(+b.dataset.az + (S.view._off || 0)); syncUI(); render(); persist(); }));
+  $('#rotL').onclick = () => { setAz(S.view.az - 15); syncUI(); render(); persist(); };
+  $('#rotR').onclick = () => { setAz(S.view.az + 15); syncUI(); render(); persist(); };
+
+  // Saved views
+  $('#btnSaveView').onclick = () => {
+    const name = $('#saveName').value.trim() || `Vista ${S.saved.length + 1}`;
+    S.saved.push({ name, view: { ...S.view }, frame: { ...S.frame }, crop: { ...S.crop } });
+    $('#saveName').value = ''; renderSaved(); persist(); toast(`Vista “${name}” salva.`);
+  };
+  $('#savedList').onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.del != null) { S.saved.splice(+b.dataset.del, 1); renderSaved(); persist(); return; }
+    const s = S.saved[+b.dataset.i]; if (!s) return;
+    Object.assign(S.view, s.view); Object.assign(S.frame, s.frame); Object.assign(S.crop, s.crop);
+    syncUI(); render(); persist();
+  };
+
+  // Stage orbit
+  const stage = $('#stage'); let drag = null;
+  stage.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, az: S.view.az, el: S.view.el }; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', (e) => {
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    setAz(drag.az - dx * 0.5);
+    if (S.view.proj === 'ortho') S.view.el = Math.max(0, Math.min(90, drag.el + dy * 0.3));
+    if (Math.abs(dy) > 2 && S.view.proj === 'ortho') S.view.preset = 'custom';
+    syncUIQuick(); scheduleRender(true);
+  });
+  const end = () => { if (!drag) return; drag = null; syncUI(); render(false); persist(); };
+  stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+  stage.addEventListener('keydown', (e) => {
+    const k = e.key; let used = true;
+    if (k === 'ArrowLeft') setAz(S.view.az + 5); else if (k === 'ArrowRight') setAz(S.view.az - 5);
+    else if (k === 'ArrowUp' && S.view.proj === 'ortho') { S.view.el = Math.min(90, S.view.el + 2.5); S.view.preset = 'custom'; }
+    else if (k === 'ArrowDown' && S.view.proj === 'ortho') { S.view.el = Math.max(0, S.view.el - 2.5); S.view.preset = 'custom'; }
+    else used = false;
+    if (used) { e.preventDefault(); syncUI(); render(); persist(); }
+  });
+
+  // Content
+  $('#btnSync').onclick = () => sync(true);
+  $('#autoSync').onchange = (e) => { S.autoSync = e.target.checked; persist(); };
+  $('#groupBy').onchange = (e) => { S.style.groupBy = e.target.value; buildGroupsUI(); render(); persist(); };
+  $('#btnReloadLayers').onclick = listLayers;
+  $('#btnCaptureLayers').onclick = captureLayers;
+  $('#btnContext').onclick = captureContext;
+  $('#btnClearContext').onclick = () => { S.ctxItems = []; buildGroupsUI(); render(); };
+  $('#btnCaptureRaster').onclick = captureRaster;
+  $('#btnActivateView').onclick = activateView;
+  $('#btnImportRaster').onclick = () => $('#fileRaster').click();
+  $('#fileRaster').onchange = (e) => { const f = e.target.files[0]; if (f) importRaster(f); e.target.value = ''; };
+  bindRange('rasterOp', () => S.style.rasterOp, (v) => { S.style.rasterOp = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
+  $('#drapeRoofs').onchange = (e) => { S.style.drapeRoofs = e.target.checked; render(); persist(); };
+  $('#btnClearRaster').onclick = () => { S.raster = null; render(); updateSummary(); };
+  $('#btnProbeGltf').onclick = probeGltf;
+
+  // Style
+  $('#btnApplyPalette').onclick = () => { applyPalette($('#palette').value); syncUI(); buildGroupsUI(); render(); persist(); };
+  bindRange('contourW', () => S.style.contourW, (v) => { S.style.contourW = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
+  bindRange('shade', () => S.style.shade, (v) => { S.style.shade = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
+  const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); persist(); });
+  sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); sty('north', 'north', 'checked');
+  const gui = $('#groupsUI');
+  gui.addEventListener('click', (e) => {
+    const eye = e.target.closest('button.eye');
+    if (eye) { const g = S.groups[eye.dataset.g]; g.visible = !g.visible; buildGroupsUI(); render(); persist(); return; }
+    const b = e.target.closest('button[data-act=orig]');
+    if (b) { const g = b.closest('details').dataset.g; S.groups[g].fill = S.groups[g].orig; buildGroupsUI(); render(); persist(); }
+  });
+  gui.addEventListener('input', (e) => {
+    const k = e.target.dataset.k; if (!k) return; const g = e.target.closest('details').dataset.g;
+    const v = e.target.type === 'range' || e.target.type === 'number' ? +e.target.value : e.target.value;
+    S.groups[g][k] = v;
+    const sw = e.target.closest('details').querySelector('.sw');
+    if (k === 'fill') sw.style.background = v; if (k === 'stroke') sw.style.borderColor = v;
+    scheduleRender(e.target.type === 'range'); persist();
+  });
+  gui.addEventListener('change', (e) => { if (e.target.dataset.k) render(); });
+
+  // Export
+  $('#btnSVG').onclick = exportSVG; $('#btnPNG').onclick = exportPNG;
+  $('#btnExportStyle').onclick = () => download(`KV_axonometria_estilo_${stamp()}.json`, new Blob([JSON.stringify(styleSnapshot(), null, 2)], { type: 'application/json' }));
+  $('#btnImportStyle').onclick = () => $('#fileStyle').click();
+  $('#fileStyle').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { loadSnapshot(JSON.parse(await f.text())); syncUI(); buildGroupsUI(); render(); persist(); toast('Estilo importado.'); } catch (err) { toast('Arquivo de estilo inválido.'); } e.target.value = ''; };
+  $('#btnCopyDiag').onclick = async () => {
+    const d = { app: 'KV Axonometria', version: VERSION, mode: S.mode, items: S.items.length, map: Object.fromEntries(Object.entries(S.mapItems).map(([k, v]) => [k, v.length])), ctx: S.ctxItems.length, raster: S.raster ? { W: S.raster.W, H: S.raster.H, bounds: S.raster.bounds } : null, view: S.view, crop: S.crop, log: S.log.slice(-80) };
+    try { await navigator.clipboard.writeText(JSON.stringify(d, null, 2)); toast('Diagnóstico copiado.'); } catch (err) { download('KV_axonometria_diagnostico.json', new Blob([JSON.stringify(d, null, 2)])); }
+  };
+}
+function syncUIQuick() {
+  const a = $('#az'), aN = $('#azN'); a.value = Math.round(S.view.az); aN.value = Math.round(S.view.az);
+  const e = $('#el'), eN = $('#elN'); e.value = S.view.el; eN.value = (+S.view.el).toFixed(1);
+  if ($('#preset').value !== S.view.preset) $('#preset').value = S.view.preset;
+}
+
+/* ---------------- SYNC ---------------- */
+function sync(manual) {
+  if (S.mode === 'demo') { ingestDemo(); }
+  else ingestGiraffe();
+  buildGroupsUI(); render();
+  if (manual) toast('Desenho atualizado.');
+}
+let autoT;
+function onModelChange() { if (!S.autoSync) return; clearTimeout(autoT); autoT = setTimeout(() => sync(false), 700); }
+
+/* ---------------- DEMO DATA ---------------- */
+const DEMO = (() => {
+  const origin = [-46.6822, -23.5617]; const P = equirect(origin);
+  const geo = (pts) => pts.map((p) => P.inverse(p));
+  const rot = (pts, a, c = [0, 0]) => pts.map(([x, y]) => { const s = Math.sin(a * D2R), co = Math.cos(a * D2R); return [c[0] + (x - c[0]) * co - (y - c[1]) * s, c[1] + (x - c[0]) * s + (y - c[1]) * co]; });
+  const rect = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]];
+  const A = 12;
+  const poly = (pts, props) => ({ type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [geo(rot(pts, A))] } });
+  const line = (pts, props) => ({ type: 'Feature', properties: props, geometry: { type: 'LineString', coordinates: geo(rot(pts, A)) } });
+  const project = poly(rect(-22, -32, 44, 64), {});
+  const baked = [
+    poly(rect(-18, -28, 36, 52), { id: 'p1', layerId: 'Proposta', usage: 'Comércio', color: '#E8A33D', _baseHeight: 0, _height: 9 }),
+    poly([[-14, -6], [10, -6], [10, 4], [2, 4], [2, 20], [-14, 20], [-14, -6]], { id: 't1', layerId: 'Proposta', usage: 'Residencial', color: '#5B8DEF', _baseHeight: 9, _height: 78 }),
+    poly(rect(-14, -24, 16, 12), { id: 't2', layerId: 'Proposta', usage: 'Hotel', color: '#9C6ADE', _baseHeight: 9, _height: 45 }),
+    poly(rect(-14, -24, 16, 12), { id: 't2c', layerId: 'Coroamento', usage: 'Técnico', color: '#747878', _baseHeight: 45, _height: 49 }),
+    poly(rect(6, -24, 12, 14), { id: 'pz', layerId: 'Paisagismo', usage: 'Área verde', color: '#2FAF83', _baseHeight: 9, _height: 9 }),
+  ];
+  const raw = [
+    line([[-22, -27], [22, -27]], { id: 'r1', layerId: 'Recuos' }),
+    line([[17, -32], [17, 32]], { id: 'r2', layerId: 'Recuos' }),
+    line([[-22, -32], [22, -32], [22, 32], [-22, 32], [-22, -32]], { id: 'r3', layerId: 'Limite do lote' }),
+  ];
+  const mapLayers = { 'Lotes (GeoSampa)': 'lots', 'Meio-fio': 'curb', 'Zoneamento': 'zone' };
+  function buildLayer(name) {
+    const items = []; const kind = mapLayers[name];
+    if (kind === 'lots') { for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) { if (i === 0 && j === 0) continue; const x = i * 48 - 22, y = j * 70 - 32; pushFeature(items, poly(rect(x, y, 44, 64), {}), 'map', P, { layer: name }); } }
+    if (kind === 'curb') { for (const x of [-26, 26, -74, 74]) pushFeature(items, line([[x, -260], [x, 260]], {}), 'map', P, { layer: name }); for (const y of [-36, 36]) pushFeature(items, line([[-260, y], [260, y]], {}), 'map', P, { layer: name }); }
+    if (kind === 'zone') { pushFeature(items, poly([[-210, -250], [40, -250], [90, 250], [-210, 250], [-210, -250]], { color: '#E1E0FF' }), 'map', P, { layer: name }); }
+    return items;
+  }
+  function context() {
+    const items = []; let seed = 7; const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+    for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) {
+      if (i === 0 && j === 0) continue; const x = i * 48 - 22, y = j * 70 - 32;
+      const n = 1 + Math.floor(rnd() * 2);
+      for (let k = 0; k < n; k++) { const w = 14 + rnd() * 18, h = 16 + rnd() * 30, ox = x + 3 + rnd() * (44 - w - 6), oy = y + 3 + k * 32 + rnd() * 4; const H = rnd() < 0.2 ? 30 + rnd() * 50 : 4 + rnd() * 14; pushFeature(items, poly(rect(ox, oy, w, Math.min(h, 28)), {}), 'ctx', P, { z0: 0, z1: H, layer: 'Entorno' }); }
+    }
+    return items.filter((i) => i.kind === 'prism');
+  }
+  const rasterBounds = (() => { const a = P.inverse([-170, -150]), b = P.inverse([170, 150]); return [[a[0], a[1]], [b[0], b[1]]]; })();
+  async function raster() {
+    const W = 680, H = 600; const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    const img = x.createImageData(W, H);
+    const ramp = [[38, 39, 125], [0, 103, 124], [0, 172, 205], [47, 175, 131], [232, 163, 61], [216, 57, 24]];
+    const col = (t) => { t = Math.max(0, Math.min(0.999, t)) * (ramp.length - 1); const i = Math.floor(t), f = t - i; return ramp[i].map((v, k) => v + (ramp[i + 1][k] - v) * f); };
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const wx = -170 + (i / W) * 340, wy = 150 - (j / H) * 300; const [rx, ry] = rot([[wx, wy]], -A)[0];
+      let t = 0.85 - 0.25 * Math.exp(-((rx + 4) ** 2 / 900 + (ry - 70) ** 2 / 4000));
+      t -= 0.45 * Math.exp(-((rx + 6) ** 2 / 300 + (ry + 60) ** 2 / 1500)); t += 0.05 * Math.sin(rx / 9) * Math.cos(ry / 11);
+      const [r, g, b] = col(t); const o = (j * W + i) * 4; img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    return { href: c.toDataURL('image/png'), W, H, bounds: rasterBounds };
+  }
+  return { origin, P, project, baked, raw, mapLayers, buildLayer, context, raster, rasterBounds };
+})();
+function buildDemoLayer(n) { return DEMO.buildLayer(n); }
+function ingestDemo() {
+  S.projector = DEMO.P; const items = []; const ids = new Set();
+  DEMO.baked.forEach((f) => { ids.add(featId(f)); pushFeature(items, f, 'vol', DEMO.P); });
+  DEMO.raw.forEach((f) => { if (!ids.has(featId(f))) pushFeature(items, f, 'flat', DEMO.P, { z0: 0, z1: 0 }); });
+  items.forEach((it) => { if (it.src === 'vol' && it.kind !== 'prism') it.src = 'flat'; });
+  S.items = items;
+}
+
+/* ---------------- BOOT ---------------- */
+async function loadSDK() {
+  const inFrame = window.parent && window.parent !== window;
+  if (!inFrame) return null;
+  const urls = ['https://cdn.jsdelivr.net/npm/@gi-nx/iframe-sdk@0.0.15/+esm', 'https://esm.sh/@gi-nx/iframe-sdk@0.0.15'];
+  for (const u of urls) {
+    try { const m = await Promise.race([import(u), sleep(8000).then(() => { throw new Error('timeout'); })]); const mod = m.rpc ? m : (m.default || m); if (mod.rpc && mod.giraffeState) { log('SDK carregado: ' + u.split('/')[2]); return mod; } } catch (e) { log(`SDK não carregou de ${u.split('/')[2]}: ${e.message}`, true); }
+  }
+  return null;
+}
+async function boot() {
+  wireUI();
+  const sdk = await loadSDK();
+  if (sdk) {
+    S.sdk = sdk; S.rpc = sdk.rpc; S.gs = sdk.giraffeState;
+    // Wait briefly for Giraffe to push state
+    for (let i = 0; i < 20 && !S.gs.get('project') && !S.gs.get('rawSections')?.features?.length; i++) await sleep(250);
+    const hasGiraffe = !!(S.gs.get('project') || S.gs.get('rawSections')?.features?.length || S.gs.get('projectLayers'));
+    if (hasGiraffe) {
+      S.mode = 'giraffe';
+      $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
+      S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
+      S.gs.addListener(['projectLayers'], () => listLayers());
+      S.gs.addListener(['views'], () => listViews());
+      S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
+    }
+  }
+  if (S.mode === 'demo') {
+    $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge">Demonstração</span>';
+    log('Fora do Giraffe: modo demonstração com dados sintéticos.');
+  }
+  restore();
+  sync(false); listLayers(); listViews(); renderSaved(); syncUI(); buildGroupsUI(); render();
+  if (S.mode === 'demo' && !Object.keys(S.mapItems).length) {
+    S.mapItems['Meio-fio'] = buildDemoLayer('Meio-fio');
+    S.ctxItems = DEMO.context(); S.raster = await DEMO.raster(); listLayers(); buildGroupsUI(); render();
+  }
+}
+boot();
+
+</script>
+</body>
+</html>
