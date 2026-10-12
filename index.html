@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V09</title>
+<title>KV Axonometria — Beta V10</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -351,15 +351,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V09 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V10 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V09 */
-/* V09: visibilidade por buffer de profundidade (ordem correta de faces + perfil só nas arestas visíveis),
+/* KV Axonometria — Beta V10 */
+/* V10: objetos 3D (gltf) lidos da exportação 3D do Giraffe (getGltf, instâncias por feição); cores do mapa base
+   por tipo; ordem água/vegetação/uso do solo/vias; entorno duplicado removido (fica 3D Buildings).
+   V09: visibilidade por buffer de profundidade (ordem correta de faces + perfil só nas arestas visíveis),
    envoltórias (_skeletonStoriesLngLat) em 3D, árvores 3D, mapa base vetorial por categoria, georreferência da imagem
    do mapa com padding, rotação da planta.
    V08: lista de layers completa (layerTree), layers ocultos no Giraffe entram desligados; leitura sob demanda
@@ -379,7 +381,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V09';
+const VERSION = 'V10';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -401,7 +403,7 @@ const PRESETS = {
 const S = {
   mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, bundleRaw: null,
   items: [],            // drawing (vol/flat)
-  extraDraw: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
+  extraDraw: {}, glbItems: [], glbKey: '',        // drawing layers read on demand (hidden in Giraffe) name -> items
   mapItems: {},         // layerName -> items
   ctxItems: [],
   raster: null,         // {href, W, H, bounds}
@@ -425,8 +427,82 @@ function lkOf(src, layer) { return src === 'vol' || src === 'flat' ? 'draw|' + l
 function lkName(lk) { return lk === 'raster' ? 'Imagem do mapa' : lk.split('|').slice(1).join('|'); }
 function hasData(lk) { if (lk === 'raster') return !!S.raster; if (lk.startsWith('map|')) return !!S.mapItems[lk.slice(4)]; if (lk.startsWith('ctx|')) return S.ctxItems.length > 0; return S.items.some((i) => i.lk === lk); }
 function isVis(lk) { const v = S.vis[lk]; if (v != null) return v; return !lk.startsWith('map|'); }
-function allItems() { return [...S.items, ...Object.values(S.mapItems).flat(), ...S.ctxItems]; }
+function allItems() { return [...S.items, ...Object.values(S.mapItems).flat()]; }
 function drawLayers() { const m = {}; for (const it of S.items) { m[it.lk] = m[it.lk] || { n: 0, prism: 0, line: 0, poly: 0, colors: {} }; const o = m[it.lk]; o.n++; o[it.kind === 'prism' ? 'prism' : it.kind]++; o.colors[it.color] = (o.colors[it.color] || 0) + 1; } return m; }
+
+/* ---------------- OBJETOS 3D (gltf) via exportação do Giraffe ---------------- */
+let gltfT = null, gltfBusy = false;
+function scheduleGltfLoad(feats) {
+  if (S.mode !== 'giraffe') return;
+  const g = new Map(); feats.forEach((f) => { const p = f?.properties || {}; if (p.gltf) g.set(String(p.id ?? f.id), f); });
+  const key = JSON.stringify([...g.values()].map((f) => [f.properties.id, f.properties.gltf, f.properties.scale, f.properties.rotation, f.properties._baseHeight, f.geometry?.coordinates, f.properties.layerId]));
+  if (!g.size) { if (S.glbItems.length) { S.glbItems = []; S.glbKey = ''; } return; }
+  if (key === S.glbKey || gltfBusy) return;
+  clearTimeout(gltfT); gltfT = setTimeout(() => loadGltfObjects(g, key), 400);
+}
+const lin2s = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+function m4mul(a, b) { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
+function m4trs(t = [0, 0, 0], q = [0, 0, 0, 1], s = [1, 1, 1]) {
+  const [x, y, z, w] = q; const xx = x * x, yy = y * y, zz = z * z, xy = x * y, xz = x * z, yz = y * z, wx = w * x, wy = w * y, wz = w * z;
+  return [(1 - 2 * (yy + zz)) * s[0], 2 * (xy + wz) * s[0], 2 * (xz - wy) * s[0], 0, 2 * (xy - wz) * s[1], (1 - 2 * (xx + zz)) * s[1], 2 * (yz + wx) * s[1], 0, 2 * (xz + wy) * s[2], 2 * (yz - wx) * s[2], (1 - 2 * (xx + yy)) * s[2], 0, t[0], t[1], t[2], 1];
+}
+const m4pt = (m, p) => [m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12], m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13], m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14]];
+function readAcc(gl, bufs, ai) {
+  const a = gl.accessors?.[ai]; if (!a) return [];
+  const nc = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[a.type] || 1; const cs = { 5126: 4, 5125: 4, 5123: 2, 5121: 1, 5122: 2, 5120: 1 }[a.componentType] || 4;
+  const out = new Array(a.count); if (a.bufferView == null) { for (let i = 0; i < a.count; i++) out[i] = new Array(nc).fill(0); return out; }
+  const bv = gl.bufferViews[a.bufferView]; const buf = bufs[bv.buffer]; const dv = new DataView(buf); const stride = bv.byteStride || nc * cs; const base = (bv.byteOffset || 0) + (a.byteOffset || 0);
+  const rd = { 5126: (o) => dv.getFloat32(o, true), 5125: (o) => dv.getUint32(o, true), 5123: (o) => dv.getUint16(o, true), 5121: (o) => dv.getUint8(o), 5122: (o) => dv.getInt16(o, true), 5120: (o) => dv.getInt8(o) }[a.componentType];
+  for (let i = 0; i < a.count; i++) { const o = base + i * stride; if (nc === 1) out[i] = rd(o); else { const v = new Array(nc); for (let c = 0; c < nc; c++) v[c] = rd(o + c * cs); out[i] = v; } }
+  return out;
+}
+async function loadGltfObjects(fmap, key) {
+  gltfBusy = true;
+  try {
+    log(`Objetos 3D: ${fmap.size} feição(ões) com gltf — lendo a exportação 3D do Giraffe…`);
+    const src = await gltfSource(await call('getGltf', [], 120000));
+    const { json: gl, bin } = src.json ? { json: src.json, bin: null } : parseGltfBuffer(src.buf);
+    const bufs = gltfBuffers(gl, bin); const P = ensureProjector(originLL());
+    const og = S.gs?.get('projectOrigin'); const offs = {};
+    for (const [id, f] of fmap) {
+      const ll = f.geometry?.type === 'Point' ? f.geometry.coordinates : firstCoord(f.geometry); const pr = f._projected || f.properties?._projected;
+      const w = P.forward(ll); offs[id] = Array.isArray(pr) && typeof pr[0] === 'number' ? [w[0] - pr[0], w[1] - pr[1]] : (og ? P.forward(og) : [0, 0]);
+    }
+    // world matrices
+    const nodes = gl.nodes || []; const world = new Array(nodes.length); const I = m4trs();
+    const walk = (i, pm) => { const n = nodes[i]; const lm = n.matrix || m4trs(n.translation, n.rotation, n.scale); const wm = m4mul(pm, lm); world[i] = wm; (n.children || []).forEach((c) => walk(c, wm)); };
+    (gl.scenes?.[gl.scene ?? 0]?.nodes || []).forEach((r) => walk(r, I));
+    const items = []; let tris = 0;
+    nodes.forEach((n, ni) => {
+      const map = n.extras?.instanceIxToFeatureMap; if (!map || n.mesh == null || !world[ni]) return;
+      const inst = n.extensions?.EXT_mesh_gpu_instancing?.attributes || {};
+      const T = inst.TRANSLATION != null ? readAcc(gl, bufs, inst.TRANSLATION) : [], R = inst.ROTATION != null ? readAcc(gl, bufs, inst.ROTATION) : [], Sc = inst.SCALE != null ? readAcc(gl, bufs, inst.SCALE) : [];
+      const count = Math.max(T.length, R.length, Sc.length, 1);
+      const mesh = gl.meshes[n.mesh];
+      for (let k = 0; k < count; k++) {
+        const fid = String(map[k] ?? map[0]); const f = fmap.get(fid); if (!f) continue;
+        const M = m4mul(world[ni], m4trs(T[k], R[k], Sc[k])); const off = offs[fid]; const p = f.properties;
+        for (const prim of mesh.primitives || []) {
+          if ((prim.mode ?? 4) !== 4) continue;
+          const pos = readAcc(gl, bufs, prim.attributes.POSITION).map((v) => { const q = m4pt(M, v); return [q[0] + off[0], -q[2] + off[1], q[1]]; });
+          const idx = prim.indices != null ? readAcc(gl, bufs, prim.indices) : pos.map((_, i) => i);
+          const mat = gl.materials?.[prim.material]; const bc = mat?.pbrMetallicRoughness?.baseColorFactor || [0.8, 0.8, 0.8, 1];
+          const hex = '#' + bc.slice(0, 3).map((c) => Math.round(Math.max(0, Math.min(1, lin2s(c))) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+          const faces = []; for (let t = 0; t + 2 < idx.length; t += 3) faces.push([pos[idx[t]], pos[idx[t + 1]], pos[idx[t + 2]]]);
+          tris += faces.length;
+          const layer = String(p.layerId ?? 'Objetos 3D');
+          items.push({ id: fid, src: 'vol', lk: lkOf('vol', layer), layer, usage: String(p.usage ?? 'Objeto 3D'), color: hex, colorReal: true, kind: 'mesh', glb: true, faces, fop: bc[3] < 0.98 ? bc[3] : undefined });
+        }
+      }
+    });
+    S.glbItems = items; S.glbKey = key;
+    log(`Objetos 3D: ${items.length} partes · ${tris.toLocaleString('pt-BR')} triângulos`);
+    if (!items.length) toast('Objetos 3D: a exportação do Giraffe não trouxe as malhas. Veja o diagnóstico.');
+    const ids = new Set(items.map((i) => i.id)); S.items = S.items.filter((i) => !ids.has(i.id)).concat(items);
+    buildLayerUI(); buildStyleUI(); render();
+  } catch (e) { log('Objetos 3D: falha — ' + e.message, true); S.glbKey = key; }
+  gltfBusy = false;
+}
 
 /* ---------------- LAYER TREE (todos os layers, com visibilidade do Giraffe) ---------------- */
 function treeLayers() {
@@ -508,6 +584,7 @@ function specialStyle(lk) {
   if (/uso do solo$/.test(n)) return { ...base, fill: '#F2F0EA', stroke: '#E2E2E2', strokeW: 0 };
   if (/vias$/.test(n)) return { ...base, fill: '#FFFFFF', stroke: '#C4C7C7', strokeW: 0.9 };
   if (lk.startsWith('map|') && /tree|[áa]rvor/i.test(n)) return { ...base, fill: '#B9D3A2', stroke: '#5E7F52', strokeW: 0.5 };
+  if (lk.startsWith('map|') && allItems().some((i) => i.lk === lk && i.kind === 'prism')) return { ...base, fill: '#F3F3F3', stroke: '#747878', strokeW: 0.45 };
   return null;
 }
 function ensureStyles() {
@@ -525,7 +602,7 @@ function applyPalette(pal) {
 }
 function fillOf(it) {
   const L = S.lstyle[it.lk]; const cm = S.style.colorMode;
-  if (cm === 'giraffe' && it.color && !it.lk.startsWith('ctx|')) return S.colorMap[it.lk]?.[it.color] || it.color;
+  if (cm === 'giraffe' && it.color && it.colorReal !== false && !it.lk.startsWith('ctx|') && !BASE_KEYS.includes(lkName(it.lk))) return S.colorMap[it.lk]?.[it.color] || it.color;
   if (cm === 'uso' && it.lk.startsWith('draw|')) return S.usageMap[it.usage] || it.color || L.fill;
   return L.fill;
 }
@@ -692,7 +769,7 @@ function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
   const meta = {
-    id: featId(f), src, lk: '', hiddenG: p._visible === false, fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
+    id: featId(f), src, lk: '', hiddenG: p._visible === false, colorReal: propColor(p) != null, fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
     layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? 'Sem camada'),
     usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
     color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
@@ -768,7 +845,8 @@ function ingestGiraffe() {
   items.forEach((it) => { if (it.src === 'vol' && it.kind !== 'prism') it.src = 'flat'; });
   const present = new Set(items.map((i) => i.layer));
   for (const [n, its] of Object.entries(S.extraDraw)) if (!present.has(n)) items.push(...its); else delete S.extraDraw[n];
-  S.items = items; applyDefaultVis();
+  const glbIds = new Set(S.glbItems.map((i) => i.id)); S.items = items.filter((i) => !glbIds.has(i.id)).concat(S.glbItems); applyDefaultVis();
+  scheduleGltfLoad(baked.concat(raw));
   const fk = new Set(); baked.concat(raw).forEach((f) => Object.entries(f.properties || {}).forEach(([k, v]) => { if (/fa[cç]ade|floor|level|slab/i.test(k)) fk.add(`${k}=${JSON.stringify(v)}`.slice(0, 60)); }));
   const mk = new Set(); baked.concat(raw).forEach((f) => { Object.entries(f.properties || {}).forEach(([k, v]) => { if (/model|gltf|glb|mesh|asset|object3d|url/i.test(k)) mk.add(`${k}=${JSON.stringify(v)}`.slice(0, 90)); }); Object.keys(f).forEach((k) => { if (/model|gltf|glb|mesh/i.test(k)) mk.add('feature.' + k); }); });
   if (mk.size) log('Possíveis objetos 3D: ' + [...mk].slice(0, 12).join(' · '));
@@ -902,7 +980,9 @@ function render(fast = false) {
     return out;
   };
   const flats = items.filter((i) => i.kind === 'poly' || i.kind === 'line');
-  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || (a.kind === 'line') - (b.kind === 'line')).forEach((it) => ground.push(...flatOps(it)));
+  const BPRI = { 'Mapa base · uso do solo': 0, 'Mapa base · vegetação': 1, 'Mapa base · água': 2, 'Mapa base · vias': 3 };
+  const pri = (it) => { const n = lkName(it.lk); return n in BPRI ? BPRI[n] : it.lk.startsWith('map|') ? 4 : 5; };
+  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || pri(a) - pri(b) || (a.kind === 'line') - (b.kind === 'line')).forEach((it) => ground.push(...flatOps(it)));
   for (const it of flats.filter((i) => (i.z || 0) > 0.05)) {
     const z = it.z;
     for (const o of flatOps(it)) {
@@ -975,10 +1055,22 @@ function render(fast = false) {
     }
   }
   // meshes (envoltórias, objetos 3D)
+  const d0 = V.depth(0, 0, 0);
+  const L3 = shs && sun ? [shs[0] * Math.cos(sun.alt * D2R), shs[1] * Math.cos(sun.alt * D2R), Math.sin(sun.alt * D2R)] : (() => { const v = [Lx / Ll * 0.7, Ly / Ll * 0.7, 0.7]; return v; })();
   for (const it of items.filter((i) => i.kind === 'mesh')) {
     const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const fop = L.fillOp * (it.fop ?? 1); const stroke = it.strokeHex ? (S.colorMap[it.lk]?.[it.strokeHex] || it.strokeHex) : L.stroke;
     for (const f of it.faces) {
-      if (f.length < 3) continue; const r3 = f.map((p) => P3(p[0], p[1], p[2]));
+      if (f.length < 3) continue;
+      if (it.glb) {
+        const [a, b, c] = f; const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const nl = Math.hypot(nx, ny, nz); if (nl < 1e-12) continue; nx /= nl; ny /= nl; nz /= nl;
+        if (V.depth(nx, ny, nz) - d0 > 1e-6) continue; // de costas
+        const lam = nx * L3[0] + ny * L3[1] + nz * L3[2]; const col = fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.85, Math.max(0, st.shade * (1 - (lam + 1) / 2) * 1.3)));
+        const r3 = f.map((p) => P3(p[0], p[1], p[2]));
+        addFace([r3], { t: 'poly', g, rings: [r3], fill: col, fop, stroke: col, sw: 0.3, dash: 'solid' }, null).opaque = fop >= 0.95;
+        continue;
+      }
+      const r3 = f.map((p) => P3(p[0], p[1], p[2]));
       if (Math.abs(sArea(r3)) < 1e-9) continue;
       addFace([r3], { t: 'poly', g, rings: [r3], fill, fop, stroke, sw: L.strokeW, dash: it.dash ? null : L.dash, dashArr: it.dash ? it.dash.map((d) => d * Math.max(0.5, L.strokeW)).join(' ') : null }, null).opaque = fop >= 0.95;
     }
@@ -1593,7 +1685,7 @@ function buildLayerUI() {
   h += `<div class="lyr-sec"><h3><span>Desenho do projeto</span><span>${dnames.length}</span></h3>${dnames.map((n) => { const k = 'draw|' + n; const has = !!dl[k]; return lyrRow(k, has ? dl[k].n : (S.mode === 'giraffe' && !giraffeVis(n) ? 'oculto' : '—'), !has); }).join('') || '<div class="lyr"><span class="check">Nenhum elemento desenhado</span></div>'}</div>`;
   const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])].filter((n) => n !== BASE_VEC && !BASE_KEYS.includes(n));
   h += `<div class="lyr-sec"><h3><span>Camadas do Giraffe</span><span>${names.length}</span></h3>${names.map((n) => lyrRow('map|' + n, S.mapItems[n] ? S.mapItems[n].length : '—', true)).join('') || '<div class="lyr"><span class="check">Nenhuma camada no projeto</span></div>'}</div>`;
-  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>${BASE_KEYS.length + 2}</span></h3>${BASE_KEYS.map((k) => lyrRow('map|' + k, S.mapItems[k] ? S.mapItems[k].length : '—', true)).join('')}${lyrRow('ctx|Entorno', S.ctxItems.length ? S.ctxItems.length : '—', true).replace('>Entorno<', '>Edifícios do entorno<')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
+  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>${BASE_KEYS.length + 1}</span></h3>${BASE_KEYS.map((k) => lyrRow('map|' + k, S.mapItems[k] ? S.mapItems[k].length : '—', true)).join('')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
   $('#layerUI').innerHTML = h;
 }
 async function captureLk(lk) {
@@ -1607,7 +1699,7 @@ async function captureLk(lk) {
   busy(false); buildLayerUI(); buildStyleUI(); render();
 }
 async function ensureCapturedForVisible() {
-  for (const lk of Object.keys(S.vis)) if (S.vis[lk] && !hasData(lk) && lk !== 'raster' && !lk.startsWith('draw|')) await captureLk(lk);
+  for (const lk of Object.keys(S.vis)) if (S.vis[lk] && !hasData(lk) && lk !== 'raster' && !lk.startsWith('draw|') && !lk.startsWith('ctx|') && lk !== 'map|' + BASE_VEC) await captureLk(lk);
   // layers de desenho ligados na versão mas sem elementos lidos (ocultos no Giraffe)
   if (S.mode === 'giraffe') for (const n of drawLayerNames()) { const lk = 'draw|' + n; if (S.vis[lk] && !hasData(lk) && treeLayers().has(n)) await captureLk(lk); }
 }
@@ -1631,8 +1723,8 @@ function buildStyleUI() {
     h += `<div class="grp-sec"><h3><span>${title}</span><span>${keys.length}</span></h3>`;
     for (const lk of keys) {
       const L = S.lstyle[lk]; const its = by[lk]; const lineOnly = its.every((i) => i.kind === 'line' || i.ink); const id = 'g' + Math.abs([...lk].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
-      const colors = {}; its.forEach((i) => { if (i.color) colors[i.color] = (colors[i.color] || 0) + 1; });
-      const showFill = !lineOnly && (cm === 'paleta' || lk.startsWith('ctx|') || (cm === 'uso' && lk.startsWith('map|')));
+      const colors = {}; its.forEach((i) => { if (i.color && i.colorReal !== false) colors[i.color] = (colors[i.color] || 0) + 1; });
+      const showFill = !lineOnly && (cm === 'paleta' || lk.startsWith('ctx|') || its.some((i) => fillOf(i) === L.fill));
       const sw = lineOnly ? (cm === 'giraffe' && its[0].color ? its[0].color : 'transparent') : (cm === 'paleta' || lk.startsWith('ctx|') ? L.fill : fillOf(its[0]));
       h += `<div class="grp${isVis(lk) ? '' : ' off'}"><details data-lk="${esc(lk)}" ${openSet.has(lk) ? 'open' : ''}><summary><span class="sw" style="background:${sw};border-color:${L.stroke}"></span><span class="nm">${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span><span class="ct">${its.length}</span></summary><div class="body">
         ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
@@ -2102,8 +2194,8 @@ async function boot() {
     $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge">Demonstração</span>';
     log(inFrame ? `Sem resposta do Giraffe: demonstração (mensagens: ${MSG.n}, tipos: ${Object.keys(MSG.types).join(', ') || 'nenhum'})` : 'Fora do Giraffe: modo demonstração com dados sintéticos.');
     restore(); if (!S.cropUI.rect) fitRatio();
-    S.mapItems['Meio-fio'] = DEMO.buildLayer('Meio-fio'); S.ctxItems = DEMO.context(); S.raster = await DEMO.raster();
-    if (S.vis['map|Meio-fio'] == null) S.vis['map|Meio-fio'] = true;
+    S.mapItems['Meio-fio'] = DEMO.buildLayer('Meio-fio'); S.mapItems['3D Buildings'] = DEMO.context().map((i) => ({ ...i, src: 'map', layer: '3D Buildings', lk: 'map|3D Buildings' })); S.raster = await DEMO.raster();
+    if (S.vis['map|Meio-fio'] == null) S.vis['map|Meio-fio'] = true; if (S.vis['map|3D Buildings'] == null) S.vis['map|3D Buildings'] = true;
     if (!giraffeEntered) { sync(false); listViews(); renderVersions(); syncUI(); histReset(); setEdit(false); }
   }
 }
