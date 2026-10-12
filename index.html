@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V06</title>
+<title>KV Axonometria — Beta V08</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -157,6 +157,11 @@ body.resizing{cursor:col-resize;user-select:none}
 
 .stage[data-tool=crop] .hud{display:none}
 
+.toolbar{flex-wrap:wrap}
+button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
+.stage[data-edit="1"]{border:2px solid var(--md-sys-color-primary)}
+.stage[data-edit="0"]{cursor:default!important}
+
 [hidden]{display:none!important}
 
 </style>
@@ -188,7 +193,7 @@ body.resizing{cursor:col-resize;user-select:none}
   <button class="icon" id="btnVerNew" aria-label="Nova versão a partir da atual" title="Nova versão (duplica a atual)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
 
-<div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Use as ferramentas Girar, Mover e Recortar; roda do mouse aproxima.">
+<div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Travado por padrão: ative Editar ou dê duplo clique para girar, mover, aproximar e recortar.">
   <svg id="drawing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet"></svg>
   <svg id="overlay" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
   <div class="hud" id="hud" aria-live="polite"></div>
@@ -196,6 +201,7 @@ body.resizing{cursor:col-resize;user-select:none}
 </div>
 
 <div class="toolbar" role="toolbar" aria-label="Ferramentas da vista">
+  <button class="icon edit" id="btnEdit" aria-pressed="false" aria-label="Editar a vista" title="Editar a vista (duplo clique na vista)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg></button>
   <div class="seg" role="group" aria-label="Ferramenta">
     <button class="icon" data-tool="orbit" aria-pressed="true" aria-label="Girar" title="Girar (arrastar)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M12 3v18"/><path d="M18 9l3 3-3 3"/></svg></button>
     <button class="icon" data-tool="pan" aria-pressed="false" aria-label="Mover" title="Mover (arrastar)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg></button>
@@ -205,6 +211,10 @@ body.resizing{cursor:col-resize;user-select:none}
     <button class="icon" id="zoomOut" aria-label="Afastar" title="Afastar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6M7 10h6"/></svg></button>
     <button class="icon" id="zoomIn" aria-label="Aproximar" title="Aproximar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6M7 10h6M10 7v6"/></svg></button>
     <button class="icon" id="zoomFit" aria-label="Enquadrar tudo" title="Enquadrar tudo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+  </div>
+  <div class="seg" role="group" aria-label="Histórico">
+    <button class="icon" id="btnUndo" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="icon" id="btnRedo" aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
   </div>
   <span class="spacer"></span>
   <button class="icon primary" id="btnSync" aria-label="Atualizar do Giraffe" title="Atualizar do Giraffe"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg></button>
@@ -263,7 +273,7 @@ body.resizing{cursor:col-resize;user-select:none}
   <!-- CONTEÚDO -->
   <section class="panel" id="p-conteudo" role="tabpanel" aria-labelledby="tab-conteudo" hidden>
     <h2>Layers</h2>
-    <p class="hint">Ligue e desligue o que aparece na versão atual. Camadas do Giraffe e mapa base são lidas ao ligar; use ↻ para ler de novo.</p>
+    <p class="hint">Todos os layers do projeto aparecem aqui. Na primeira leitura, cada layer entra ligado ou desligado conforme está no Giraffe; depois, o controle é do app (por versão). Layers ocultos no Giraffe são lidos ao ligar; use ↻ para ler de novo.</p>
     <div id="layerUI"></div>
     <label class="check"><input type="checkbox" id="autoSync">Atualizar o desenho do projeto automaticamente</label>
 
@@ -339,15 +349,19 @@ body.resizing{cursor:col-resize;user-select:none}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V06 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V08 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V06 */
-/* V06: quadro da vista fixo — redimensionar janela/painel só escala vista e recorte juntos.
+/* KV Axonometria — Beta V08 */
+/* V08: lista de layers completa (layerTree), layers ocultos no Giraffe entram desligados; leitura sob demanda
+   (getLayerContents → mostrar/ocultar temporário via changeLayerVisibility); altura de elementos só em rawSections.
+   V07: trava de edição da vista, desfazer/refazer, linhas com estilo do Giraffe (_display2dOutline: traço, espessura, setas),
+   lajes só na base de cada pavimento, mapa base vetorial, árvores, correções de captura (queryRenderedFeatures/getPng).
+   V06: quadro da vista fixo — redimensionar janela/painel só escala vista e recorte juntos.
    V05: painel lateral redimensionável/ocultável; layers sem sombra; elementos 'sem fachada' como lajes.
    V04: versões de vista, zoom/mover, recorte na vista, sombra projetada, cor por layer/Giraffe/uso, lista completa de layers.
    V03: buffer de mensagens do Giraffe desde o carregamento (o SDK é importado depois) + replay;
@@ -360,7 +374,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V06';
+const VERSION = 'V08';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -382,6 +396,7 @@ const PRESETS = {
 const S = {
   mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, bundleRaw: null,
   items: [],            // drawing (vol/flat)
+  extraDraw: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
   mapItems: {},         // layerName -> items
   ctxItems: [],
   raster: null,         // {href, W, H, bounds}
@@ -393,7 +408,7 @@ const S = {
   style: { palette: 'paper', colorMode: 'paleta', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false,
     sh: { on: false, day: '06-21', date: '', min: 720, tz: -3, op: 0.32, color: '#3A3F55', noCast: {} } },
   lstyle: {}, colorMap: {}, usageMap: {},
-  autoSync: true, tool: 'orbit',
+  autoSync: true, tool: 'orbit', edit: false,
   log: [], lastSVG: '', W: 1600, H: 1000, fit: null,
 };
 const newView = () => ({ preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1, zoom: 1, panX: 0, panY: 0, _off: 0 });
@@ -403,15 +418,74 @@ function setActive(i) { S.av = Math.max(0, Math.min(S.versions.length - 1, i)); 
 /* ---------------- LAYER KEYS & VISIBILITY ---------------- */
 function lkOf(src, layer) { return src === 'vol' || src === 'flat' ? 'draw|' + layer : src === 'map' ? 'map|' + layer : 'ctx|Entorno'; }
 function lkName(lk) { return lk === 'raster' ? 'Imagem do mapa' : lk.split('|').slice(1).join('|'); }
-function hasData(lk) { if (lk === 'raster') return !!S.raster; if (lk.startsWith('map|')) return !!S.mapItems[lk.slice(4)]; if (lk.startsWith('ctx|')) return S.ctxItems.length > 0; return true; }
+function hasData(lk) { if (lk === 'raster') return !!S.raster; if (lk.startsWith('map|')) return !!S.mapItems[lk.slice(4)]; if (lk.startsWith('ctx|')) return S.ctxItems.length > 0; return S.items.some((i) => i.lk === lk); }
 function isVis(lk) { const v = S.vis[lk]; if (v != null) return v; return !lk.startsWith('map|'); }
 function allItems() { return [...S.items, ...Object.values(S.mapItems).flat(), ...S.ctxItems]; }
 function drawLayers() { const m = {}; for (const it of S.items) { m[it.lk] = m[it.lk] || { n: 0, prism: 0, line: 0, poly: 0, colors: {} }; const o = m[it.lk]; o.n++; o[it.kind === 'prism' ? 'prism' : it.kind]++; o.colors[it.color] = (o.colors[it.color] || 0) + 1; } return m; }
 
+/* ---------------- LAYER TREE (todos os layers, com visibilidade do Giraffe) ---------------- */
+function treeLayers() {
+  const out = new Map(); const t = S.gs?.get('layerTree'); if (!t) return out;
+  const VK = ['visible', 'isVisible', 'show', 'checked', 'active', 'enabled', 'on'];
+  const kidsOf = (o) => { for (const k of ['children', 'items', 'layers', 'nodes']) { const c = o[k]; if (c && typeof c === 'object') return Array.isArray(c) ? c : Object.values(c); } return null; };
+  const walk = (o, pv, depth) => {
+    if (!o || typeof o !== 'object' || depth > 12) return;
+    if (Array.isArray(o)) { o.forEach((x) => walk(x, pv, depth + 1)); return; }
+    let v = pv; const vk = VK.find((k) => typeof o[k] === 'boolean'); if (vk) v = pv && o[vk]; if (typeof o.hidden === 'boolean') v = pv && !o.hidden;
+    const name = o.name ?? o.label ?? o.title ?? o.layerName ?? o.layer?.name ?? null;
+    const kids = kidsOf(o);
+    if (kids) { walk(kids, v, depth + 1); return; }
+    if (name != null && typeof name !== 'object') out.set(String(name), { vis: v, id: o.id ?? o.layerId ?? o.key ?? null });
+    else if (!vk) Object.values(o).forEach((x) => { if (x && typeof x === 'object') walk(x, v, depth + 1); });
+  };
+  walk(t, true, 0);
+  return out;
+}
+let treeLogged = false;
+function drawLayerNames() {
+  const T = treeLayers(); const maps = new Set(projectLayerNames());
+  if (!treeLogged && S.gs?.get('layerTree')) { treeLogged = true; log(`layerTree: ${T.size} layers · amostra: ${JSON.stringify(S.gs.get('layerTree')).slice(0, 500)}`); }
+  const names = new Set(S.items.map((i) => i.layer));
+  for (const n of T.keys()) if (!maps.has(n)) names.add(n);
+  return [...names];
+}
+function giraffeVis(name) {
+  const t = treeLayers().get(name); if (t && typeof t.vis === 'boolean') return t.vis;
+  const its = S.items.filter((i) => i.layer === name); if (its.length && its.every((i) => i.hiddenG)) return false;
+  return true;
+}
+function applyDefaultVis() {
+  // layers ainda sem decisão na versão herdam a visibilidade atual do Giraffe
+  if (S.mode !== 'giraffe') return;
+  for (const n of drawLayerNames()) { const lk = 'draw|' + n; const gv = giraffeVis(n); for (const v of S.versions) if (v.vis[lk] == null) v.vis[lk] = gv; }
+}
+async function fetchDrawLayer(name) {
+  if (S.mode === 'demo') return;
+  const P = ensureProjector(DEMO.origin); const items = [];
+  const take = (feats) => { for (const f of feats) { if (!f?.geometry) continue; const p = f.properties || {}; const z0 = +(p._baseHeight ?? p.baseHeight ?? 0) || 0; let z1 = +(p._height ?? NaN); if (!isFinite(z1)) z1 = z0 + (+(p.height ?? 0) || ((+p.levels || 0) * (+p.floorToFloor || 0)) || 0); pushFeature(items, f, z1 - z0 > 0.05 ? 'vol' : 'flat', P, { layer: name, z0, z1 }); } items.forEach((it) => { if (it.src === 'vol' && it.kind !== 'prism') it.src = 'flat'; }); };
+  // 1) leitura direta
+  try { const feats = toFeatures(await call('getLayerContents', [name], 45000)); logShape(`getLayerContents("${name}")`, feats); take(feats); } catch (e) { /* next */ }
+  // 2) mostrar temporariamente no Giraffe, ler e ocultar de novo
+  if (!items.length) {
+    const t = treeLayers().get(name); const tries = [[name, true], ...(t?.id != null ? [[t.id, true]] : []), [{ name, visible: true }]];
+    let shown = null;
+    for (const a of tries) { try { await call('changeLayerVisibility', a, 15000); shown = a; break; } catch (e) { /* next */ } }
+    if (shown) {
+      const got = await new Promise((res) => { let done = false; const fin = (v) => { if (!done) { done = true; res(v); } }; const id = S.gs.addListener(['bakedSections'], () => { const fs = (S.gs.get('bakedSections')?.features || []).filter((f) => String(f.properties?.layerId ?? f.properties?.layer ?? '') === name); if (fs.length) fin(fs); }); setTimeout(() => fin((S.gs.get('bakedSections')?.features || []).filter((f) => String(f.properties?.layerId ?? '') === name)), 5000); });
+      take(got.map((f) => ({ ...f, properties: { ...f.properties, _visible: true } })));
+      const off = [...shown]; off[off.length - 1] = typeof off[off.length - 1] === 'boolean' ? false : { name, visible: false };
+      try { await call('changeLayerVisibility', off, 15000); } catch (e) { toast(`Não consegui ocultar "${name}" de novo no Giraffe.`); }
+      log(`"${name}": lido mostrando temporariamente no Giraffe (${items.length} itens)`);
+    }
+  }
+  if (items.length) { S.extraDraw[name] = items; S.items = S.items.filter((i) => i.layer !== name).concat(items); }
+  else toast(`"${name}": não consegui ler os elementos deste layer oculto. Mostre-o no Giraffe e clique em Atualizar.`);
+}
+
 /* ---------------- STYLE ---------------- */
 function layerKind(lk) {
   if (lk.startsWith('ctx|')) return 'ctx'; if (lk.startsWith('map|')) return 'map';
-  return S.items.some((i) => i.lk === lk && i.kind === 'prism') ? 'vol' : S.items.filter((i) => i.lk === lk).every((i) => i.kind === 'line') ? 'line' : 'flat';
+  return S.items.some((i) => i.lk === lk && i.kind === 'prism') ? 'vol' : S.items.filter((i) => i.lk === lk).every((i) => i.kind === 'line' || i.ink) ? 'line' : 'flat';
 }
 function defaultLayerStyle(kind, pal = S.style.palette) {
   const ink = '#1B1B1B', gray = '#747878';
@@ -575,14 +649,16 @@ function firstCoord(g) {
 }
 function geomToParts(g, P) {
   // returns {polys:[[ring...]], lines:[[pt...]]} in world meters
-  const out = { polys: [], lines: [] }; if (!g) return out;
+  const out = { polys: [], lines: [], points: [] }; if (!g) return out;
   const f = (c) => P.forward([c[0], c[1]]);
   const T = g.type, C = g.coordinates;
   if (T === 'Polygon') out.polys.push(C.map((r) => r.map(f)));
   else if (T === 'MultiPolygon') C.forEach((p) => out.polys.push(p.map((r) => r.map(f))));
   else if (T === 'LineString') out.lines.push(C.map(f));
+  else if (T === 'Point') out.points.push(f(C));
+  else if (T === 'MultiPoint') C.forEach((c) => out.points.push(f(c)));
   else if (T === 'MultiLineString') C.forEach((l) => out.lines.push(l.map(f)));
-  else if (T === 'GeometryCollection') (g.geometries || []).forEach((gg) => { const o = geomToParts(gg, P); out.polys.push(...o.polys); out.lines.push(...o.lines); });
+  else if (T === 'GeometryCollection') (g.geometries || []).forEach((gg) => { const o = geomToParts(gg, P); out.polys.push(...o.polys); out.lines.push(...o.lines); out.points.push(...o.points); });
   return out;
 }
 
@@ -602,7 +678,7 @@ function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
   const meta = {
-    id: featId(f), src, lk: '',
+    id: featId(f), src, lk: '', hiddenG: p._visible === false,
     layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? 'Sem camada'),
     usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
     color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
@@ -613,18 +689,32 @@ function pushFeature(list, f, src, P, opts = {}) {
   if (!isFinite(z1)) { const h = +(p.height ?? 0) || 0; z1 = z0 + h; }
   if (opts.z0 != null) z0 = opts.z0; if (opts.z1 != null) z1 = opts.z1;
   const nf = z1 - z0 > 0.05 && isNoFacade(p);
-  const f2f = +(p.floor_to_floor ?? p.floorToFloor ?? p._floorToFloor ?? p.floorHeight ?? NaN);
-  const thk = Math.min(+(p.slab_thickness ?? p.slabThickness ?? 0.3) || 0.3, (z1 - z0) / 2);
+  const f2f = +(p.floorToFloor ?? p.floor_to_floor ?? p._floorToFloor ?? p.floorHeight ?? NaN);
+  const lv = +(p.levels ?? NaN);
+  const thk = Math.min(+(p.slabThickness ?? p.slab_thickness ?? 0.3) || 0.3, isFinite(f2f) && f2f > 0 ? f2f / 2 : (z1 - z0) / 2);
+  // contorno 2D calculado pelo Giraffe (traço, espessura e setas já resolvidos)
+  const olG = f._display2dOutline?.geometry || p._display2dOutline?.geometry || null;
+  const inkHex = p.stroke ? toHex(p.stroke, meta.color) : meta.color;
+  const pushInk = (zz) => { if (!olG) return false; const op = geomToParts(olG, P); let n = 0; for (const pp of op.polys) { const o = orientPoly(pp); if (o.length) { list.push({ ...meta, color: inkHex, kind: 'poly', ink: true, poly: o, z: zz }); n++; } } return n > 0; };
   for (const poly of parts.polys) {
     const o = orientPoly(poly); if (!o.length || Math.abs(sArea(o[0])) < 0.01) continue;
     if (nf) {
-      // sem fachada: só as lajes (base de cada pavimento + cobertura)
-      const n = isFinite(f2f) && f2f > 0.5 ? Math.max(1, Math.round((z1 - z0) / f2f)) : 1; const step = (z1 - z0) / n;
-      for (let i = 0; i <= n; i++) { const zb = i === n ? z1 - thk : z0 + i * step; list.push({ ...meta, kind: 'prism', poly: o, z0: zb, z1: zb + thk, slab: true }); }
+      // sem fachada: uma laje na BASE de cada pavimento (sem laje de cobertura)
+      const zs = [];
+      if (isFinite(f2f) && f2f > 0.5) { const n = isFinite(lv) && lv > 0 ? lv : Math.round((z1 - z0) / f2f); for (let i = 0; i < Math.max(1, n); i++) { const z = z0 + i * f2f; if (z < z1 - 0.05) zs.push(z); } }
+      else if (isFinite(lv) && lv > 0) { const st = (z1 - z0) / lv; for (let i = 0; i < lv; i++) zs.push(z0 + i * st); }
+      else zs.push(z0);
+      for (const zb of zs) list.push({ ...meta, kind: 'prism', poly: o, z0: zb, z1: zb + thk, slab: true });
     } else if (z1 - z0 > 0.05) list.push({ ...meta, kind: 'prism', poly: o, z0, z1 });
-    else list.push({ ...meta, kind: 'poly', poly: o, z: z0 });
+    else { list.push({ ...meta, kind: 'poly', poly: o, z: z0, noStroke: !!olG }); pushInk(z0); }
   }
-  for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, kind: 'line', pts: l, z: z0 });
+  if (parts.lines.length) {
+    if (!pushInk(z0)) {
+      const ls = (p.strokeWidth != null || p.arrowEnd || p.arrowStart || p.strokeDasharray) ? { w: +p.strokeWidth || 0, dash: Array.isArray(p.strokeDasharray) ? p.strokeDasharray : null, cap: p.strokeLinecap || null, aS: !!p.arrowStart, aE: !!p.arrowEnd, aSL: +p.arrowStartLength || 0, aEL: +p.arrowEndLength || 0, aSA: +p.arrowStartYawn || 40, aEA: +p.arrowEndYawn || 40 } : null;
+      for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, color: inkHex, kind: 'line', pts: l, z: z0, ls });
+    }
+  }
+  if (opts.points && parts.points.length) for (const c of parts.points) { const r = opts.points; const ring = []; for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; ring.push([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]); } list.push({ ...meta, kind: 'poly', poly: [ring], z: z0 }); }
 }
 function ingestGiraffe() {
   const gs = S.gs; if (!gs) return;
@@ -643,11 +733,14 @@ function ingestGiraffe() {
   for (const f of raw) {
     if (bakedIds.has(featId(f))) continue;
     const t = f.geometry?.type; if (!t || t.includes('Point')) continue;
-    pushFeature(items, f, 'flat', P, { z1: 0, z0: +(f.properties?.baseHeight ?? 0) || 0 }); rawAdded++;
+    const rp = f.properties || {}; const z0r = +(rp._baseHeight ?? rp.baseHeight ?? 0) || 0; const hr = +(rp.height ?? 0) || ((+rp.levels || 0) * (+rp.floorToFloor || +rp.floor_to_floor || 0)) || 0;
+    pushFeature(items, f, hr > 0.05 ? 'vol' : 'flat', P, { z0: z0r, z1: z0r + hr }); rawAdded++;
   }
   // baked 2D (no height) and lines belong to the 2D source
   items.forEach((it) => { if (it.src === 'vol' && it.kind !== 'prism') it.src = 'flat'; });
-  S.items = items;
+  const present = new Set(items.map((i) => i.layer));
+  for (const [n, its] of Object.entries(S.extraDraw)) if (!present.has(n)) items.push(...its); else delete S.extraDraw[n];
+  S.items = items; applyDefaultVis();
   const fk = new Set(); baked.concat(raw).forEach((f) => Object.entries(f.properties || {}).forEach(([k, v]) => { if (/fa[cç]ade|floor|level|slab/i.test(k)) fk.add(`${k}=${JSON.stringify(v)}`.slice(0, 60)); }));
   if (fk.size) log('Propriedades de fachada/pavimento: ' + [...fk].slice(0, 20).join(' · '));
   log(`Sem fachada (lajes): ${items.filter((i) => i.slab).length} lajes`);
@@ -749,10 +842,26 @@ function render(fast = false) {
   if (st.ground && R) ops.push({ t: 'poly', g: 'Terreno', rings: [prj(rectPoly(R)[0].slice(0, 4), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
   if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ops.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null }); }
 
+  // linhas com estilo próprio do Giraffe mantêm a cor original (substituível em Estilo → layer → cores)
+  const inkOf = (it, L) => (it.color ? (S.colorMap[it.lk]?.[it.color] || it.color) : L.stroke);
   const emitFlat = (it) => {
-    const L = LS[it.lk]; const g = lkName(it.lk);
-    if (it.kind === 'line') ops.push({ t: 'line', g, pts: it.pts.map((p) => V.P(p[0], p[1], it.z || 0)), stroke: L.stroke, sw: L.strokeW, dash: L.dash });
-    else ops.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, it.z || 0)), fill: fillOf(it), fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash });
+    const L = LS[it.lk]; const g = lkName(it.lk); const z = it.z || 0;
+    if (it.ink) { const c = inkOf(it, L); ops.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: c, fop: 1, stroke: c, sw: 0.25, dash: 'solid' }); return; }
+    if (it.kind === 'line') {
+      const ls = it.ls; const pts = it.pts.map((p) => V.P(p[0], p[1], z));
+      if (!ls) { ops.push({ t: 'line', g, pts, stroke: L.stroke, sw: L.strokeW, dash: L.dash }); return; }
+      const c = inkOf(it, L); const w = ls.w > 0 ? Math.max(L.strokeW, ls.w * 0.35) : L.strokeW;
+      ops.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: ls.dash ? ls.dash.map((d) => d * w).join(' ') : null, dash: ls.dash ? null : L.dash, cap: ls.cap });
+      const arrow = (a, b, len, ang) => { // world-space chevron at point a, pointing away from b
+        const dx = a[0] - b[0], dy = a[1] - b[1]; const l = Math.hypot(dx, dy) || 1; const ux = dx / l, uy = dy / l; const h = (ang / 2) * D2R; const L2 = len || 6;
+        const w1 = [a[0] - L2 * (ux * Math.cos(h) - uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) + ux * Math.sin(h))];
+        const w2 = [a[0] - L2 * (ux * Math.cos(h) + uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) - ux * Math.sin(h))];
+        ops.push({ t: 'line', g, pts: [w1, a, w2].map((p) => V.P(p[0], p[1], z)), stroke: c, sw: w, dash: 'solid', cap: ls.cap });
+      };
+      const P0 = it.pts; if (ls.aE) arrow(P0[P0.length - 1], P0[P0.length - 2], ls.aEL, ls.aEA); if (ls.aS) arrow(P0[0], P0[1], ls.aSL, ls.aSA);
+      return;
+    }
+    ops.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: fillOf(it), fop: L.fillOp, stroke: it.noStroke ? 'none' : L.stroke, sw: it.noStroke ? 0 : L.strokeW, dash: L.dash });
   };
   const flats = items.filter((i) => i.kind !== 'prism');
   flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || (a.kind === 'line') - (b.kind === 'line')).forEach(emitFlat);
@@ -811,7 +920,7 @@ function render(fast = false) {
   const open = (g) => { if (g === curG) return; if (curG !== null) out += '</g>'; out += `<g id="${esc(safeId(g))}" data-name="${esc(g)}">`; curG = g; };
   for (const o of ops) {
     open(o.g);
-    const dash = DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : ''; const cap = o.dash === 'dot' ? ' stroke-linecap="round"' : '';
+    const dash = o.dashArr ? ` stroke-dasharray="${o.dashArr}"` : DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : ''; const cap = o.cap ? ` stroke-linecap="${o.cap}"` : o.dash === 'dot' ? ' stroke-linecap="round"' : '';
     if (o.t === 'poly') {
       const d = o.rings.map(ringD).join(''); const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
       const sw = o.sw > 0 && o.stroke !== 'none' ? ` stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap}` : ' stroke="none"';
@@ -845,8 +954,8 @@ function render(fast = false) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join('')}</defs>${bgRect}${out}${north}</svg>`;
   S.lastSVG = svg;
   const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-  host.style.background = st.bgT ? 'repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/16px 16px' : st.bg;
-  $('#hud').textContent = `${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}`;
+  host.style.background = 'transparent';
+  $('#hud').textContent = `${S.edit ? 'EDITANDO · ' : '🔒 '}${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}`;
   if (sun) $('#sunInfo').textContent = sunUp ? `Sol: az ${Math.round(sun.az)}°, alt ${Math.round(sun.alt)}°` : 'Sol abaixo do horizonte';
   drawOverlay();
 }
@@ -970,15 +1079,25 @@ async function fetchLayerFeatures(n, SL) {
   let ids = [];
   try { ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; } catch (e) { /* */ }
   if (!ids.length) ids = SL.filter((l) => String(l.id).includes(n) || l.source === n).map((l) => l.id);
-  log(`Layers Mapbox de "${n}": ${ids.join(', ') || 'nenhuma'}`);
-  if (!ids.length) return [];
+  const typeById = Object.fromEntries(SL.map((l) => [l.id, l.type]));
+  const skipped = ids.filter((i) => ['symbol', 'raster', 'background', 'hillshade', 'sky'].includes(typeById[i]));
+  ids = ids.filter((i) => !skipped.includes(i));
+  log(`Layers Mapbox de "${n}": ${ids.join(', ') || 'nenhuma'}${skipped.length ? ` · ignoradas (rótulo/imagem): ${skipped.length}` : ''}`);
+  if (!ids.length) { if (skipped.some((i) => typeById[i] === 'raster')) toast(`"${n}" é uma imagem: use Mapa base → Imagem do mapa.`); return []; }
   const feats = await queryFeatures(ids); logShape(`queryRenderedFeatures("${n}")`, feats);
   return feats;
 }
+const BASE_VEC = 'Mapa base (vetorial)';
 async function captureMapLayer(n) {
-  if (S.mode === 'demo') { S.mapItems[n] = DEMO.buildLayer(n); return; }
+  if (S.mode === 'demo') { S.mapItems[n] = n === BASE_VEC ? DEMO.buildLayer('Meio-fio') : DEMO.buildLayer(n); return; }
   const SL = await styleLayers();
-  const feats = await fetchLayerFeatures(n, SL);
+  let feats;
+  if (n === BASE_VEC) {
+    const ids = SL.filter((l) => (l.type === 'fill' || l.type === 'line') && !/^GIRPLA/i.test(String(l.id)) && !/raw|section|draw|giraffe|select|lens|project|temp|highlight/i.test(String(l.source) + ' ' + l.id)).map((l) => l.id);
+    log(`Mapa base vetorial: ${ids.length} layers · ${ids.slice(0, 25).join(', ')}`);
+    feats = ids.length ? await queryFeatures(ids) : []; logShape('Mapa base vetorial', feats);
+  } else feats = await fetchLayerFeatures(n, SL);
+  const treeR = /tree|[áa]rvor/i.test(n) ? 2.5 : 0;
   const styleById = Object.fromEntries(SL.map((l) => [l.id, l]));
   let ext = null; try { const ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; ext = ids.map((i) => styleById[i]).find((l) => l?.type === 'fill-extrusion') || null; } catch (e) { /* */ }
   const P = ensureProjector(firstCoord(feats.find((f) => f?.geometry)?.geometry)); const items = [];
@@ -991,7 +1110,7 @@ async function captureMapLayer(n) {
       if (isFinite(h) && h > 0) { z1 = h; z0 = isFinite(b) ? b : 0; }
     }
     const color = sl.paint?.['fill-color'] || sl.paint?.['fill-extrusion-color'] || sl.paint?.['line-color'];
-    pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: f.properties?.color ?? (typeof color === 'string' ? color : null) } }, 'map', P, { layer: n, z0, z1 });
+    pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: f.properties?.color ?? (typeof color === 'string' ? color : null) } }, 'map', P, { layer: n, z0, z1, points: treeR });
   }
   S.mapItems[n] = items; log(`Camada "${n}": ${feats.length} feições → ${items.length} itens`);
   if (!items.length) toast(`"${n}": nada lido. Veja o diagnóstico.`);
@@ -1016,8 +1135,8 @@ function evalExpr(e, p) {
 }
 async function queryFeatures(ids) {
   let r = null;
-  try { r = await call('queryRenderedFeatures', [{ layers: ids }]); } catch (e) { /* alt */ }
-  if (!toFeatures(r).length) { try { r = await call('queryRenderedFeatures', [undefined, { layers: ids }]); } catch (e) { /* */ } }
+  try { r = await call('queryRenderedFeatures', [undefined, { layers: ids }]); } catch (e) { /* alt */ }
+  if (!toFeatures(r).length) { try { r = await call('queryRenderedFeatures', [{ layers: ids }]); } catch (e) { /* */ } }
   return toFeatures(r);
 }
 function dedupe(feats) {
@@ -1088,13 +1207,18 @@ async function captureRaster() {
   try {
     if (S.mode === 'demo') { S.raster = await DEMO.raster(); }
     else {
-      try { await call('setTopView', [true]); } catch (e) { /* user may already be in 2D */ }
-      await sleep(1500);
+      let top = false;
+      for (const args of [[], [{}], ['top']]) { try { await call('setTopView', args, 8000); top = true; break; } catch (e) { /* next */ } }
+      if (!top) { try { await call('flyTo', [{ pitch: 0, bearing: 0, duration: 0 }], 8000); top = true; } catch (e) { /* */ } }
+      await sleep(1800);
+      const mv = S.gs?.get('mapView'); log('mapView: ' + JSON.stringify(mv || {}).slice(0, 300));
       const bounds = await currentMapBounds();
       const href = await anyToDataURL(await call('getPng', [], 60000));
       const img = await loadImg(href);
+      const E = equirect(bounds[0]); const c1 = E.forward(bounds[1]); const arB = Math.abs(c1[0] / (c1[1] || 1)); const arI = img.naturalWidth / img.naturalHeight;
+      log(`Raster ${img.naturalWidth}×${img.naturalHeight}px (proporção ${arI.toFixed(2)}) · limites ${Math.round(Math.abs(c1[0]))}×${Math.round(Math.abs(c1[1]))} m (proporção ${arB.toFixed(2)}) · topo: ${top ? 'sim' : 'não'}`);
+      if (Math.abs(Math.log(arI / arB)) > 0.15) toast('Atenção: a imagem não bate com uma vista de topo com norte para cima. Ajuste o mapa (2D, norte para cima) e capture de novo.');
       S.raster = { href, W: img.naturalWidth, H: img.naturalHeight, bounds };
-      log(`Raster ${img.naturalWidth}×${img.naturalHeight}px · limites ${JSON.stringify(bounds)}`);
       ensureProjector(bounds[0]);
     }
     S.vis.raster = true; render(); toast('Imagem do mapa aplicada no terreno.');
@@ -1273,11 +1397,11 @@ function lyrRow(lk, count, reload) {
 }
 function buildLayerUI() {
   const dl = drawLayers(); let h = '';
-  const dkeys = Object.keys(dl).sort();
-  h += `<div class="lyr-sec"><h3><span>Desenho do projeto</span><span>${dkeys.length}</span></h3>${dkeys.map((k) => lyrRow(k, dl[k].n)).join('') || '<div class="lyr"><span class="check">Nenhum elemento desenhado</span></div>'}</div>`;
-  const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])];
+  const dnames = drawLayerNames().sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  h += `<div class="lyr-sec"><h3><span>Desenho do projeto</span><span>${dnames.length}</span></h3>${dnames.map((n) => { const k = 'draw|' + n; const has = !!dl[k]; return lyrRow(k, has ? dl[k].n : (S.mode === 'giraffe' && !giraffeVis(n) ? 'oculto' : '—'), !has); }).join('') || '<div class="lyr"><span class="check">Nenhum elemento desenhado</span></div>'}</div>`;
+  const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])].filter((n) => n !== BASE_VEC);
   h += `<div class="lyr-sec"><h3><span>Camadas do Giraffe</span><span>${names.length}</span></h3>${names.map((n) => lyrRow('map|' + n, S.mapItems[n] ? S.mapItems[n].length : '—', true)).join('') || '<div class="lyr"><span class="check">Nenhuma camada no projeto</span></div>'}</div>`;
-  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>2</span></h3>${lyrRow('ctx|Entorno', S.ctxItems.length ? S.ctxItems.length : '—', true).replace('>Entorno<', '>Edifícios do entorno<')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
+  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>3</span></h3>${lyrRow('map|' + BASE_VEC, S.mapItems[BASE_VEC] ? S.mapItems[BASE_VEC].length : '—', true)}${lyrRow('ctx|Entorno', S.ctxItems.length ? S.ctxItems.length : '—', true).replace('>Entorno<', '>Edifícios do entorno<')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
   $('#layerUI').innerHTML = h;
 }
 async function captureLk(lk) {
@@ -1286,11 +1410,14 @@ async function captureLk(lk) {
     if (lk === 'raster') await captureRaster(true);
     else if (lk.startsWith('ctx|')) await captureContext();
     else if (lk.startsWith('map|')) await captureMapLayer(lk.slice(4));
+    else if (lk.startsWith('draw|')) await fetchDrawLayer(lk.slice(5));
   } catch (e) { toast('Falha: ' + e.message); }
   busy(false); buildLayerUI(); buildStyleUI(); render();
 }
 async function ensureCapturedForVisible() {
   for (const lk of Object.keys(S.vis)) if (S.vis[lk] && !hasData(lk) && lk !== 'raster' && !lk.startsWith('draw|')) await captureLk(lk);
+  // layers de desenho ligados na versão mas sem elementos lidos (ocultos no Giraffe)
+  if (S.mode === 'giraffe') for (const n of drawLayerNames()) { const lk = 'draw|' + n; if (S.vis[lk] && !hasData(lk) && treeLayers().has(n)) await captureLk(lk); }
 }
 
 /* ---------------- STYLE UI ---------------- */
@@ -1311,16 +1438,16 @@ function buildStyleUI() {
     const keys = Object.keys(by).filter((k) => k.startsWith(pfx)).sort(); if (!keys.length) continue;
     h += `<div class="grp-sec"><h3><span>${title}</span><span>${keys.length}</span></h3>`;
     for (const lk of keys) {
-      const L = S.lstyle[lk]; const its = by[lk]; const lineOnly = its.every((i) => i.kind === 'line'); const id = 'g' + Math.abs([...lk].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
+      const L = S.lstyle[lk]; const its = by[lk]; const lineOnly = its.every((i) => i.kind === 'line' || i.ink); const id = 'g' + Math.abs([...lk].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
       const colors = {}; its.forEach((i) => { if (i.color) colors[i.color] = (colors[i.color] || 0) + 1; });
       const showFill = !lineOnly && (cm === 'paleta' || lk.startsWith('ctx|') || (cm === 'uso' && lk.startsWith('map|')));
-      const sw = lineOnly ? 'transparent' : (cm === 'paleta' || lk.startsWith('ctx|') ? L.fill : fillOf(its[0]));
+      const sw = lineOnly ? (cm === 'giraffe' && its[0].color ? its[0].color : 'transparent') : (cm === 'paleta' || lk.startsWith('ctx|') ? L.fill : fillOf(its[0]));
       h += `<div class="grp${isVis(lk) ? '' : ' off'}"><details data-lk="${esc(lk)}" ${openSet.has(lk) ? 'open' : ''}><summary><span class="sw" style="background:${sw};border-color:${L.stroke}"></span><span class="nm">${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span><span class="ct">${its.length}</span></summary><div class="body">
         ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
         ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
-        ${cm === 'giraffe' && !lineOnly && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
+        ${(cm === 'giraffe' || its.some((i) => i.ink || i.ls)) && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
       </div></details></div>`;
     }
     h += '</div>';
@@ -1364,7 +1491,7 @@ function loadSnapshot(o) {
 }
 function storeKey() { const p = S.gs?.get('project'); const id = p?.properties?.id ?? p?.id ?? (S.mode === 'demo' ? 'demo' : 'sem-id'); return 'kv-axono:' + id; }
 let persistT;
-function persist() { clearTimeout(persistT); persistT = setTimeout(() => { try { localStorage.setItem(storeKey(), JSON.stringify(snapshot())); } catch (e) { /* */ } }, 400); }
+function persist() { clearTimeout(persistT); persistT = setTimeout(() => { histPush(); try { localStorage.setItem(storeKey(), JSON.stringify(snapshot())); } catch (e) { /* */ } }, 400); }
 function restore() { try { const o = JSON.parse(localStorage.getItem(storeKey()) || 'null'); if (o && o.common) { loadSnapshot(o); log('Configuração restaurada (' + S.versions.length + ' versões)'); } } catch (e) { /* */ } }
 
 /* ---------------- UI WIRING ---------------- */
@@ -1451,6 +1578,13 @@ function wireUI() {
   $('#zoomOut').onclick = () => { setZoom(S.view.zoom / 1.25); syncUIQuick(); render(); persist(); };
   $('#zoomFit').onclick = () => { S.view.zoom = 1; S.view.panX = 0; S.view.panY = 0; syncUIQuick(); render(); persist(); };
   $$('[data-tool]').forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
+  $('#btnEdit').onclick = () => setEdit(!S.edit);
+  $('#btnUndo').onclick = () => histGo(-1); $('#btnRedo').onclick = () => histGo(1);
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || /input|select|textarea/i.test(e.target.tagName)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); histGo(-1); } else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); histGo(1); }
+  });
 
   // crop
   $('#cropOn').onchange = (e) => { S.cropUI.on = e.target.checked; if (S.cropUI.on && !S.cropUI.rect) fitRatio(); render(); persist(); };
@@ -1458,18 +1592,20 @@ function wireUI() {
   const custom = () => { S.cropUI.cw = Math.max(1, +$('#cropCW').value || 1); S.cropUI.ch = Math.max(1, +$('#cropCH').value || 1); fitRatio(); render(); persist(); };
   $('#cropCW').onchange = custom; $('#cropCH').onchange = custom;
   $('#cropShowOut').onchange = (e) => { S.cropUI.showOut = e.target.checked; drawOverlay(); persist(); };
-  $('#btnCropTool').onclick = () => { S.cropUI.on = true; if (!S.cropUI.rect) fitRatio(); setTool('crop'); syncUI(); render(); $('#stage').focus(); };
+  $('#btnCropTool').onclick = () => { S.cropUI.on = true; if (!S.cropUI.rect) fitRatio(); if (!S.edit) setEdit(true); setTool('crop'); syncUI(); render(); $('#stage').focus(); };
   $('#btnCropReset').onclick = () => { S.cropUI.on = true; S.cropUI.rect = maxCrop(cropAR()); syncUI(); render(); persist(); };
 
   // stage pointer
   const stage = $('#stage'); let drag = null;
+  stage.addEventListener('dblclick', (e) => { e.preventDefault(); setEdit(!S.edit); toast(S.edit ? 'Edição da vista ativada.' : 'Vista travada.'); });
   stage.addEventListener('pointerdown', (e) => {
+    if (!S.edit) { lockedHint(); return; }
     const p = toFrame(e); stage.setPointerCapture(e.pointerId);
     if (S.tool === 'crop') { if (!S.cropUI.on) { S.cropUI.on = true; syncUI(); } const mode = cropHit(p); drag = { kind: 'crop', mode, p0: p, r0: { ...(S.cropUI.rect || { x: p.x, y: p.y, w: 0, h: 0 }) } }; }
     else drag = { kind: S.tool, x: e.clientX, y: e.clientY, az: S.view.az, el: S.view.el, px: S.view.panX, py: S.view.panY, u: pxUnit() };
   });
   stage.addEventListener('pointermove', (e) => {
-    if (!drag) { if (S.tool === 'crop') { const m = cropHit(toFrame(e)); stage.style.cursor = { move: 'move', new: 'crosshair', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize' }[m]; } else stage.style.cursor = ''; return; }
+    if (!drag) { if (!S.edit) { stage.style.cursor = ''; return; } if (S.tool === 'crop') { const m = cropHit(toFrame(e)); stage.style.cursor = { move: 'move', new: 'crosshair', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize' }[m]; } else stage.style.cursor = ''; return; }
     if (drag.kind === 'crop') { cropDrag(drag, toFrame(e)); drawOverlay(); return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.kind === 'pan') { S.view.panX = drag.px + dx * drag.u; S.view.panY = drag.py + dy * drag.u; scheduleRender(true); return; }
@@ -1479,8 +1615,9 @@ function wireUI() {
   });
   const end = () => { if (!drag) return; const k = drag.kind; drag = null; if (k === 'crop') { render(); } else { syncUI(); render(false); } persist(); };
   stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
-  stage.addEventListener('wheel', (e) => { e.preventDefault(); setZoom(S.view.zoom * Math.exp(-e.deltaY * 0.0015), toFrame(e)); syncUIQuick(); scheduleRender(true); clearTimeout(stage._wt); stage._wt = setTimeout(() => { render(false); persist(); }, 250); }, { passive: false });
+  stage.addEventListener('wheel', (e) => { if (!S.edit) { lockedHint(); return; } e.preventDefault(); setZoom(S.view.zoom * Math.exp(-e.deltaY * 0.0015), toFrame(e)); syncUIQuick(); scheduleRender(true); clearTimeout(stage._wt); stage._wt = setTimeout(() => { render(false); persist(); }, 250); }, { passive: false });
   stage.addEventListener('keydown', (e) => {
+    if (!S.edit) return;
     const k = e.key; let used = true; const v = S.view; const step = 40;
     if (S.tool === 'pan') { if (k === 'ArrowLeft') v.panX += step; else if (k === 'ArrowRight') v.panX -= step; else if (k === 'ArrowUp') v.panY += step; else if (k === 'ArrowDown') v.panY -= step; else used = false; }
     else if (k === 'ArrowLeft') setAz(v.az + 5); else if (k === 'ArrowRight') setAz(v.az - 5);
@@ -1558,6 +1695,37 @@ function wireUI() {
     try { await navigator.clipboard.writeText(JSON.stringify(d, null, 2)); toast('Diagnóstico copiado.'); } catch (err) { download('KV_axonometria_diagnostico.json', new Blob([JSON.stringify(d, null, 2)])); }
   };
 }
+
+/* ---------------- UNDO / REDO ---------------- */
+const HIST = { stack: [], i: -1, lock: false };
+function histState() { const s = snapshot(); delete s.common.autoSync; return JSON.stringify(s); }
+function histReset() { HIST.stack = [histState()]; HIST.i = 0; updHist(); }
+function histPush() {
+  if (HIST.lock) return; const s = histState(); if (HIST.stack[HIST.i] === s) return;
+  HIST.stack = HIST.stack.slice(0, HIST.i + 1); HIST.stack.push(s); if (HIST.stack.length > 100) HIST.stack.shift(); HIST.i = HIST.stack.length - 1; updHist();
+}
+function histGo(d) {
+  clearTimeout(persistT); histPush();
+  const j = HIST.i + d; if (j < 0 || j >= HIST.stack.length) return;
+  HIST.i = j; HIST.lock = true;
+  const o = JSON.parse(HIST.stack[j]); const c = o.common;
+  S.style = c.style; S.lstyle = c.lstyle; S.colorMap = c.colorMap; S.usageMap = c.usageMap; S.cropUI = c.cropUI; Object.assign(S.area, c.area);
+  S.versions = o.versions; setActive(o.av);
+  renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render();
+  try { localStorage.setItem(storeKey(), JSON.stringify(snapshot())); } catch (e) { /* */ }
+  HIST.lock = false; updHist();
+}
+function updHist() { const u = $('#btnUndo'), r = $('#btnRedo'); if (u) u.disabled = HIST.i <= 0; if (r) r.disabled = HIST.i >= HIST.stack.length - 1; }
+
+/* ---------------- EDIT LOCK ---------------- */
+let lockHintT = 0;
+function setEdit(on) {
+  S.edit = !!on; const b = $('#btnEdit'); b.setAttribute('aria-pressed', String(S.edit)); b.setAttribute('aria-label', S.edit ? 'Travar a vista' : 'Editar a vista'); b.title = S.edit ? 'Travar a vista (duplo clique na vista)' : 'Editar a vista (duplo clique na vista)';
+  $('#stage').dataset.edit = S.edit ? '1' : '0'; $$('[data-tool]').forEach((x) => (x.disabled = !S.edit));
+  if (!S.edit) { S.tool = 'orbit'; syncUI(); }
+  drawOverlay(); render();
+}
+function lockedHint() { const now = Date.now(); if (now - lockHintT > 4000) { lockHintT = now; toast('Vista travada. Clique em Editar (lápis) ou dê duplo clique na vista.'); } }
 
 /* ---------------- SIDEBAR ---------------- */
 function wireSidebar() {
@@ -1707,19 +1875,20 @@ async function fetchBundleFallback() {
 let giraffeEntered = false;
 function enterGiraffe(reason) {
   if (giraffeEntered) return; giraffeEntered = true;
-  S.mode = 'giraffe'; S.projector = null; S.mapItems = {}; S.ctxItems = []; S.raster = null; S.items = [];
+  S.mode = 'giraffe'; S.projector = null; S.mapItems = {}; S.ctxItems = []; S.raster = null; S.items = []; S.extraDraw = {};
   S.area.drawn = null; S.area.mapRect = null;
   $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
   log('Conectado ao Giraffe (' + reason + ')');
   S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
   S.gs.addListener(['projectLayers'], () => buildLayerUI());
+  S.gs.addListener(['layerTree'], () => { applyDefaultVis(); buildLayerUI(); });
   S.gs.addListener(['views'], () => listViews());
   S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
   initVersions(); S.lstyle = {}; S.colorMap = {}; S.usageMap = {};
   restore(); if (!S.cropUI.rect) fitRatio();
   sync(false); listViews(); renderVersions(); syncUI();
   if (!S.items.length) fetchBundleFallback();
-  ensureCapturedForVisible();
+  ensureCapturedForVisible(); histReset(); setEdit(false);
 }
 async function boot() {
   initVersions(); wireUI(); fitRatio();
@@ -1740,7 +1909,7 @@ async function boot() {
     restore(); if (!S.cropUI.rect) fitRatio();
     S.mapItems['Meio-fio'] = DEMO.buildLayer('Meio-fio'); S.ctxItems = DEMO.context(); S.raster = await DEMO.raster();
     if (S.vis['map|Meio-fio'] == null) S.vis['map|Meio-fio'] = true;
-    if (!giraffeEntered) { sync(false); listViews(); renderVersions(); syncUI(); }
+    if (!giraffeEntered) { sync(false); listViews(); renderVersions(); syncUI(); histReset(); setEdit(false); }
   }
 }
 
