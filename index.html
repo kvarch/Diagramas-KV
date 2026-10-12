@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V04</title>
+<title>KV Axonometria — Beta V06</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -106,13 +106,22 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* V04 layout: top fixed, panels scroll */
-.top{flex:0 0 auto;background:var(--md-sys-color-background);z-index:5}
-.scroll{flex:1 1 auto;overflow:auto;min-height:120px}
+/* V05 workspace: stage left, controls right */
+.work{flex:1 1 auto;display:flex;min-height:0}
+.main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.side{flex:0 0 auto;width:380px;min-width:260px;display:flex;flex-direction:column;min-height:0;background:var(--md-sys-color-surface-container-lowest);border-left:1px solid var(--md-sys-color-outline-variant)}
+.scroll{flex:1 1 auto;overflow:auto;min-height:0;background:var(--md-sys-color-background)}
+.resizer{flex:0 0 12px;cursor:col-resize;position:relative;touch-action:none;background:transparent}
+.resizer::after{content:'';position:absolute;top:0;bottom:0;left:5px;width:2px;background:var(--md-sys-color-outline-variant)}
+.resizer:hover::after,.resizer:focus-visible::after,body.resizing .resizer::after{background:var(--md-sys-color-primary);width:3px}
+body.resizing{cursor:col-resize;user-select:none}
+.work.collapsed .side,.work.collapsed .resizer{display:none}
+@media (max-width:620px){.work{flex-direction:column}.side{width:auto!important;min-width:0;flex:1 1 45%;border-left:0;border-top:1px solid var(--md-sys-color-outline-variant)}.resizer{display:none}.main{flex:1 1 55%}}
 .verbar{display:flex;align-items:center;gap:0;padding:6px 12px 0}
 .verbar .verlbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--md-sys-color-on-surface-variant);padding-right:12px}
 .verbar select{flex:1;border-right:0}
 .verbar button.icon{border:1px solid var(--md-sys-color-outline);border-left:0}
-.stage{position:relative;margin:8px 12px 0;aspect-ratio:16/10;max-height:46vh;background:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline-variant);touch-action:none;overflow:hidden;outline-offset:-2px}
+.stage{position:relative;margin:8px 12px 0;flex:1 1 auto;min-height:200px;background:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline-variant);touch-action:none;overflow:hidden;outline-offset:-2px}
 .stage svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .stage #overlay{pointer-events:none}
 .stage[data-tool=orbit]{cursor:grab}.stage[data-tool=orbit]:active{cursor:grabbing}
@@ -154,7 +163,6 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
 <script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
 </head>
 <body>
-<div class="top">
 <header class="app-header">
   <div class="logo-container">
     <img class="brand-logo pos" src="data:image/png;base64,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" alt="Königsberger Vannucchi Arquitetos Associados" width="206" height="80">
@@ -164,7 +172,13 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
   <button class="icon" id="btnTheme" aria-label="Alternar tema claro/escuro" title="Tema">
     <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 5a7 7 0 0 1 0 14z" fill="currentColor"/></svg>
   </button>
+  <button class="icon" id="btnSide" aria-controls="side" aria-expanded="true" aria-label="Ocultar painel de controles" title="Painel de controles">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16"/><path d="M15 4v16"/></svg>
+  </button>
 </header>
+
+<div class="work" id="work">
+<div class="main">
 
 <div class="verbar">
   <label for="verSel" class="verlbl">Versão</label>
@@ -195,14 +209,17 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
   <span class="spacer"></span>
   <button class="icon primary" id="btnSync" aria-label="Atualizar do Giraffe" title="Atualizar do Giraffe"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg></button>
 </div>
+</div>
 
+<div class="resizer" id="resizer" role="separator" aria-orientation="vertical" aria-label="Largura do painel de controles" aria-valuemin="260" aria-valuenow="380" aria-valuemax="1200" tabindex="0" title="Arraste para redimensionar · duplo clique para padrão"></div>
+
+<aside class="side" id="side" aria-label="Controles">
 <nav class="tabs" role="tablist" aria-label="Seções">
   <button role="tab" id="tab-vista" aria-controls="p-vista" aria-selected="true">Vista</button>
   <button role="tab" id="tab-conteudo" aria-controls="p-conteudo" aria-selected="false" tabindex="-1">Conteúdo</button>
   <button role="tab" id="tab-estilo" aria-controls="p-estilo" aria-selected="false" tabindex="-1">Estilo</button>
   <button role="tab" id="tab-export" aria-controls="p-export" aria-selected="false" tabindex="-1">Exportar</button>
 </nav>
-</div>
 
 <div class="scroll" id="scroll">
   <!-- VISTA -->
@@ -286,6 +303,8 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
       <div class="field"><label for="shTime">Hora</label><div class="ctl"><input type="range" id="shTime" min="300" max="1200" step="5" aria-valuetext=""><output id="shTimeOut" for="shTime" class="out"></output></div></div>
       <div class="field"><label for="shOp">Intensidade</label><div class="ctl"><input type="range" id="shOp" min="0.05" max="0.9" step="0.05"><input type="color" id="shColor" aria-label="Cor da sombra"></div></div>
       <div class="field"><label for="shTz">Fuso (UTC)</label><div class="ctl"><input type="number" id="shTz" min="-12" max="14" step="1"><span class="out" id="sunInfo"></span></div></div>
+      <div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant);margin:8px 0 4px">Layers que projetam sombra</div>
+      <div class="list" id="shLayers"></div>
     </div>
 
     <h2>Fundo e terreno</h2>
@@ -320,13 +339,17 @@ footer.app-footer{padding:12px 16px;font-size:12px;color:var(--md-sys-color-on-s
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V04 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V06 · © 2026 Königsberger Vannucchi</footer>
+</div>
+</aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V04 */
-/* V04: versões de vista, zoom/mover, recorte na vista, sombra projetada, cor por layer/Giraffe/uso, lista completa de layers.
+/* KV Axonometria — Beta V06 */
+/* V06: quadro da vista fixo — redimensionar janela/painel só escala vista e recorte juntos.
+   V05: painel lateral redimensionável/ocultável; layers sem sombra; elementos 'sem fachada' como lajes.
+   V04: versões de vista, zoom/mover, recorte na vista, sombra projetada, cor por layer/Giraffe/uso, lista completa de layers.
    V03: buffer de mensagens do Giraffe desde o carregamento (o SDK é importado depois) + replay;
    troca automática demo → Giraffe; sonda RPC (getUrlParams) e fallback getProjectBundle. */
 const STATE_KEYS = new Set(['selected', 'lensSelection', 'mapView', 'mapContent', 'mapSelectCoord', 'projects', 'bakedSections', 'projectLayers', 'rawSections', 'flows', 'blocks', 'project', 'projectOrigin', 'projectAppsByAppID', 'layerTree', 'selectedProjectApp', 'mapHoverCoords', 'closingSignal', 'uiLayout', 'contextMenuClick', 'views', 'mapboxEvent', 'workspace', 'visibleScenarios']);
@@ -337,7 +360,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V04';
+const VERSION = 'V06';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -368,7 +391,7 @@ const S = {
   area: { mode: 'project', buffer: 60, drawn: null, mapRect: null },
   cropUI: { on: true, ratio: '16:9', cw: 16, ch: 9, showOut: true, rect: null },
   style: { palette: 'paper', colorMode: 'paleta', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false,
-    sh: { on: false, day: '06-21', date: '', min: 720, tz: -3, op: 0.32, color: '#3A3F55' } },
+    sh: { on: false, day: '06-21', date: '', min: 720, tz: -3, op: 0.32, color: '#3A3F55', noCast: {} } },
   lstyle: {}, colorMap: {}, usageMap: {},
   autoSync: true, tool: 'orbit',
   log: [], lastSVG: '', W: 1600, H: 1000, fit: null,
@@ -567,6 +590,14 @@ function geomToParts(g, P) {
 /* ---------------- INGEST (Giraffe features → items) ---------------- */
 function propColor(p) { return p.color ?? p._color ?? p.fill ?? p.fillColor ?? p.colour ?? p['fill-color'] ?? p.stroke ?? null; }
 function featId(f) { return String(f?.properties?.id ?? f?.id ?? ''); }
+function isNoFacade(p) {
+  for (const [k, v] of Object.entries(p || {})) {
+    if (!/fa[cç]ade/i.test(k)) continue; const s = String(v).toLowerCase();
+    if (/^(no|hide|without|sem)/i.test(k) || /(off|hidden|none)$/i.test(k)) { if (v === true || s === 'true' || s === '1' || s === 'yes') return true; }
+    else if (v === false || ['false', 'none', '0', 'no', 'off', 'hidden', 'nofacade', 'no facade'].includes(s)) return true;
+  }
+  return false;
+}
 function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
@@ -581,9 +612,16 @@ function pushFeature(list, f, src, P, opts = {}) {
   let z1 = +(p._height ?? NaN);
   if (!isFinite(z1)) { const h = +(p.height ?? 0) || 0; z1 = z0 + h; }
   if (opts.z0 != null) z0 = opts.z0; if (opts.z1 != null) z1 = opts.z1;
+  const nf = z1 - z0 > 0.05 && isNoFacade(p);
+  const f2f = +(p.floor_to_floor ?? p.floorToFloor ?? p._floorToFloor ?? p.floorHeight ?? NaN);
+  const thk = Math.min(+(p.slab_thickness ?? p.slabThickness ?? 0.3) || 0.3, (z1 - z0) / 2);
   for (const poly of parts.polys) {
     const o = orientPoly(poly); if (!o.length || Math.abs(sArea(o[0])) < 0.01) continue;
-    if (z1 - z0 > 0.05) list.push({ ...meta, kind: 'prism', poly: o, z0, z1 });
+    if (nf) {
+      // sem fachada: só as lajes (base de cada pavimento + cobertura)
+      const n = isFinite(f2f) && f2f > 0.5 ? Math.max(1, Math.round((z1 - z0) / f2f)) : 1; const step = (z1 - z0) / n;
+      for (let i = 0; i <= n; i++) { const zb = i === n ? z1 - thk : z0 + i * step; list.push({ ...meta, kind: 'prism', poly: o, z0: zb, z1: zb + thk, slab: true }); }
+    } else if (z1 - z0 > 0.05) list.push({ ...meta, kind: 'prism', poly: o, z0, z1 });
     else list.push({ ...meta, kind: 'poly', poly: o, z: z0 });
   }
   for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, kind: 'line', pts: l, z: z0 });
@@ -610,6 +648,9 @@ function ingestGiraffe() {
   // baked 2D (no height) and lines belong to the 2D source
   items.forEach((it) => { if (it.src === 'vol' && it.kind !== 'prism') it.src = 'flat'; });
   S.items = items;
+  const fk = new Set(); baked.concat(raw).forEach((f) => Object.entries(f.properties || {}).forEach(([k, v]) => { if (/fa[cç]ade|floor|level|slab/i.test(k)) fk.add(`${k}=${JSON.stringify(v)}`.slice(0, 60)); }));
+  if (fk.size) log('Propriedades de fachada/pavimento: ' + [...fk].slice(0, 20).join(' · '));
+  log(`Sem fachada (lajes): ${items.filter((i) => i.slab).length} lajes`);
   if (baked[0]) log(`bakedSections: ${baked.length} · chaves: ${Object.keys(baked[0].properties || {}).slice(0, 14).join(', ')}`);
   log(`Itens: ${items.filter((i) => i.kind === 'prism').length} volumes, ${items.filter((i) => i.kind !== 'prism').length} 2D (raw extras: ${rawAdded})`);
 }
@@ -721,13 +762,14 @@ function render(fast = false) {
   if (sunUp) {
     const t = Math.tan(sun.alt * D2R); const vx = -shs[0] / t, vy = -shs[1] / t; const polys = [];
     for (const it of prismsAll) {
+      if (st.sh.noCast?.[it.lk]) continue;
       const sh = (p, z) => V.P(p[0] + vx * z, p[1] + vy * z, 0);
       for (const ring of it.poly) {
         polys.push(ring.map((p) => sh(p, it.z1))); if (it.z0 > 0.05) polys.push(ring.map((p) => sh(p, it.z0)));
         for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; polys.push([sh(a, it.z0), sh(b, it.z0), sh(b, it.z1), sh(a, it.z1)]); }
       }
     }
-    ops.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op });
+    ops.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null });
   }
 
   const order = prismsAll.map((it) => { const b = itemBBox(it); return { it, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, (it.z0 + it.z1) / 2) }; });
@@ -779,7 +821,8 @@ function render(fast = false) {
     } else if (o.t === 'contour') {
       out += `<path d="${o.polys.map((p) => p.map((r) => ringD(r.slice(0, -1))).join('')).join('')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}" stroke-linejoin="round"/>`;
     } else if (o.t === 'shadow') {
-      out += `<g opacity="${o.op}">` + o.polys.map((r) => `<path d="${ringD(r)}" fill="${o.color}"/>`).join('') + '</g>';
+      let clipS = ''; if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}"/></clipPath>`); clipS = ` clip-path="url(#${id})"`; }
+      out += `<g opacity="${o.op}"${clipS}>` + o.polys.map((r) => `<path d="${ringD(r)}" fill="${o.color}"/>`).join('') + '</g>';
     } else if (o.t === 'img') {
       const M = o.m; const mm = [M[0] * sc, M[1] * sc, M[2] * sc, M[3] * sc, M[4] * sc + ox, M[5] * sc + oy].map((v) => +v.toFixed(5));
       let clip = '';
@@ -801,7 +844,7 @@ function render(fast = false) {
   const bgRect = st.bgT ? '' : `<rect id="L_Fundo" x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${st.bg}"/>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join('')}</defs>${bgRect}${out}${north}</svg>`;
   S.lastSVG = svg;
-  const host = $('#drawing'); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   host.style.background = st.bgT ? 'repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/16px 16px' : st.bg;
   $('#hud').textContent = `${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}`;
   if (sun) $('#sunInfo').textContent = sunUp ? `Sol: az ${Math.round(sun.az)}°, alt ${Math.round(sun.alt)}°` : 'Sol abaixo do horizonte';
@@ -809,6 +852,7 @@ function render(fast = false) {
 }
 function drawEmpty() {
   const host = $('#drawing'); host.style.background = 'transparent';
+  host.setAttribute('viewBox', `0 0 ${S.W} ${S.H}`);
   host.innerHTML = `<text x="800" y="490" text-anchor="middle" font-family="Hind, sans-serif" font-size="34" fill="#747878">Nada para desenhar ainda</text><text x="800" y="540" text-anchor="middle" font-family="Hind, sans-serif" font-size="24" fill="#747878">Desenhe no Giraffe ou ligue camadas na aba Conteúdo</text>`;
   S.lastSVG = ''; $('#hud').textContent = 'Sem conteúdo';
 }
@@ -834,7 +878,7 @@ function clampRect(r) { r.w = Math.min(r.w, S.W); r.h = Math.min(r.h, S.H); r.x 
 function pxUnit() { const el = $('#overlay'); const b = el.getBoundingClientRect(); return Math.max(S.W / b.width, S.H / b.height) || 1; }
 function drawOverlay() {
   const c = S.cropUI; const ov = $('#overlay'); const W = S.W, H = S.H;
-  if (!c.on || !c.rect) { ov.innerHTML = ''; return; }
+  if (!c.on || !c.rect) { ov.setAttribute('viewBox', `0 0 ${W} ${H}`); ov.innerHTML = ''; return; }
   const r = c.rect; const u = pxUnit(); const showH = S.tool === 'crop';
   const maskFill = c.showOut ? 'rgba(0,0,0,0.5)' : (S.style.bgT ? 'var(--md-sys-color-surface-container)' : S.style.bg);
   let h = `<path d="M-20 -20H${W + 20}V${H + 20}H-20Z M${r.x} ${r.y}v${r.h}h${r.w}v${-r.h}Z" fill="${maskFill}" fill-rule="evenodd"/>`;
@@ -844,7 +888,7 @@ function drawOverlay() {
     for (const [hx, hy] of handlePts(r)) h += `<rect x="${hx - hs / 2}" y="${hy - hs / 2}" width="${hs}" height="${hs}" fill="#FFFFFF" stroke="#00677C" stroke-width="${1.5 * u}"/>`;
     h += `<text x="${r.x + 6 * u}" y="${r.y - 6 * u > 14 * u ? r.y - 6 * u : r.y + 16 * u}" font-family="Hind, sans-serif" font-size="${12 * u}" fill="#00ACCD">${Math.round(r.w)}×${Math.round(r.h)}</text>`;
   }
-  ov.innerHTML = h;
+  ov.setAttribute('viewBox', `0 0 ${W} ${H}`); ov.innerHTML = h;
 }
 function handlePts(r) { return [[r.x, r.y], [r.x + r.w / 2, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h / 2], [r.x + r.w, r.y + r.h], [r.x + r.w / 2, r.y + r.h], [r.x, r.y + r.h], [r.x, r.y + r.h / 2]]; }
 const HANDLE_IDS = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -1252,7 +1296,7 @@ async function ensureCapturedForVisible() {
 /* ---------------- STYLE UI ---------------- */
 const DASH_OPTS = [['solid', 'Contínuo'], ['dash', 'Tracejado'], ['dot', 'Pontilhado'], ['dashdot', 'Traço-ponto']];
 function buildStyleUI() {
-  ensureStyles();
+  ensureStyles(); buildShadowUI();
   const cm = S.style.colorMode; const openSet = new Set($$('#styleUI details[open]').map((d) => d.dataset.lk));
   $('#styleHint').textContent = cm === 'giraffe' ? 'Cada layer mostra as cores originais do Giraffe; troque cada uma. Opacidade, linha e traço valem para o layer todo.' : cm === 'uso' ? 'Volumes coloridos pelo uso (lista abaixo). Opacidade, linha e traço por layer.' : 'Cada layer tem sua cor de preenchimento, opacidade, linha e traço.';
   // usages
@@ -1446,7 +1490,9 @@ function wireUI() {
     if (k === '+' || k === '=') { setZoom(v.zoom * 1.25); used = true; } if (k === '-') { setZoom(v.zoom / 1.25); used = true; }
     if (used) { e.preventDefault(); syncUI(); render(); persist(); }
   });
+  // quadro fixo (1600×1000): a janela só escala o desenho e o recorte juntos, nunca reenquadra
   new ResizeObserver(() => drawOverlay()).observe(stage);
+  wireSidebar();
 
   // content
   $('#btnSync').onclick = () => sync(true);
@@ -1483,6 +1529,7 @@ function wireUI() {
   $('#shDay').onchange = (e) => { S.style.sh.day = e.target.value; if (e.target.value === 'custom' && !S.style.sh.date) S.style.sh.date = new Date().toISOString().slice(0, 10); syncUI(); render(); persist(); };
   $('#shDate').onchange = (e) => { S.style.sh.date = e.target.value; render(); persist(); };
   $('#shTz').onchange = (e) => { S.style.sh.tz = +e.target.value || 0; render(); persist(); };
+  $('#shLayers').addEventListener('change', (e) => { const lk = e.target.dataset.cast; if (lk == null) return; S.style.sh.noCast[lk] = !e.target.checked; render(); persist(); });
   $('#shColor').oninput = (e) => { S.style.sh.color = e.target.value; scheduleRender(); persist(); };
   const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); drawOverlay(); persist(); });
   sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); sty('north', 'north', 'checked'); sty('drapeRoofs', 'drapeRoofs', 'checked');
@@ -1512,6 +1559,34 @@ function wireUI() {
   };
 }
 
+/* ---------------- SIDEBAR ---------------- */
+function wireSidebar() {
+  const work = $('#work'), side = $('#side'), rz = $('#resizer'), btn = $('#btnSide');
+  let w = 380, col = false; try { w = +localStorage.getItem('kv-axono-sidew') || 380; col = localStorage.getItem('kv-axono-sidecol') === '1'; } catch (e) { /* */ }
+  const max = () => Math.max(280, work.clientWidth - 240);
+  const apply = () => {
+    w = Math.max(260, Math.min(max(), w)); side.style.width = w + 'px';
+    work.classList.toggle('collapsed', col); btn.setAttribute('aria-expanded', String(!col)); btn.setAttribute('aria-label', col ? 'Mostrar painel de controles' : 'Ocultar painel de controles');
+    rz.setAttribute('aria-valuenow', String(Math.round(w))); rz.setAttribute('aria-valuemax', String(Math.round(max())));
+    try { localStorage.setItem('kv-axono-sidew', String(Math.round(w))); localStorage.setItem('kv-axono-sidecol', col ? '1' : '0'); } catch (e) { /* */ }
+  };
+  btn.onclick = () => { col = !col; apply(); };
+  let drag = null;
+  rz.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, w }; rz.setPointerCapture(e.pointerId); document.body.classList.add('resizing'); });
+  rz.addEventListener('pointermove', (e) => { if (!drag) return; w = drag.w + (drag.x - e.clientX); apply(); });
+  const end = () => { drag = null; document.body.classList.remove('resizing'); };
+  rz.addEventListener('pointerup', end); rz.addEventListener('pointercancel', end);
+  rz.addEventListener('dblclick', () => { w = 380; apply(); });
+  rz.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { w += 24; apply(); e.preventDefault(); } else if (e.key === 'ArrowRight') { w -= 24; apply(); e.preventDefault(); } });
+  window.addEventListener('resize', apply);
+  apply();
+}
+function buildShadowUI() {
+  const keys = [...new Set(allItems().filter((i) => i.kind === 'prism').map((i) => i.lk))].sort();
+  const nc = S.style.sh.noCast || (S.style.sh.noCast = {});
+  $('#shLayers').innerHTML = keys.length ? keys.map((lk) => `<label class="check"><input type="checkbox" data-cast="${esc(lk)}" ${nc[lk] ? '' : 'checked'}><span>${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span></label>`).join('') : '<div class="empty">Nenhum volume.</div>';
+}
+
 /* ---------------- SYNC ---------------- */
 function sync(manual) {
   if (S.mode === 'demo') ingestDemo(); else ingestGiraffe();
@@ -1537,6 +1612,7 @@ const DEMO = (() => {
     poly(rect(-14, -24, 16, 12), { id: 't2', layerId: 'Proposta', usage: 'Hotel', color: '#9C6ADE', _baseHeight: 9, _height: 45 }),
     poly(rect(-14, -24, 16, 12), { id: 't2c', layerId: 'Coroamento', usage: 'Técnico', color: '#747878', _baseHeight: 45, _height: 49 }),
     poly(rect(6, -24, 12, 14), { id: 'pz', layerId: 'Paisagismo', usage: 'Área verde', color: '#2FAF83', _baseHeight: 9, _height: 9 }),
+    poly(rect(11, 6, 7, 16), { id: 'nf', layerId: 'Estrutura futura', usage: 'Residencial', color: '#B5895B', _baseHeight: 9, _height: 30, floor_to_floor: 3, facade: false }),
   ];
   const raw = [
     line([[-22, -27], [22, -27]], { id: 'r1', layerId: 'Recuos' }),
