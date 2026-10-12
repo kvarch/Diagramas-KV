@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V10</title>
+<title>KV Axonometria — Beta V13</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -162,6 +162,9 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
 .stage[data-edit="1"]{border:2px solid var(--md-sys-color-primary)}
 .stage[data-edit="0"]{cursor:default!important}
 
+.save-status[data-state=err]{color:var(--md-sys-color-error)}
+.save-status[data-state=ok]::before,.save-status[data-state=remote]::before{content:'● ';color:var(--md-extended-color-custom-color1-color)}
+
 [hidden]{display:none!important}
 
 </style>
@@ -236,8 +239,10 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
   <!-- VISTA -->
   <section class="panel" id="p-vista" role="tabpanel" aria-labelledby="tab-vista">
     <h2>Versões da vista</h2>
-    <p class="hint">Cada versão guarda só o ângulo, o zoom e quais layers estão ligados. Estilo e recorte são comuns a todas — ideal para diagramas em sequência.</p>
+    <p class="hint">Cada versão guarda só o ângulo, o zoom e quais layers estão ligados. Estilo e recorte são comuns a todas. Tudo é salvo no projeto do Giraffe e aparece para quem abrir o app no mesmo projeto.</p>
     <div class="list" id="verList"></div>
+    <p class="hint save-status" id="saveStatus" aria-live="polite"></p>
+    <div class="row"><button id="btnSaveProj">Enviar agora</button><button id="btnPullProj">Receber agora</button></div>
 
     <h2>Projeção</h2>
     <div class="field"><label for="preset">Tipo</label><div class="ctl">
@@ -287,7 +292,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
       </select></div></div>
     <div class="field" id="fBuffer"><label for="buffer">Entorno (m)</label><div class="ctl"><input type="range" id="buffer" min="0" max="500" step="5"><input type="number" id="bufferN" min="0" max="2000" step="5" aria-label="Entorno em metros"></div></div>
     <div class="row"><button id="btnDrawArea">Desenhar no mapa</button><button id="btnMapArea">Usar área visível</button></div>
-    <p class="hint">Camadas e entorno são cortados nesse limite, como numa maquete. Volumes do projeto nunca são cortados.</p>
+    <p class="hint">Mapa base, 3D Buildings e árvores são lidos para esta área, sem depender do que está na tela do Giraffe (sem limite = projeto + 150 m). Camadas são cortadas no limite, como numa maquete; volumes do projeto nunca são cortados.</p>
 
     <h2>Imagem do mapa / análise</h2>
     <p class="hint">Para horas de sol ou o próprio mapa base: deixe a análise visível no Giraffe com norte para cima e capture. A imagem vai para o plano do terreno.</p>
@@ -351,15 +356,21 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V10 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V13 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V10 */
-/* V10: objetos 3D (gltf) lidos da exportação 3D do Giraffe (getGltf, instâncias por feição); cores do mapa base
+/* KV Axonometria — Beta V13 */
+/* V13: sincronização com junção por versão (3 vias), nunca grava sem juntar o que está no projeto,
+   ID do projeto na gravação, versão aberta/trava/painel são pessoais, nome de quem salvou, Enviar/Receber agora.
+   V12: vistas e estilo salvos no projeto (updateProjectApp → public.kvAxono), compartilhados entre usuários,
+   com cópia local; espera o 'project' antes de restaurar; sincroniza alterações de outros usuários.
+   V11: camadas do mapa base, 3D Buildings e árvores lidas pela Área do modelo, não pela tela do Giraffe
+   (API vetorial do Giraffe → OpenStreetMap → tela como último recurso); releitura automática ao mudar a área.
+   V10: objetos 3D (gltf) lidos da exportação 3D do Giraffe (getGltf, instâncias por feição); cores do mapa base
    por tipo; ordem água/vegetação/uso do solo/vias; entorno duplicado removido (fica 3D Buildings).
    V09: visibilidade por buffer de profundidade (ordem correta de faces + perfil só nas arestas visíveis),
    envoltórias (_skeletonStoriesLngLat) em 3D, árvores 3D, mapa base vetorial por categoria, georreferência da imagem
@@ -381,7 +392,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V10';
+const VERSION = 'V13';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -403,7 +414,7 @@ const PRESETS = {
 const S = {
   mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, bundleRaw: null,
   items: [],            // drawing (vol/flat)
-  extraDraw: {}, glbItems: [], glbKey: '',        // drawing layers read on demand (hidden in Giraffe) name -> items
+  extraDraw: {}, glbItems: [], glbKey: '', capBox: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
   mapItems: {},         // layerName -> items
   ctxItems: [],
   raster: null,         // {href, W, H, bounds}
@@ -419,7 +430,7 @@ const S = {
   log: [], lastSVG: '', W: 1600, H: 1000, fit: null,
 };
 const newView = () => ({ preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1, zoom: 1, panX: 0, panY: 0, _off: 0 });
-function initVersions() { S.versions = [{ id: 'v' + Date.now(), name: 'Vista 1', view: newView(), vis: {} }]; setActive(0); }
+function initVersions() { S.versions = [{ id: 'v' + Date.now() + Math.random().toString(36).slice(2, 6), name: 'Vista 1', view: newView(), vis: {} }]; setActive(0); }
 function setActive(i) { S.av = Math.max(0, Math.min(S.versions.length - 1, i)); S.view = S.versions[S.av].view; S.vis = S.versions[S.av].vis; }
 
 /* ---------------- LAYER KEYS & VISIBILITY ---------------- */
@@ -429,6 +440,129 @@ function hasData(lk) { if (lk === 'raster') return !!S.raster; if (lk.startsWith
 function isVis(lk) { const v = S.vis[lk]; if (v != null) return v; return !lk.startsWith('map|'); }
 function allItems() { return [...S.items, ...Object.values(S.mapItems).flat()]; }
 function drawLayers() { const m = {}; for (const it of S.items) { m[it.lk] = m[it.lk] || { n: 0, prism: 0, line: 0, poly: 0, colors: {} }; const o = m[it.lk]; o.n++; o[it.kind === 'prism' ? 'prism' : it.kind]++; o.colors[it.color] = (o.colors[it.color] || 0) + 1; } return m; }
+
+/* ---------------- CAPTURA POR ÁREA (independe da tela do Giraffe) ---------------- */
+// área de captura = Área do modelo; sem limite → limite do projeto + 150 m (ou área visível)
+function captureArea() {
+  let R = areaRect();
+  if (!R && S.projector) {
+    const pg = projectGeom(); if (pg) { const parts = geomToParts(pg, S.projector); const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity }; parts.polys.forEach((p) => bboxOf(p[0], b)); if (isFinite(b.minx)) R = { minx: b.minx - 150, miny: b.miny - 150, maxx: b.maxx + 150, maxy: b.maxy + 150 }; }
+  }
+  if (!R) return null;
+  const P = S.projector; const sw = P.inverse([R.minx, R.miny]), ne = P.inverse([R.maxx, R.maxy]);
+  const ring = [[sw[0], sw[1]], [ne[0], sw[1]], [ne[0], ne[1]], [sw[0], ne[1]], [sw[0], sw[1]]];
+  return { R, sw, ne, bbox: [sw[0], sw[1], ne[0], ne[1]], fc: { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }] } };
+}
+const AREA_LAYERS = /3d buildings|landmark buildings|^trees$|tree/i;
+const rectIn = (a, b) => b && a.minx >= b.minx - 1 && a.miny >= b.miny - 1 && a.maxx <= b.maxx + 1 && a.maxy <= b.maxy + 1;
+let vecApi = null; // padrão de argumentos que funcionou
+async function vectorContents(styleLayer, A) {
+  const sl = styleLayer['source-layer'];
+  const detTries = [[styleLayer.id], [sl], [{ id: styleLayer.id }], [{ sourceLayer: sl, source: styleLayer.source }]];
+  const conTries = (det) => [['fc', [det, A.fc]], ['bbox', [det, A.bbox]], ['feat', [det, A.fc.features[0]]], ['merge', [{ ...det, fc: A.fc }]], ['only', [det]]];
+  const order = vecApi ? [detTries[vecApi.d]] : detTries;
+  for (const [di, da] of order.entries()) {
+    let det = null; try { det = await call('getSourceLayerDetails', da, 15000); } catch (e) { continue; }
+    if (!det) continue; if (!vecApi) log(`getSourceLayerDetails(${JSON.stringify(da)}) → ${JSON.stringify(det).slice(0, 240)}`);
+    const tries = vecApi ? conTries(det).filter((t) => t[0] === vecApi.c) : conTries(det);
+    for (const [cn, ca] of tries) {
+      try { const fs = toFeatures(await call('getVectorLayerContents', ca, 90000)); if (!vecApi) logShape(`getVectorLayerContents[${cn}] ${sl}`, fs); if (fs.some((f) => f?.geometry)) { if (!vecApi) { vecApi = { d: vecApi ? 0 : detTries.indexOf(da), c: cn }; log(`API vetorial do Giraffe: OK (${cn})`); } return fs; } } catch (e) { /* next */ }
+    }
+    // por tiles (getTiles → um pedido por tile)
+    if (!vecApi || vecApi.c === 'tiles') {
+      try {
+        const tiles = await call('getTiles', [A.fc, 15], 20000); const list = Array.isArray(tiles) ? tiles : toFeatures(tiles);
+        if (list && list.length && list.length <= 64) { let all = []; for (const t of list) { try { all = all.concat(toFeatures(await call('getVectorLayerContents', [det, t], 60000))); } catch (e) { /* */ } } logShape(`getVectorLayerContents[tiles×${list.length}] ${sl}`, all); if (all.some((f) => f?.geometry)) { vecApi = vecApi || { d: detTries.indexOf(da), c: 'tiles' }; return all; } }
+      } catch (e) { /* */ }
+    }
+  }
+  return null;
+}
+// ---- OpenStreetMap (Overpass) como alternativa
+let osmCache = { key: '', feats: null };
+async function osmFeatures(A) {
+  const [w, s, e, n] = A.bbox; const key = A.bbox.map((v) => v.toFixed(5)).join(',');
+  if (osmCache.key === key && osmCache.feats) return osmCache.feats;
+  const bb = `${s},${w},${n},${e}`;
+  const q = `[out:json][timeout:90];(way["building"](${bb});relation["building"](${bb});way["natural"](${bb});relation["natural"~"water|wood|wetland|scrub|beach"](${bb});way["waterway"](${bb});way["landuse"](${bb});relation["landuse"](${bb});way["leisure"](${bb});relation["leisure"~"park|nature_reserve|garden"](${bb});way["highway"](${bb});node["natural"="tree"](${bb}););out geom;`;
+  let json = null;
+  for (const url of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']) {
+    try { const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }); if (r.ok) { json = await r.json(); log(`OpenStreetMap (${new URL(url).hostname}): ${json.elements?.length || 0} elementos`); break; } log(`Overpass ${new URL(url).hostname}: HTTP ${r.status}`, true); } catch (err) { log(`Overpass ${new URL(url).hostname}: ${err.message}`, true); }
+  }
+  if (!json) throw new Error('OpenStreetMap indisponível');
+  const feats = osmToFeatures(json); osmCache = { key, feats }; return feats;
+}
+function joinRings(segs) {
+  const rings = []; const pool = segs.map((s) => s.slice());
+  const eq = (a, b) => Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+  while (pool.length) {
+    let cur = pool.shift();
+    let grew = true;
+    while (!eq(cur[0], cur[cur.length - 1]) && grew) {
+      grew = false;
+      for (let i = 0; i < pool.length; i++) {
+        const s = pool[i]; const end = cur[cur.length - 1];
+        if (eq(s[0], end)) { cur = cur.concat(s.slice(1)); } else if (eq(s[s.length - 1], end)) { cur = cur.concat(s.slice(0, -1).reverse()); } else continue;
+        pool.splice(i, 1); grew = true; break;
+      }
+    }
+    if (cur.length >= 4 && eq(cur[0], cur[cur.length - 1])) rings.push(cur);
+  }
+  return rings;
+}
+function osmToFeatures(json) {
+  const out = [];
+  for (const el of json.elements || []) {
+    const t = el.tags || {};
+    if (el.type === 'node') { if (t.natural === 'tree') out.push({ type: 'Feature', properties: { ...t }, geometry: { type: 'Point', coordinates: [el.lon, el.lat] } }); continue; }
+    if (el.type === 'way' && el.geometry) {
+      const c = el.geometry.map((g) => [g.lon, g.lat]); const closed = c.length > 3 && c[0][0] === c[c.length - 1][0] && c[0][1] === c[c.length - 1][1];
+      const lineish = (t.highway && t.area !== 'yes') || (t.waterway && !['riverbank', 'dock', 'boatyard'].includes(t.waterway)) || t.natural === 'coastline' || t.barrier;
+      out.push({ type: 'Feature', properties: { ...t }, geometry: closed && !lineish ? { type: 'Polygon', coordinates: [c] } : { type: 'LineString', coordinates: c } });
+      continue;
+    }
+    if (el.type === 'relation' && el.members) {
+      const outers = el.members.filter((m) => m.type === 'way' && m.role !== 'inner' && m.geometry).map((m) => m.geometry.map((g) => [g.lon, g.lat]));
+      const rings = joinRings(outers); if (rings.length) out.push({ type: 'Feature', properties: { ...t }, geometry: { type: 'MultiPolygon', coordinates: rings.map((r) => [r]) } });
+    }
+  }
+  return out;
+}
+function osmClass(t) {
+  if (t.building) return 'building';
+  if (t.natural === 'tree') return 'tree';
+  if (t.highway) return 'vias';
+  if (t.natural === 'water' || t.natural === 'bay' || t.waterway || ['reservoir', 'basin'].includes(t.landuse) || t.water) return 'agua';
+  if (['wood', 'scrub', 'grassland', 'heath', 'wetland', 'mangrove', 'tree_row'].includes(t.natural) || ['forest', 'grass', 'meadow', 'recreation_ground', 'village_green', 'orchard', 'vineyard', 'cemetery'].includes(t.landuse) || ['park', 'garden', 'nature_reserve', 'golf_course'].includes(t.leisure)) return 'veg';
+  if (t.landuse || t.leisure || ['beach', 'sand', 'bare_rock'].includes(t.natural)) return 'solo';
+  return null;
+}
+const num = (v) => { const x = parseFloat(String(v ?? '').replace(',', '.')); return isFinite(x) ? x : NaN; };
+function osmBuildingHeights(t) {
+  let h = num(t.height); if (!isFinite(h)) { const lv = num(t['building:levels']); h = isFinite(lv) ? lv * 3 + (num(t['roof:levels']) * 3 || 0) : 6; }
+  let b = num(t.min_height); if (!isFinite(b)) { const ml = num(t['building:min_level']); b = isFinite(ml) ? ml * 3 : 0; }
+  return [b, Math.max(h, b + 0.5)];
+}
+async function areaLayerFromOSM(n, A) {
+  const feats = await osmFeatures(A); const P = S.projector; const items = [];
+  const isTree = /tree|[áa]rvor/i.test(n);
+  for (const f of feats) {
+    const c = osmClass(f.properties);
+    if (isTree && c === 'tree') pushFeature(items, f, 'map', P, { layer: n, z0: 0, z1: 0, tree: true });
+    else if (!isTree && c === 'building' && /Polygon/.test(f.geometry.type)) { const [b, h] = osmBuildingHeights(f.properties); pushFeature(items, { ...f, properties: { ...f.properties, color: null } }, 'map', P, { layer: n, z0: b, z1: h }); }
+  }
+  return items;
+}
+async function refreshAreaLayers() {
+  if (S.mode !== 'giraffe') return; const A = captureArea(); if (!A) return;
+  const names = Object.keys(S.mapItems).filter((n) => (BASE_KEYS.includes(n) || AREA_LAYERS.test(n)) && isVis('map|' + n) && !rectIn(A.R, S.capBox[n]));
+  if (!names.length) return;
+  log('Área do modelo mudou: relendo ' + names.join(', '));
+  let baseDone = false;
+  for (const n of names) { if (BASE_KEYS.includes(n)) { if (baseDone) continue; baseDone = true; } await captureLk('map|' + n); }
+}
+let areaRefreshT;
+function scheduleAreaRefresh() { clearTimeout(areaRefreshT); areaRefreshT = setTimeout(refreshAreaLayers, 900); }
 
 /* ---------------- OBJETOS 3D (gltf) via exportação do Giraffe ---------------- */
 let gltfT = null, gltfBusy = false;
@@ -1342,7 +1476,18 @@ async function fetchLayerFeatures(n, SL) {
   ids = ids.filter((i) => !skipped.includes(i));
   log(`Layers Mapbox de "${n}": ${ids.join(', ') || 'nenhuma'}${skipped.length ? ` · ignoradas (rótulo/imagem): ${skipped.length}` : ''}`);
   if (!ids.length) { if (skipped.some((i) => typeById[i] === 'raster')) toast(`"${n}" é uma imagem: use Mapa base → Imagem do mapa.`); return []; }
-  const feats = await queryFeatures(ids); logShape(`queryRenderedFeatures("${n}")`, feats);
+  // 2) API vetorial do Giraffe, pela Área do modelo
+  const A = captureArea();
+  if (A) {
+    const byId = Object.fromEntries(SL.map((l) => [l.id, l])); const seen = new Set(); let all = [];
+    for (const id of ids) { const l = byId[id]; if (!l || !l['source-layer'] || seen.has(l['source-layer'])) continue; seen.add(l['source-layer']); const fs = await vectorContents(l, A); if (fs) all = all.concat(fs.map((f) => ({ ...f, layer: f.layer || { id } }))); }
+    if (all.some((f) => f?.geometry)) { S.capBox[n] = A.R; return all; }
+    // 3) OpenStreetMap para edifícios e árvores
+    if (AREA_LAYERS.test(n)) { try { const its = await areaLayerFromOSM(n, A); if (its.length) { S.capBox[n] = A.R; return { items: its }; } } catch (e) { log('OpenStreetMap: ' + e.message, true); } }
+  }
+  // 4) último recurso: só o que está visível na tela do Giraffe
+  const feats = await queryFeatures(ids); logShape(`queryRenderedFeatures("${n}") — só área visível`, feats);
+  if (feats.length && AREA_LAYERS.test(n)) toast(`"${n}": lido só da área visível no Giraffe.`);
   return feats;
 }
 const BASE_VEC = 'Mapa base (vetorial)';
@@ -1356,13 +1501,28 @@ async function captureBaseVector(SL) {
   log(`Mapa base vetorial: água ${grp.agua.length} · vias ${grp.vias.length} · solo ${grp.solo.length} layers · source-layers: ${[...new Set(cand.map((l) => l['source-layer']))].join(', ')}`);
   const P = ensureProjector(DEMO.origin); const out = {}; BASE_KEYS.forEach((k) => (out[k] = []));
   const colorOf = (l) => { const c = l.paint?.['fill-color'] || l.paint?.['line-color']; return typeof c === 'string' ? c : null; };
-  const take = async (layers, keyFn) => {
-    if (!layers.length) return; const feats = await queryFeatures(layers.map((l) => l.id)); logShape('Mapa base ' + layers[0]['source-layer'], feats);
-    for (const f of feats) { if (!f?.geometry) continue; const k = keyFn(f); pushFeature(out[k], { ...f, properties: { ...(f.properties || {}), color: null } }, 'map', P, { layer: k, z0: 0, z1: 0 }); }
-  };
-  await take(grp.agua, () => BASE_KEYS[0]);
-  await take(grp.solo, (f) => (VEG_RE.test(`${f.properties?.class || ''} ${f.properties?.type || ''} ${f.properties?.landuse || ''}`) ? BASE_KEYS[1] : BASE_KEYS[2]));
-  await take(grp.vias, () => BASE_KEYS[3]);
+  const A = captureArea(); let mode = 'tela';
+  const add = (f, k) => { if (f?.geometry && !/Point/.test(f.geometry.type)) pushFeature(out[k], { ...f, properties: { ...(f.properties || {}), color: null } }, 'map', P, { layer: k, z0: 0, z1: 0 }); };
+  const vegKey = (f) => (VEG_RE.test(`${f.properties?.class || ''} ${f.properties?.type || ''} ${f.properties?.landuse || ''}`) ? BASE_KEYS[1] : BASE_KEYS[2]);
+  // 1) API vetorial do Giraffe pela Área do modelo
+  if (A) {
+    let got = 0; const per = async (layers, keyFn) => { const seen = new Set(); for (const l of layers) { if (seen.has(l['source-layer'])) continue; seen.add(l['source-layer']); const fs = await vectorContents(l, A); if (fs) { fs.forEach((f) => add(f, keyFn(f))); got += fs.length; } } };
+    await per(grp.agua, () => BASE_KEYS[0]); if (vecApi || got) { await per(grp.solo, vegKey); await per(grp.vias, () => BASE_KEYS[3]); }
+    if (got) mode = 'giraffe';
+    // 2) OpenStreetMap
+    if (!got) {
+      try { const fs = await osmFeatures(A); for (const f of fs) { const c = osmClass(f.properties); const k = c === 'agua' ? BASE_KEYS[0] : c === 'veg' ? BASE_KEYS[1] : c === 'solo' ? BASE_KEYS[2] : c === 'vias' ? BASE_KEYS[3] : null; if (k) add(f, k); } mode = 'osm'; }
+      catch (e) { log('OpenStreetMap: ' + e.message, true); }
+    }
+  }
+  // 3) último recurso: só o que está visível na tela
+  if (mode === 'tela') {
+    const take = async (layers, keyFn) => { if (!layers.length) return; const feats = await queryFeatures(layers.map((l) => l.id)); logShape('Mapa base (tela) ' + layers[0]['source-layer'], feats); feats.forEach((f) => add(f, keyFn(f))); };
+    await take(grp.agua, () => BASE_KEYS[0]); await take(grp.solo, vegKey); await take(grp.vias, () => BASE_KEYS[3]);
+    toast('Mapa base lido só da área visível no Giraffe.');
+  }
+  log(`Mapa base: fonte ${mode === 'giraffe' ? 'Giraffe (API vetorial)' : mode === 'osm' ? 'OpenStreetMap' : 'tela do Giraffe'} · ${BASE_KEYS.map((k) => out[k].length).join('/')} itens`);
+  if (A && mode !== 'tela') BASE_KEYS.forEach((k) => (S.capBox[k] = A.R));
   for (const k of BASE_KEYS) { S.mapItems[k] = out[k]; if (S.vis['map|' + k] == null) S.vis['map|' + k] = true; }
   delete S.mapItems[BASE_VEC];
 }
@@ -1372,6 +1532,7 @@ async function captureMapLayer(n) {
   let feats;
   if (BASE_KEYS.includes(n) || n === BASE_VEC) { await captureBaseVector(SL); return; }
   feats = await fetchLayerFeatures(n, SL);
+  if (feats && feats.items) { S.mapItems[n] = feats.items; log(`Camada "${n}": ${feats.items.length} itens (OpenStreetMap)`); return; }
   const treeR = /tree|[áa]rvor/i.test(n) ? 2.5 : 0;
   const styleById = Object.fromEntries(SL.map((l) => [l.id, l]));
   let ext = null; try { const ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; ext = ids.map((i) => styleById[i]).find((l) => l?.type === 'fill-extrusion') || null; } catch (e) { /* */ }
@@ -1384,6 +1545,7 @@ async function captureMapLayer(n) {
       const h = evalExpr(sl.paint?.['fill-extrusion-height'], f.properties), b = evalExpr(sl.paint?.['fill-extrusion-base'], f.properties);
       if (isFinite(h) && h > 0) { z1 = h; z0 = isFinite(b) ? b : 0; }
     }
+    if (!z1 && /build/i.test(n) && /Polygon/.test(f.geometry.type)) { const h = num(f.properties?.height ?? f.properties?.render_height), b = num(f.properties?.min_height ?? f.properties?.render_min_height); z1 = isFinite(h) && h > 0 ? h : 6; z0 = isFinite(b) ? b : 0; }
     const color = sl.paint?.['fill-color'] || sl.paint?.['fill-extrusion-color'] || sl.paint?.['line-color'];
     pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: f.properties?.color ?? (typeof color === 'string' ? color : null) } }, 'map', P, { layer: n, z0, z1, tree: !!treeR });
   }
@@ -1642,7 +1804,7 @@ async function useMapArea() {
     const pts = [[b[0][0], b[0][1]], [b[1][0], b[0][1]], [b[1][0], b[1][1]], [b[0][0], b[1][1]]].map((c) => P.forward(c));
     S.area.mapRect = bboxOf(pts);
   }
-  S.area.mode = 'map'; syncUI(); render(); persist();
+  S.area.mode = 'map'; syncUI(); render(); persist(); scheduleAreaRefresh();
 }
 async function drawArea() {
   if (S.mode === 'demo') { S.area.drawn = { minx: -70, miny: -60, maxx: 80, maxy: 70 }; S.area.mode = 'drawn'; syncUI(); render(); return; }
@@ -1652,7 +1814,7 @@ async function drawArea() {
     const g = r?.geometry || r?.features?.[0]?.geometry || (r?.type === 'Polygon' ? r : null);
     if (!g) throw new Error('nenhum polígono');
     const P = ensureProjector(firstCoord(g)); const parts = geomToParts(g, P);
-    S.area.drawn = bboxOf(parts.polys[0][0]); S.area.mode = 'drawn'; syncUI(); render(); persist();
+    S.area.drawn = bboxOf(parts.polys[0][0]); S.area.mode = 'drawn'; syncUI(); render(); persist(); scheduleAreaRefresh();
   } catch (e) { toast('Desenho cancelado ou indisponível.'); }
 }
 
@@ -1661,7 +1823,7 @@ async function drawArea() {
 function renderVersions() {
   $('#verSel').innerHTML = S.versions.map((v, i) => `<option value="${i}" ${i === S.av ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
   $('#verList').innerHTML = S.versions.map((v, i) => `<div class="saved-item${i === S.av ? ' on' : ''}">
-    <input type="text" value="${esc(v.name)}" data-ren="${i}" aria-label="Nome da versão ${i + 1}">
+    <input type="text" value="${esc(v.name)}" data-ren="${i}" aria-label="Nome da versão ${i + 1}" title="${v.updatedBy ? esc(`Última alteração: ${v.updatedBy}, ${new Date(v.updatedAt).toLocaleString('pt-BR')}`) : ''}">
     <button class="icon" data-act="go" data-i="${i}" aria-label="Abrir ${esc(v.name)}" title="Abrir"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
     <button class="icon" data-act="dup" data-i="${i}" aria-label="Duplicar ${esc(v.name)}" title="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
     <button class="icon" data-act="del" data-i="${i}" aria-label="Excluir ${esc(v.name)}" title="Excluir" ${S.versions.length < 2 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('');
@@ -1669,7 +1831,7 @@ function renderVersions() {
 function switchVersion(i) { setActive(i); renderVersions(); syncUI(); buildLayerUI(); render(); persist(); ensureCapturedForVisible(); }
 function duplicateVersion(i) {
   const v = S.versions[i]; const n = S.versions.length + 1;
-  S.versions.splice(i + 1, 0, { id: 'v' + Date.now(), name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis } });
+  S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis } });
   switchVersion(i + 1); toast(`Nova versão “Vista ${n}” criada a partir de “${v.name}”.`);
 }
 
@@ -1773,10 +1935,147 @@ function loadSnapshot(o) {
   if (c.cropUI) Object.assign(S.cropUI, c.cropUI); if (c.area) Object.assign(S.area, c.area); if (c.autoSync != null) S.autoSync = c.autoSync;
   if (Array.isArray(o.versions) && o.versions.length) { S.versions = o.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); setActive(o.av || 0); }
 }
-function storeKey() { const p = S.gs?.get('project'); const id = p?.properties?.id ?? p?.id ?? (S.mode === 'demo' ? 'demo' : 'sem-id'); return 'kv-axono:' + id; }
-let persistT;
-function persist() { clearTimeout(persistT); persistT = setTimeout(() => { histPush(); try { localStorage.setItem(storeKey(), JSON.stringify(snapshot())); } catch (e) { /* */ } }, 400); }
-function restore() { try { const o = JSON.parse(localStorage.getItem(storeKey()) || 'null'); if (o && o.common) { loadSnapshot(o); log('Configuração restaurada (' + S.versions.length + ' versões)'); } } catch (e) { /* */ } }
+const PSTORE = 'kvAxono'; const SESSION = Math.random().toString(36).slice(2, 8);
+/* ---- Sincronização no projeto (updateProjectApp → public.kvAxono)
+   Compartilhado: versões (ângulo, zoom, layers) + estilo/recorte/área. Pessoal (só no navegador): versão aberta, trava, painel.
+   Junção em 3 vias: base = última versão do projeto lida/gravada por este app. Versões diferentes se juntam;
+   a mesma versão alterada pelos dois lados vira "(sua cópia)". Nunca grava sem antes juntar o que está no projeto. */
+const SY = { base: null, baseRev: null, prevBase: null, lastWrittenRev: null, meta: null, busy: false, again: false, user: null };
+let persistT, projSaveT, lastLocalEdit = 0;
+function stableStr(o) { if (o === null || typeof o !== 'object') return JSON.stringify(o); if (Array.isArray(o)) return '[' + o.map(stableStr).join(',') + ']'; return '{' + Object.keys(o).filter((k) => o[k] !== undefined).sort().map((k) => JSON.stringify(k) + ':' + stableStr(o[k])).join(',') + '}'; }
+const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
+const vKey = (v) => (v ? stableStr({ ...v, updatedAt: undefined, updatedBy: undefined }) : null);
+function projId() { const p = S.gs?.get('project'); return String(p?.properties?.id ?? p?.id ?? (S.mode === 'demo' ? 'demo' : '')); }
+function storeKey() { return 'kv-axono:' + (projId() || 'sem-id'); }
+function sharedData() { const s = snapshot(); const common = { ...s.common }; delete common.autoSync; return clone({ common, versions: s.versions }); }
+function projectApp() { return S.gs?.get('selectedProjectApp') || null; }
+function validRemote(d) { if (!d || !d.common || !Array.isArray(d.versions)) return null; if (d.projectId && projId() && String(d.projectId) !== projId()) { log('Dados salvos de outro projeto ignorados (' + d.projectId + ')', true); return null; } return d; }
+async function userName() {
+  if (SY.user) return SY.user;
+  try { const t = await call('getUserClaimsJwt', [], 8000); const tok = typeof t === 'string' ? t : t?.token || t?.jwt; const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); SY.user = p.name || p.user_name || p.given_name || p.user_email || p.email || 'usuário'; }
+  catch (e) { SY.user = 'usuário'; }
+  return SY.user;
+}
+const hm = (t) => new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+function setSaveStatus(st, msg) {
+  const el = $('#saveStatus'); if (!el) return; const m = SY.meta;
+  const who = m ? `${m.savedBy ? ' por ' + m.savedBy : ''} às ${hm(m.savedAt)}` : '';
+  el.textContent = st === 'ok' ? `Salvo no projeto${who}. Visível para todos que abrirem o app neste projeto.` : st === 'saving' ? 'Enviando ao projeto…' : st === 'pending' ? 'Alterações locais ainda não enviadas…' : st === 'err' ? `Não foi possível salvar no projeto (${msg || 'erro'}). Cópia local mantida.` : st === 'remote' ? `Atualizado com alterações${who}.` : 'Salvo só neste navegador (fora do Giraffe).';
+  el.dataset.state = st;
+}
+function stampVersions(me) {
+  const bm = Object.fromEntries((SY.base?.versions || []).map((v) => [v.id, v]));
+  for (const v of S.versions) if (vKey(v) !== vKey(bm[v.id]) && v.updatedBy !== me + '*') { v.updatedAt = Date.now(); v.updatedBy = me; }
+}
+function merge3(b, l, r) {
+  const sb = stableStr(b), sl = stableStr(l), sr = stableStr(r);
+  if (sl === sb) return clone(r); if (sr === sb || sr === sl) return clone(l);
+  const obj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  if (obj(l) && obj(r)) { const o = {}; for (const k of new Set([...Object.keys(l), ...Object.keys(r)])) { const v = merge3(obj(b) ? b[k] : undefined, l[k], r[k]); if (v !== undefined) o[k] = v; } return o; }
+  return clone(l); // conflito no mesmo campo: vale a alteração local (mais recente)
+}
+function mergeShared(b, l, r, conflicts) {
+  b = b || { common: {}, versions: [] };
+  const bm = Object.fromEntries(b.versions.map((v) => [v.id, v])), lm = Object.fromEntries(l.versions.map((v) => [v.id, v])), rm = Object.fromEntries(r.versions.map((v) => [v.id, v]));
+  const ids = [...r.versions.map((v) => v.id)]; l.versions.forEach((v) => { if (!ids.includes(v.id)) ids.push(v.id); });
+  const out = [];
+  for (const id of ids) {
+    const B = bm[id], L = lm[id], R = rm[id]; const cl = vKey(L) !== vKey(B), cr = vKey(R) !== vKey(B);
+    if (!cl) { if (R) out.push(clone(R)); continue; }
+    if (!cr) { if (L) out.push(clone(L)); continue; }
+    if (vKey(L) === vKey(R)) { out.push(clone(L || R)); continue; }
+    if (!L) { out.push(clone(R)); continue; }
+    if (!R) { out.push(clone(L)); continue; }
+    out.push(clone(R)); out.push({ ...clone(L), id: 'v' + Date.now() + SESSION + out.length, name: `${L.name} (cópia de ${SY.user || 'usuário'})` }); conflicts.push(L.name);
+  }
+  if (!out.length) out.push({ id: 'v' + Date.now() + SESSION, name: 'Vista 1', view: newView(), vis: {} });
+  return { common: merge3(b.common, l.common, r.common), versions: out };
+}
+function applyShared(d, keepId) {
+  if (!d || !d.common) return; d = clone(d); const c = d.common;
+  if (c.style) S.style = { ...S.style, ...c.style, sh: { ...S.style.sh, ...(c.style.sh || {}) } };
+  S.lstyle = c.lstyle || {}; S.colorMap = c.colorMap || {}; S.usageMap = c.usageMap || {}; if (c.cropUI) S.cropUI = { ...S.cropUI, ...c.cropUI }; if (c.area) Object.assign(S.area, c.area);
+  if (Array.isArray(d.versions) && d.versions.length) { S.versions = d.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); const k = keepId ? S.versions.findIndex((v) => v.id === keepId) : -1; setActive(k >= 0 ? k : Math.min(S.av || 0, S.versions.length - 1)); }
+}
+function applyFull(o, keepId) { // histórico / importação (formato completo)
+  if (!o || !o.common) return; applyShared({ common: o.common, versions: o.versions }, keepId || o.versions?.[o.av || 0]?.id);
+  if (o.common.autoSync != null) S.autoSync = o.common.autoSync;
+}
+function saveLocal() { try { localStorage.setItem(storeKey(), JSON.stringify({ fmt: 13, shared: sharedData(), av: S.versions[S.av]?.id, autoSync: S.autoSync, base: SY.base, baseRev: SY.baseRev, meta: SY.meta, savedAt: Date.now() })); } catch (e) { /* */ } }
+function persist() {
+  lastLocalEdit = Date.now(); clearTimeout(persistT);
+  persistT = setTimeout(() => { histPush(); saveLocal(); if (S.mode === 'giraffe') { setSaveStatus('pending'); saveToProject(); } }, 400);
+}
+function refreshAll() { renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render(); ensureCapturedForVisible(); }
+function saveToProject(now) { clearTimeout(projSaveT); projSaveT = setTimeout(() => syncPush(!!now), now ? 0 : 1500); }
+async function syncPush(manual) {
+  if (S.mode !== 'giraffe') { setSaveStatus('local'); return; }
+  const pa = projectApp(); if (!pa) { setSaveStatus('err', 'app do projeto não encontrado'); return; }
+  if (SY.busy) { SY.again = true; return; } SY.busy = true;
+  try {
+    const me = await userName(); const keep = S.versions[S.av]?.id;
+    const remote = validRemote(pa.public?.[PSTORE]);
+    if (remote && remote.rev !== SY.baseRev) { // alguém gravou desde a última leitura: junta antes
+      const conflicts = []; const base = remote.parentRev === SY.baseRev || !SY.prevBase ? SY.base : SY.prevBase;
+      const merged = mergeShared(base, sharedData(), remote, conflicts); applyShared(merged, keep);
+      SY.base = { common: remote.common, versions: remote.versions }; SY.baseRev = remote.rev; SY.meta = { savedAt: remote.savedAt, savedBy: remote.savedBy };
+      if (conflicts.length) toast(`A mesma vista foi alterada por outra pessoa: guardei a sua como “${conflicts[0]} (cópia de ${SY.user || 'usuário'})”.`);
+      refreshAll();
+    }
+    stampVersions(me);
+    const local = sharedData();
+    if (remote && stableStr(local) === stableStr({ common: SY.base?.common, versions: SY.base?.versions }) && !manual) { setSaveStatus('ok'); return; }
+    const rev = Date.now().toString(36) + '-' + SESSION;
+    const data = { app: 'KV Axonometria', version: VERSION, fmt: 13, projectId: projId(), savedAt: Date.now(), savedBy: me, rev, parentRev: remote?.rev || null, ...local };
+    setSaveStatus('saving');
+    const cur = projectApp() || pa;
+    await call('updateProjectApp', [cur.app, { ...cur, public: { ...(cur.public || {}), [PSTORE]: data } }], 20000);
+    SY.prevBase = SY.base; SY.base = clone(local); SY.baseRev = rev; SY.lastWrittenRev = rev; SY.meta = { savedAt: data.savedAt, savedBy: me };
+    saveLocal(); setSaveStatus('ok'); log(`Enviado ao projeto (rev ${rev})`);
+  } catch (e) { setSaveStatus('err', e.message); }
+  finally { SY.busy = false; if (SY.again) { SY.again = false; saveToProject(); } }
+}
+function syncPull(manual) {
+  const remote = validRemote(projectApp()?.public?.[PSTORE]);
+  if (!remote) { if (manual) toast('Ainda não há vistas salvas neste projeto.'); return; }
+  if (remote.rev && remote.rev === SY.baseRev) { if (manual) toast('Você já está com a versão mais recente do projeto.'); return; }
+  if ((remote.savedAt || 0) < (SY.meta?.savedAt || 0)) { if (manual) toast('O Giraffe ainda está mostrando uma versão anterior. Recarregue a página do Giraffe (F5) se persistir.'); return; }
+  if (SY.busy || (!manual && Date.now() - lastLocalEdit < 1500)) { setTimeout(() => syncPull(manual), 1500); return; }
+  const keep = S.versions[S.av]?.id; const conflicts = [];
+  const clobbered = SY.lastWrittenRev && SY.baseRev === SY.lastWrittenRev && remote.parentRev !== SY.baseRev; // gravaram por cima da nossa última gravação
+  const base = clobbered ? SY.prevBase : SY.base;
+  const local = sharedData(); const merged = SY.base || clobbered ? mergeShared(base, local, remote, conflicts) : { common: remote.common, versions: remote.versions };
+  applyShared(merged, keep);
+  SY.base = { common: clone(remote.common), versions: clone(remote.versions) }; SY.baseRev = remote.rev; SY.meta = { savedAt: remote.savedAt, savedBy: remote.savedBy };
+  saveLocal(); refreshAll(); setSaveStatus('remote');
+  if (conflicts.length) toast(`A mesma vista foi alterada por outra pessoa: guardei a sua como “${conflicts[0]} (cópia de ${SY.user || 'usuário'})”.`);
+  else if (!manual) toast(`Vistas atualizadas${remote.savedBy ? ' por ' + remote.savedBy : ''}.`);
+  if (stableStr(sharedData()) !== stableStr(SY.base)) saveToProject(); // ainda há alterações nossas a enviar
+}
+function restore() {
+  let local = null; try { local = JSON.parse(localStorage.getItem(storeKey()) || 'null'); } catch (e) { /* */ }
+  if (local && !local.fmt && local.common) local = { fmt: 12, shared: { common: local.common, versions: local.versions }, av: local.versions?.[local.av || 0]?.id, autoSync: local.common.autoSync, base: null };
+  if (local?.autoSync != null) S.autoSync = local.autoSync;
+  const remote = S.mode === 'giraffe' ? validRemote(projectApp()?.public?.[PSTORE]) : null;
+  if (remote) {
+    const pending = local?.shared && (!local.base || stableStr(local.shared) !== stableStr(local.base));
+    const conflicts = [];
+    const d = pending && local.base ? mergeShared(local.base, local.shared, remote, conflicts) : pending && !remote.rev ? local.shared : { common: remote.common, versions: remote.versions };
+    applyShared(d, local?.av);
+    SY.base = { common: clone(remote.common), versions: clone(remote.versions) }; SY.baseRev = remote.rev || null; SY.meta = { savedAt: remote.savedAt, savedBy: remote.savedBy };
+    log(`Vistas restauradas do projeto (${S.versions.length} versões${remote.savedBy ? ', salvas por ' + remote.savedBy : ''})${pending ? ' + alterações locais pendentes' : ''}`);
+    setSaveStatus('ok'); if (pending || !remote.fmt) saveToProject(true);
+  } else if (local?.shared) {
+    applyShared(local.shared, local.av); log(`Vistas restauradas deste navegador (${S.versions.length} versões)`);
+    if (S.mode === 'giraffe') saveToProject(true); else setSaveStatus('local');
+  } else if (S.mode === 'giraffe') saveToProject(true);
+}
+function onProjectAppChange() {
+  const d = validRemote(projectApp()?.public?.[PSTORE]); if (!d) return;
+  if (d.rev && (d.rev === SY.baseRev || d.rev === SY.lastWrittenRev)) return;
+  if ((d.savedAt || 0) < (SY.meta?.savedAt || 0)) { log('Versão do projeto mais antiga que a atual ignorada (' + d.rev + ')'); return; }
+  syncPull(false);
+}
 
 /* ---------------- UI WIRING ---------------- */
 function bindRange(id, get, set, after) {
@@ -1841,6 +2140,8 @@ function wireUI() {
   $('#btnVerPrev').onclick = () => switchVersion((S.av - 1 + S.versions.length) % S.versions.length);
   $('#btnVerNext').onclick = () => switchVersion((S.av + 1) % S.versions.length);
   $('#btnVerNew').onclick = () => duplicateVersion(S.av);
+  $('#btnSaveProj').onclick = () => { histPush(); saveLocal(); saveToProject(true); };
+  $('#btnPullProj').onclick = () => syncPull(true);
   $('#verList').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-act]'); if (!b) return; const i = +b.dataset.i;
     if (b.dataset.act === 'go') switchVersion(i);
@@ -1926,12 +2227,12 @@ function wireUI() {
     if (e.target.checked && !hasData(lk)) await captureLk(lk); else { buildStyleUI(); render(); }
   });
   $('#layerUI').addEventListener('click', (e) => { const b = e.target.closest('button[data-reload]'); if (b) { S.vis[b.dataset.reload] = true; captureLk(b.dataset.reload); } });
-  bindRange('buffer', () => S.area.buffer, (v) => { S.area.buffer = v; }, viewChanged);
+  bindRange('buffer', () => S.area.buffer, (v) => { S.area.buffer = v; }, (f) => { viewChanged(f); if (!f) scheduleAreaRefresh(); });
   $('#areaMode').onchange = async (e) => {
     S.area.mode = e.target.value; syncUI();
     if (S.area.mode === 'map' && !S.area.mapRect) await useMapArea().catch(() => toast('Área do mapa indisponível.'));
     if (S.area.mode === 'drawn' && !S.area.drawn) await drawArea();
-    render(); persist();
+    render(); persist(); scheduleAreaRefresh();
   };
   $('#btnMapArea').onclick = () => useMapArea().catch(() => toast('Área do mapa indisponível.'));
   $('#btnDrawArea').onclick = drawArea;
@@ -1995,12 +2296,10 @@ function histGo(d) {
   clearTimeout(persistT); histPush();
   const j = HIST.i + d; if (j < 0 || j >= HIST.stack.length) return;
   HIST.i = j; HIST.lock = true;
-  const o = JSON.parse(HIST.stack[j]); const c = o.common;
-  S.style = c.style; S.lstyle = c.lstyle; S.colorMap = c.colorMap; S.usageMap = c.usageMap; S.cropUI = c.cropUI; Object.assign(S.area, c.area);
-  S.versions = o.versions; setActive(o.av);
+  applyFull(JSON.parse(HIST.stack[j]));
   renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render();
-  try { localStorage.setItem(storeKey(), JSON.stringify(snapshot())); } catch (e) { /* */ }
-  HIST.lock = false; updHist();
+  HIST.lock = false; updHist(); lastLocalEdit = Date.now();
+  saveLocal(); saveToProject();
 }
 function updHist() { const u = $('#btnUndo'), r = $('#btnRedo'); if (u) u.disabled = HIST.i <= 0; if (r) r.disabled = HIST.i >= HIST.stack.length - 1; }
 
@@ -2160,8 +2459,10 @@ async function fetchBundleFallback() {
 }
 
 let giraffeEntered = false;
-function enterGiraffe(reason) {
+async function enterGiraffe(reason) {
   if (giraffeEntered) return; giraffeEntered = true;
+  for (let i = 0; i < 16 && !(S.gs.get('project') && S.gs.get('selectedProjectApp')); i++) await sleep(250);
+  log(`Projeto: ${storeKey().slice(9)} · app do projeto: ${projectApp() ? 'ok' : 'não encontrado'}${projectApp()?.public?.[PSTORE] ? ' · com vistas salvas' : ''}`);
   S.mode = 'giraffe'; S.projector = null; S.mapItems = {}; S.ctxItems = []; S.raster = null; S.items = []; S.extraDraw = {};
   S.area.drawn = null; S.area.mapRect = null;
   $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge live">Giraffe</span>';
@@ -2170,6 +2471,7 @@ function enterGiraffe(reason) {
   S.gs.addListener(['projectLayers'], () => buildLayerUI());
   S.gs.addListener(['layerTree'], () => { applyDefaultVis(); buildLayerUI(); });
   S.gs.addListener(['views'], () => listViews());
+  S.gs.addListener(['selectedProjectApp'], onProjectAppChange);
   S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
   initVersions(); S.lstyle = {}; S.colorMap = {}; S.usageMap = {};
   restore(); if (!S.cropUI.rect) fitRatio();
@@ -2187,8 +2489,8 @@ async function boot() {
     log(`Mensagens recebidas antes do SDK: ${MSG.n} · reaplicadas: ${n} · origens: ${Object.keys(MSG.origins).join(', ') || 'nenhuma'}`);
     S.gs.addListener(['project', 'rawSections', 'bakedSections', 'projectLayers', 'projectOrigin'], () => { if (!giraffeEntered && hasGiraffeState()) enterGiraffe('estado recebido'); });
     for (let i = 0; i < 12 && !hasGiraffeState(); i++) await sleep(250);
-    if (hasGiraffeState()) enterGiraffe('estado do projeto');
-    else { try { const u = await call('getUrlParams', [], 6000); if (u != null) enterGiraffe('RPC respondeu'); } catch (e) { /* not in Giraffe */ } }
+    if (hasGiraffeState()) await enterGiraffe('estado do projeto');
+    else { try { const u = await call('getUrlParams', [], 6000); if (u != null) await enterGiraffe('RPC respondeu'); } catch (e) { /* not in Giraffe */ } }
   }
   if (!giraffeEntered) {
     $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge">Demonstração</span>';
