@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V08</title>
+<title>KV Axonometria — Beta V09</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -166,6 +166,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js"></script>
 </head>
 <body>
 <header class="app-header">
@@ -254,6 +255,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="field"><label for="az">Azimute</label><div class="ctl"><input type="range" id="az" min="0" max="359" step="1"><input type="number" id="azN" min="0" max="359" step="1" aria-label="Azimute em graus"></div></div>
     <div class="field" id="fEl"><label for="el">Elevação</label><div class="ctl"><input type="range" id="el" min="0" max="90" step="0.5"><input type="number" id="elN" min="0" max="90" step="0.5" aria-label="Elevação em graus"></div></div>
     <div class="field" id="fK" hidden><label for="k">Fator vertical</label><div class="ctl"><input type="range" id="k" min="0.3" max="1.2" step="0.05"><input type="number" id="kN" min="0.3" max="1.2" step="0.05" aria-label="Fator vertical"></div></div>
+    <div class="field" id="fPlanRot" hidden><label for="planRot">Rotação da planta</label><div class="ctl"><input type="number" id="planRot" min="-360" max="360" step="1" aria-label="Rotação da planta em graus"><button id="btnNorthUp">Norte para cima</button></div></div>
     <div class="field"><label for="zoom">Zoom (%)</label><div class="ctl"><input type="range" id="zoom" min="25" max="800" step="5"><input type="number" id="zoomN" min="10" max="2000" step="5" aria-label="Zoom em porcentagem"></div></div>
 
     <h2>Recorte da imagem</h2>
@@ -349,15 +351,18 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V08 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V09 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V08 */
-/* V08: lista de layers completa (layerTree), layers ocultos no Giraffe entram desligados; leitura sob demanda
+/* KV Axonometria — Beta V09 */
+/* V09: visibilidade por buffer de profundidade (ordem correta de faces + perfil só nas arestas visíveis),
+   envoltórias (_skeletonStoriesLngLat) em 3D, árvores 3D, mapa base vetorial por categoria, georreferência da imagem
+   do mapa com padding, rotação da planta.
+   V08: lista de layers completa (layerTree), layers ocultos no Giraffe entram desligados; leitura sob demanda
    (getLayerContents → mostrar/ocultar temporário via changeLayerVisibility); altura de elementos só em rawSections.
    V07: trava de edição da vista, desfazer/refazer, linhas com estilo do Giraffe (_display2dOutline: traço, espessura, setas),
    lajes só na base de cada pavimento, mapa base vetorial, árvores, correções de captura (queryRenderedFeatures/getPng).
@@ -374,7 +379,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V08';
+const VERSION = 'V09';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -390,7 +395,7 @@ const PRESETS = {
   mil:   { proj: 'oblique', k: 1, azOff: 0 },
   plano: { proj: 'oblique', k: 1, azOff: 15 },
   elev:  { proj: 'ortho', el: 0, azOff: 0 },
-  plan:  { proj: 'ortho', el: 90, azOff: 0 },
+  plan:  { proj: 'ortho', el: 90, azOff: 0, az: 180 },
 };
 
 const S = {
@@ -496,10 +501,19 @@ function defaultLayerStyle(kind, pal = S.style.palette) {
   if (kind === 'map') return { ...base, fill: '#EEEEEE', fillOp: 0.7, stroke: gray, strokeW: 0.45 };
   return { ...base, fill: pal === 'mono' ? '#E2E2E2' : '#F3F3F3', stroke: gray, strokeW: 0.45 };
 }
+function specialStyle(lk) {
+  const n = lkName(lk); const base = { fillOp: 1, dash: 'solid' };
+  if (/água$/.test(n)) return { ...base, fill: '#CFE6F2', stroke: '#9CC7DD', strokeW: 0.4 };
+  if (/vegetação$/.test(n)) return { ...base, fill: '#DCEBCF', stroke: '#B9D3A2', strokeW: 0 };
+  if (/uso do solo$/.test(n)) return { ...base, fill: '#F2F0EA', stroke: '#E2E2E2', strokeW: 0 };
+  if (/vias$/.test(n)) return { ...base, fill: '#FFFFFF', stroke: '#C4C7C7', strokeW: 0.9 };
+  if (lk.startsWith('map|') && /tree|[áa]rvor/i.test(n)) return { ...base, fill: '#B9D3A2', stroke: '#5E7F52', strokeW: 0.5 };
+  return null;
+}
 function ensureStyles() {
   const seen = new Set();
   for (const it of allItems()) {
-    if (!seen.has(it.lk)) { seen.add(it.lk); if (!S.lstyle[it.lk]) S.lstyle[it.lk] = defaultLayerStyle(layerKind(it.lk)); }
+    if (!seen.has(it.lk)) { seen.add(it.lk); if (!S.lstyle[it.lk]) S.lstyle[it.lk] = specialStyle(it.lk) || defaultLayerStyle(layerKind(it.lk)); }
     if (it.lk.startsWith('draw|') && it.usage && !S.usageMap[it.usage]) S.usageMap[it.usage] = it.color || hashColor(it.usage);
   }
 }
@@ -604,7 +618,7 @@ function bboxOf(pts, b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy
 function itemBBox(it) {
   if (it._bb) return it._bb;
   const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
-  if (it.kind === 'line') bboxOf(it.pts, b); else for (const r of it.poly) bboxOf(r, b);
+  if (it.kind === 'line') bboxOf(it.pts, b); else if (it.kind === 'tree') bboxOf([[it.pos[0] - it.r, it.pos[1] - it.r], [it.pos[0] + it.r, it.pos[1] + it.r]], b); else if (it.kind === 'mesh') it.faces.forEach((f) => bboxOf(f, b)); else for (const r of it.poly) bboxOf(r, b);
   return (it._bb = b);
 }
 const bbHit = (a, b) => a.minx <= b.maxx && a.maxx >= b.minx && a.miny <= b.maxy && a.maxy >= b.miny;
@@ -678,7 +692,7 @@ function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
   const meta = {
-    id: featId(f), src, lk: '', hiddenG: p._visible === false,
+    id: featId(f), src, lk: '', hiddenG: p._visible === false, fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
     layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? 'Sem camada'),
     usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
     color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
@@ -714,7 +728,21 @@ function pushFeature(list, f, src, P, opts = {}) {
       for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, color: inkHex, kind: 'line', pts: l, z: z0, ls });
     }
   }
-  if (opts.points && parts.points.length) for (const c of parts.points) { const r = opts.points; const ring = []; for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; ring.push([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]); } list.push({ ...meta, kind: 'poly', poly: [ring], z: z0 }); }
+  const sk = f._skeletonStoriesLngLat || p._skeletonStoriesLngLat;
+  if (Array.isArray(sk) && sk.length && src !== 'ctx') {
+    const faces = []; const base0 = +(p._baseHeight ?? p.baseHeight ?? 0) || 0;
+    sk.forEach((s, k) => {
+      const b = base0 + (k ? (+sk[k - 1]?.story?.height || 0) : 0);
+      for (const skl of s.skeletons || []) {
+        if ((+skl.maxHeight || 0) < 0.05) continue;
+        const V3 = (skl.vertices || []).map((v) => { const w = P.forward([v[0], v[1]]); return [w[0], w[1], b + (+v[2] || 0)]; });
+        for (const poly of [...(skl.polygons || []), ...(skl.capPolygons || [])]) { const fc = poly.map((i) => V3[i]).filter(Boolean); if (fc.length >= 3) faces.push(fc); }
+      }
+    });
+    if (faces.length) list.push({ ...meta, kind: 'mesh', faces, strokeHex: p.stroke ? toHex(p.stroke) : null, dash: Array.isArray(p.strokeDasharray) ? p.strokeDasharray : null });
+  }
+  if (opts.tree && parts.points.length) for (const c of parts.points) { const h = +(p.height ?? p.tree_height ?? 0) || 7; const r = Math.max(1.2, Math.min(5, +(p.radius ?? p.crown ?? 0) || h * 0.34)); list.push({ ...meta, kind: 'tree', pos: c, r, trunk: Math.max(1.5, h - 2 * r), zc: h - r }); }
+  else if (opts.points && parts.points.length) for (const c of parts.points) { const r = opts.points; const ring = []; for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; ring.push([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]); } list.push({ ...meta, kind: 'poly', poly: [ring], z: z0 }); }
 }
 function ingestGiraffe() {
   const gs = S.gs; if (!gs) return;
@@ -742,6 +770,9 @@ function ingestGiraffe() {
   for (const [n, its] of Object.entries(S.extraDraw)) if (!present.has(n)) items.push(...its); else delete S.extraDraw[n];
   S.items = items; applyDefaultVis();
   const fk = new Set(); baked.concat(raw).forEach((f) => Object.entries(f.properties || {}).forEach(([k, v]) => { if (/fa[cç]ade|floor|level|slab/i.test(k)) fk.add(`${k}=${JSON.stringify(v)}`.slice(0, 60)); }));
+  const mk = new Set(); baked.concat(raw).forEach((f) => { Object.entries(f.properties || {}).forEach(([k, v]) => { if (/model|gltf|glb|mesh|asset|object3d|url/i.test(k)) mk.add(`${k}=${JSON.stringify(v)}`.slice(0, 90)); }); Object.keys(f).forEach((k) => { if (/model|gltf|glb|mesh/i.test(k)) mk.add('feature.' + k); }); });
+  if (mk.size) log('Possíveis objetos 3D: ' + [...mk].slice(0, 12).join(' · '));
+  log(`Envoltórias/malhas: ${items.filter((i) => i.kind === 'mesh').length}`);
   if (fk.size) log('Propriedades de fachada/pavimento: ' + [...fk].slice(0, 20).join(' · '));
   log(`Sem fachada (lajes): ${items.filter((i) => i.slab).length} lajes`);
   if (baked[0]) log(`bakedSections: ${baked.length} · chaves: ${Object.keys(baked[0].properties || {}).slice(0, 14).join(', ')}`);
@@ -786,6 +817,8 @@ function applyArea(items, R) {
     const b = itemBBox(it); if (!bbHit(b, R)) continue;
     const inside = b.minx >= R.minx && b.maxx <= R.maxx && b.miny >= R.miny && b.maxy <= R.maxy;
     if (it.src === 'vol' || it.src === 'flat' || inside) { out.push(it); continue; }
+    if (it.kind === 'tree') { if (it.pos[0] >= R.minx && it.pos[0] <= R.maxx && it.pos[1] >= R.miny && it.pos[1] <= R.maxy) out.push(it); continue; }
+    if (it.kind === 'mesh') { out.push(it); continue; }
     if (it.kind === 'line') { clipLine(it.pts, R).forEach((pts) => out.push({ ...it, pts, _bb: null })); continue; }
     if (!pc) { out.push(it); continue; }
     try {
@@ -810,6 +843,8 @@ function fitBox(V, R) {
   let src = S.items; if (!src.length) src = allItems();
   for (const it of src) {
     if (it.kind === 'line') bboxOf(it.pts.map((p) => V.P(p[0], p[1], it.z || 0)), b);
+    else if (it.kind === 'mesh') it.faces.forEach((f) => bboxOf(f.map((p) => V.P(p[0], p[1], p[2])), b));
+    else if (it.kind === 'tree') continue;
     else for (const r of it.poly) { bboxOf(r.map((p) => V.P(p[0], p[1], it.kind === 'prism' ? it.z0 : it.z || 0)), b); if (it.kind === 'prism') bboxOf(r.map((p) => V.P(p[0], p[1], it.z1)), b); }
   }
   if (R) bboxOf(rectPoly(R)[0].map((p) => V.P(p[0], p[1], 0)), b);
@@ -833,102 +868,225 @@ function render(fast = false) {
 
   let items = allItems().filter((it) => isVis(it.lk));
   items = applyArea(items, R);
-  const ops = [];
+  const ground = []; const faces = []; const lineOps = []; const sil = [];
   const prj = (r, z) => r.map((p) => V.P(p[0], p[1], z));
+  const P3 = (x, y, z) => { const p = V.P(x, y, z); p.push(V.depth(x, y, z)); return p; };
   const sun = st.sh.on ? sunPos() : null; const sunUp = sun && sun.alt > 1;
   const shs = sunUp ? [Math.sin(sun.az * D2R), Math.cos(sun.az * D2R)] : null;
   const Lx = -0.8 * V.rx - 0.6 * V.fx, Ly = -0.8 * V.ry - 0.6 * V.fy; const Ll = Math.hypot(Lx, Ly) || 1;
-
-  if (st.ground && R) ops.push({ t: 'poly', g: 'Terreno', rings: [prj(rectPoly(R)[0].slice(0, 4), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
-  if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ops.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null }); }
-
-  // linhas com estilo próprio do Giraffe mantêm a cor original (substituível em Estilo → layer → cores)
   const inkOf = (it, L) => (it.color ? (S.colorMap[it.lk]?.[it.color] || it.color) : L.stroke);
-  const emitFlat = (it) => {
-    const L = LS[it.lk]; const g = lkName(it.lk); const z = it.z || 0;
-    if (it.ink) { const c = inkOf(it, L); ops.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: c, fop: 1, stroke: c, sw: 0.25, dash: 'solid' }); return; }
+  const addFace = (rings3, op, extra) => { const f = { rings3, op, extra }; faces.push(f); return f; };
+
+  if (st.ground && R) ground.push({ t: 'poly', g: 'Terreno', rings: [prj(rectPoly(R)[0].slice(0, 4), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
+  if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ground.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null }); }
+
+  // flats → ops (ground) or faces (elevated)
+  const flatOps = (it) => {
+    const L = LS[it.lk]; const g = lkName(it.lk); const z = it.z || 0; const out = [];
+    if (it.ink) { const c = inkOf(it, L); out.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: c, fop: 1, stroke: c, sw: 0.25, dash: 'solid' }); return out; }
     if (it.kind === 'line') {
       const ls = it.ls; const pts = it.pts.map((p) => V.P(p[0], p[1], z));
-      if (!ls) { ops.push({ t: 'line', g, pts, stroke: L.stroke, sw: L.strokeW, dash: L.dash }); return; }
+      if (!ls) { out.push({ t: 'line', g, pts, stroke: L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
       const c = inkOf(it, L); const w = ls.w > 0 ? Math.max(L.strokeW, ls.w * 0.35) : L.strokeW;
-      ops.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: ls.dash ? ls.dash.map((d) => d * w).join(' ') : null, dash: ls.dash ? null : L.dash, cap: ls.cap });
-      const arrow = (a, b, len, ang) => { // world-space chevron at point a, pointing away from b
+      out.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: ls.dash ? ls.dash.map((d) => d * w).join(' ') : null, dash: ls.dash ? null : L.dash, cap: ls.cap });
+      const arrow = (a, b, len, ang) => {
         const dx = a[0] - b[0], dy = a[1] - b[1]; const l = Math.hypot(dx, dy) || 1; const ux = dx / l, uy = dy / l; const h = (ang / 2) * D2R; const L2 = len || 6;
         const w1 = [a[0] - L2 * (ux * Math.cos(h) - uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) + ux * Math.sin(h))];
         const w2 = [a[0] - L2 * (ux * Math.cos(h) + uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) - ux * Math.sin(h))];
-        ops.push({ t: 'line', g, pts: [w1, a, w2].map((p) => V.P(p[0], p[1], z)), stroke: c, sw: w, dash: 'solid', cap: ls.cap });
+        out.push({ t: 'line', g, pts: [w1, a, w2].map((p) => V.P(p[0], p[1], z)), stroke: c, sw: w, dash: 'solid', cap: ls.cap });
       };
       const P0 = it.pts; if (ls.aE) arrow(P0[P0.length - 1], P0[P0.length - 2], ls.aEL, ls.aEA); if (ls.aS) arrow(P0[0], P0[1], ls.aSL, ls.aSA);
-      return;
+      return out;
     }
-    ops.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: fillOf(it), fop: L.fillOp, stroke: it.noStroke ? 'none' : L.stroke, sw: it.noStroke ? 0 : L.strokeW, dash: L.dash });
+    out.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: fillOf(it), fop: L.fillOp * (it.fop ?? 1), stroke: it.noStroke ? 'none' : L.stroke, sw: it.noStroke ? 0 : L.strokeW, dash: L.dash });
+    return out;
   };
-  const flats = items.filter((i) => i.kind !== 'prism');
-  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || (a.kind === 'line') - (b.kind === 'line')).forEach(emitFlat);
+  const flats = items.filter((i) => i.kind === 'poly' || i.kind === 'line');
+  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || (a.kind === 'line') - (b.kind === 'line')).forEach((it) => ground.push(...flatOps(it)));
+  for (const it of flats.filter((i) => (i.z || 0) > 0.05)) {
+    const z = it.z;
+    for (const o of flatOps(it)) {
+      if (o.t === 'poly') addFace(it.poly.map((r) => r.map((p) => P3(p[0], p[1], z))), o, null);
+      else lineOps.push(o);
+    }
+  }
 
   const prismsAll = items.filter((i) => i.kind === 'prism');
-  // projected shadows on the ground (world → z=0), drawn as one translucent group
+  const trees = items.filter((i) => i.kind === 'tree');
+  // projected shadows on the ground
   if (sunUp) {
     const t = Math.tan(sun.alt * D2R); const vx = -shs[0] / t, vy = -shs[1] / t; const polys = [];
+    const sh = (p, z) => V.P(p[0] + vx * z, p[1] + vy * z, 0);
     for (const it of prismsAll) {
       if (st.sh.noCast?.[it.lk]) continue;
-      const sh = (p, z) => V.P(p[0] + vx * z, p[1] + vy * z, 0);
       for (const ring of it.poly) {
         polys.push(ring.map((p) => sh(p, it.z1))); if (it.z0 > 0.05) polys.push(ring.map((p) => sh(p, it.z0)));
         for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length]; polys.push([sh(a, it.z0), sh(b, it.z0), sh(b, it.z1), sh(a, it.z1)]); }
       }
     }
-    ops.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null });
+    const sa = Math.sin(sun.alt * D2R);
+    for (const it of trees) {
+      if (st.sh.noCast?.[it.lk]) continue;
+      const [x, y] = it.pos; const zc = it.zc, r = it.r; const c0 = [x + vx * zc, y + vy * zc]; const ux = -shs[0], uy = -shs[1]; const px = -uy, py = ux; const ring = [];
+      for (let k = 0; k < 18; k++) { const a = (k / 18) * Math.PI * 2; const A = r * Math.cos(a), B = (r / sa) * Math.sin(a); ring.push(V.P(c0[0] + px * A + ux * B, c0[1] + py * A + uy * B, 0)); }
+      polys.push(ring); polys.push([V.P(x - px * 0.2, y - py * 0.2, 0), V.P(x + px * 0.2, y + py * 0.2, 0), sh([x + px * 0.2, y + py * 0.2], it.trunk), sh([x - px * 0.2, y - py * 0.2], it.trunk)]);
+    }
+    ground.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null });
   }
 
-  const order = prismsAll.map((it) => { const b = itemBBox(it); return { it, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, (it.z0 + it.z1) / 2) }; });
-  flats.filter((i) => (i.z || 0) > 0.05).forEach((it) => { const b = itemBBox(it); order.push({ it, flat: true, d: V.depth((b.minx + b.maxx) / 2, (b.miny + b.maxy) / 2, it.z + 0.05) }); });
-  order.sort((a, b) => b.d - a.d);
-
   let nVol = 0;
-  for (const { it, flat } of order) {
-    if (flat) { emitFlat(it); continue; }
+  for (const it of prismsAll) {
     nVol++;
-    const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const faces = [];
-    if (!V.plan) {
-      const walls = [];
-      for (const ring of it.poly) for (let i = 0; i < ring.length; i++) {
-        const a = ring[i], b = ring[(i + 1) % ring.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy); if (len < 1e-3) continue;
-        const nx = dy / len, ny = -dx / len; if (nx * V.fx + ny * V.fy > -1e-4) continue;
+    const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const opaque = L.fillOp >= 0.95 && fill !== 'none';
+    const front = [];
+    for (const ring of it.poly) {
+      const fr = [];
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i], b = ring[(i + 1) % ring.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy);
+        if (len < 1e-3) { fr.push(false); continue; }
+        const nx = dy / len, ny = -dx / len; const isF = nx * V.fx + ny * V.fy < -1e-4; fr.push(isF);
+        if (!isF || V.plan) continue;
         let tone;
         if (shs) { const lit = nx * shs[0] + ny * shs[1]; tone = st.shade * (lit > 0 ? (1 - lit) * 0.6 : 1); }
         else { const lam = (nx * Lx + ny * Ly) / Ll; tone = st.shade * (1 - (lam + 1) / 2) * 1.25; }
-        walls.push({ q: [V.P(a[0], a[1], it.z0), V.P(b[0], b[1], it.z0), V.P(b[0], b[1], it.z1), V.P(a[0], a[1], it.z1)], d: V.depth((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (it.z0 + it.z1) / 2), tone });
+        const q = [P3(a[0], a[1], it.z0), P3(b[0], b[1], it.z0), P3(b[0], b[1], it.z1), P3(a[0], a[1], it.z1)];
+        addFace([q], { t: 'poly', g, rings: [q], fill: fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.9, Math.max(0, tone))), fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash }, null).opaque = opaque;
       }
-      walls.sort((a, b) => b.d - a.d);
-      for (const w of walls) { faces.push([w.q]); ops.push({ t: 'poly', g, rings: [w.q], fill: fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.9, Math.max(0, w.tone))), fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash }); }
+      front.push(fr);
     }
     if (!V.elev) {
-      const top = it.poly.map((r) => prj(r, it.z1)); faces.push(top);
-      ops.push({ t: 'poly', g, rings: top, fill, fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash });
-      if (S.raster && st.drapeRoofs && isVis('raster')) { const m = rasterMatrix(V, it.z1); if (m) ops.push({ t: 'img', g, m, op: st.rasterOp, clip: top }); }
+      const top = it.poly.map((r) => r.map((p) => P3(p[0], p[1], it.z1)));
+      const extra = (S.raster && st.drapeRoofs && isVis('raster')) ? (() => { const m = rasterMatrix(V, it.z1); return m ? [{ t: 'img', g, m, op: st.rasterOp, clip: top }] : null; })() : null;
+      addFace(top, { t: 'poly', g, rings: top, fill, fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash }, extra).opaque = opaque;
     }
-    if (!fast && st.contourW > 0 && PC() && faces.length) {
-      try { const polys = faces.filter((f) => Math.abs(sArea(f[0])) > 1e-9).map((f) => f.map((r) => [...r, r[0]])); if (polys.length) ops.push({ t: 'contour', g, polys: PC().union(...polys), stroke: L.stroke, sw: st.contourW }); } catch (e) { /* skip */ }
+    // silhouette edges (perfil)
+    if (st.contourW > 0) {
+      it.poly.forEach((ring, ri) => {
+        const fr = front[ri]; const n = ring.length;
+        for (let i = 0; i < n; i++) {
+          const a = ring[i], b = ring[(i + 1) % n]; const prev = fr[(i - 1 + n) % n];
+          if (V.plan) { sil.push({ a: [a[0], a[1], it.z1], b: [b[0], b[1], it.z1], c: L.stroke }); continue; }
+          if (fr[i] !== prev && !V.elev) sil.push({ a: [a[0], a[1], it.z0], b: [a[0], a[1], it.z1], c: L.stroke });
+          if (V.elev) { if (fr[i] !== prev) sil.push({ a: [a[0], a[1], it.z0], b: [a[0], a[1], it.z1], c: L.stroke }); if (fr[i]) { sil.push({ a: [a[0], a[1], it.z1], b: [b[0], b[1], it.z1], c: L.stroke }); sil.push({ a: [a[0], a[1], it.z0], b: [b[0], b[1], it.z0], c: L.stroke }); } continue; }
+          if (!fr[i]) sil.push({ a: [a[0], a[1], it.z1], b: [b[0], b[1], it.z1], c: L.stroke });
+          else sil.push({ a: [a[0], a[1], it.z0], b: [b[0], b[1], it.z0], c: L.stroke });
+        }
+      });
+    }
+  }
+  // meshes (envoltórias, objetos 3D)
+  for (const it of items.filter((i) => i.kind === 'mesh')) {
+    const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const fop = L.fillOp * (it.fop ?? 1); const stroke = it.strokeHex ? (S.colorMap[it.lk]?.[it.strokeHex] || it.strokeHex) : L.stroke;
+    for (const f of it.faces) {
+      if (f.length < 3) continue; const r3 = f.map((p) => P3(p[0], p[1], p[2]));
+      if (Math.abs(sArea(r3)) < 1e-9) continue;
+      addFace([r3], { t: 'poly', g, rings: [r3], fill, fop, stroke, sw: L.strokeW, dash: it.dash ? null : L.dash, dashArr: it.dash ? it.dash.map((d) => d * Math.max(0.5, L.strokeW)).join(' ') : null }, null).opaque = fop >= 0.95;
+    }
+  }
+  // trees (tronco + copa esférica → círculo)
+  for (const it of trees) {
+    const L = LS[it.lk]; const g = lkName(it.lk); const [x, y] = it.pos;
+    const b0 = P3(x, y, 0), b1 = P3(x, y, it.trunk); const tw = 0.18;
+    const trunk = [[b0[0] - tw, b0[1], b0[2]], [b0[0] + tw, b0[1], b0[2]], [b1[0] + tw, b1[1], b1[2]], [b1[0] - tw, b1[1], b1[2]]];
+    addFace([trunk], { t: 'poly', g, rings: [trunk], fill: mix(L.stroke, '#ffffff', 0.15), fop: 1, stroke: 'none', sw: 0 }, null).opaque = true;
+    const c = P3(x, y, it.zc); const ring = [];
+    for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2; ring.push([c[0] + it.r * Math.cos(a), c[1] + it.r * Math.sin(a), c[2] - it.r * 0.7]); }
+    const fill = fillOf(it);
+    addFace([ring], { t: 'poly', g, rings: [ring], fill, fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: 'solid' }, st.shade > 0 && fill !== 'none' ? [{ t: 'poly', g, rings: [ring.map((p, k) => { const a = (k / 24) * Math.PI * 2; return [c[0] + it.r * 0.82 * Math.cos(a) + it.r * 0.16, c[1] + it.r * 0.82 * Math.sin(a) + it.r * 0.16]; })], fill: mix(fill, '#000000', Math.min(0.5, st.shade * 0.6)), fop: L.fillOp, stroke: 'none', sw: 0, clipCircle: { c, r: it.r } }] : null).opaque = L.fillOp >= 0.95;
+  }
+
+  // ---- visibility: software depth buffer → painter order + visible silhouettes
+  const q = 0.5; const ZW = Math.ceil(W * q), ZH = Math.ceil(H * q);
+  const tx = (p) => (p[0] * sc + ox) * q, ty = (p) => (p[1] * sc + oy) * q;
+  faces.forEach((f, i) => { f.i = i; let s = 0, n = 0; for (const r of f.rings3) for (const p of r) { s += p[2]; n++; } f.d = n ? s / n : 0; });
+  let order;
+  let zOp = null;
+  if (!fast && faces.length) {
+    const zAll = new Float32Array(ZW * ZH).fill(Infinity); zOp = new Float32Array(ZW * ZH).fill(Infinity); const idB = new Int32Array(ZW * ZH).fill(-1);
+    const edges = new Set(); const NF = faces.length; const eps = 0.02;
+    const tri = (A, B, C, fi, opq) => {
+      const x0 = tx(A), y0 = ty(A), x1 = tx(B), y1 = ty(B), x2 = tx(C), y2 = ty(C);
+      const area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0); if (Math.abs(area) < 1e-6) return;
+      const minX = Math.max(0, Math.floor(Math.min(x0, x1, x2))), maxX = Math.min(ZW - 1, Math.ceil(Math.max(x0, x1, x2)));
+      const minY = Math.max(0, Math.floor(Math.min(y0, y1, y2))), maxY = Math.min(ZH - 1, Math.ceil(Math.max(y0, y1, y2)));
+      if (minX > maxX || minY > maxY) return;
+      const ia = 1 / area;
+      for (let py = minY; py <= maxY; py++) {
+        const yy = py + 0.5;
+        for (let px = minX; px <= maxX; px++) {
+          const xx = px + 0.5;
+          const w0 = ((x1 - xx) * (y2 - yy) - (x2 - xx) * (y1 - yy)) * ia; if (w0 < 0) continue;
+          const w1 = ((x2 - xx) * (y0 - yy) - (x0 - xx) * (y2 - yy)) * ia; if (w1 < 0) continue;
+          const w2 = 1 - w0 - w1; if (w2 < 0) continue;
+          const d = w0 * A[2] + w1 * B[2] + w2 * C[2]; const k = py * ZW + px;
+          const prev = idB[k];
+          if (prev === -1) { idB[k] = fi; zAll[k] = d; }
+          else if (prev !== fi) {
+            const zp = zAll[k];
+            if (d < zp - eps) { edges.add(prev * NF + fi); idB[k] = fi; zAll[k] = d; }
+            else if (d > zp + eps) edges.add(fi * NF + prev);
+          }
+          if (opq && d < zOp[k]) zOp[k] = d;
+        }
+      }
+    };
+    const ec = window.earcut;
+    for (const f of faces) {
+      const opq = !!f.opaque;
+      if (f.rings3.length === 1 && f.rings3[0].length <= 4) { const r = f.rings3[0]; for (let k = 1; k < r.length - 1; k++) tri(r[0], r[k], r[k + 1], f.i, opq); continue; }
+      if (ec) {
+        const flat = [], holes = [], pts = [];
+        f.rings3.forEach((r, ri) => { if (ri) holes.push(pts.length); r.forEach((p) => { flat.push(tx(p), ty(p)); pts.push(p); }); });
+        const ids = ec(flat, holes.length ? holes : null, 2); for (let k = 0; k < ids.length; k += 3) tri(pts[ids[k]], pts[ids[k + 1]], pts[ids[k + 2]], f.i, opq);
+      } else { const r = f.rings3[0]; for (let k = 1; k < r.length - 1; k++) tri(r[0], r[k], r[k + 1], f.i, opq); }
+    }
+    // topological order (far → near), cycles broken by depth
+    const outE = new Map(), indeg = new Int32Array(NF);
+    for (const e of edges) { const a = Math.floor(e / NF), b = e - a * NF; if (edges.has(b * NF + a)) continue; if (!outE.has(a)) outE.set(a, []); outE.get(a).push(b); indeg[b]++; }
+    const heap = []; const push = (i) => { heap.push(i); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (faces[heap[p]].d >= faces[heap[c]].d) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+    const pop = () => { const top = heap[0]; const last = heap.pop(); if (heap.length) { heap[0] = last; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let m = c; if (l < heap.length && faces[heap[l]].d > faces[heap[m]].d) m = l; if (r < heap.length && faces[heap[r]].d > faces[heap[m]].d) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+    const done = new Uint8Array(NF); order = [];
+    for (let i = 0; i < NF; i++) if (!indeg[i]) push(i);
+    const byDepth = faces.map((f) => f.i).sort((a, b) => faces[b].d - faces[a].d); let bp = 0;
+    while (order.length < NF) {
+      let i;
+      if (heap.length) i = pop(); else { while (done[byDepth[bp]]) bp++; i = byDepth[bp]; }
+      if (done[i]) continue; done[i] = 1; order.push(i);
+      for (const j of outE.get(i) || []) { if (--indeg[j] === 0 && !done[j]) push(j); }
+    }
+  } else order = faces.map((f) => f.i).sort((a, b) => faces[b].d - faces[a].d);
+
+  // visible silhouette segments
+  const silPaths = [];
+  if (!fast && zOp && sil.length) {
+    const eps0 = 0.08 + 2.5 / (sc * q);
+    const zmax = (px, py) => { let m = -Infinity; for (let yy = py - 1; yy <= py + 1; yy++) for (let xx = px - 1; xx <= px + 1; xx++) { if (xx < 0 || yy < 0 || xx >= ZW || yy >= ZH) return Infinity; const v = zOp[yy * ZW + xx]; if (v > m) m = v; } return m; };
+    for (const e of sil) {
+      const A = P3(...e.a), B = P3(...e.b); const len = Math.hypot(tx(B) - tx(A), ty(B) - ty(A)); const n = Math.max(1, Math.ceil(len)); let cur = null;
+      for (let k = 0; k <= n; k++) {
+        const t = k / n; const p = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; const d = A[2] + (B[2] - A[2]) * t;
+        const px = Math.floor(tx(p)), py = Math.floor(ty(p)); const vis = d - eps0 <= zmax(px, py);
+        if (vis) { if (!cur) cur = [p]; else cur[1] = p; } else if (cur) { if (cur.length > 1) silPaths.push({ pts: cur, c: e.c }); cur = null; }
+      }
+      if (cur && cur.length > 1) silPaths.push({ pts: cur, c: e.c });
     }
   }
 
-  // serialize
+  // ---- serialize
   const idUse = {};
   const safeId = (s) => { const b = 'L_' + s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_'); idUse[b] = (idUse[b] || 0) + 1; return idUse[b] > 1 ? `${b}_${idUse[b]}` : b; };
   let out = ''; let curG = null; let clipN = 0; const defs = [];
   const open = (g) => { if (g === curG) return; if (curG !== null) out += '</g>'; out += `<g id="${esc(safeId(g))}" data-name="${esc(g)}">`; curG = g; };
-  for (const o of ops) {
+  const emit = (o) => {
     open(o.g);
     const dash = o.dashArr ? ` stroke-dasharray="${o.dashArr}"` : DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : ''; const cap = o.cap ? ` stroke-linecap="${o.cap}"` : o.dash === 'dot' ? ' stroke-linecap="round"' : '';
     if (o.t === 'poly') {
       const d = o.rings.map(ringD).join(''); const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
       const sw = o.sw > 0 && o.stroke !== 'none' ? ` stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap}` : ' stroke="none"';
-      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${o.fop}"` : ''} fill-rule="evenodd"${sw} stroke-linejoin="round"/>`;
+      let clip = ''; if (o.clipCircle) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><circle cx="${fmt(o.clipCircle.c[0] * sc + ox)}" cy="${fmt(o.clipCircle.c[1] * sc + oy)}" r="${fmt(o.clipCircle.r * sc)}"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
+      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${+o.fop.toFixed(3)}"` : ''} fill-rule="evenodd"${sw} stroke-linejoin="round"${clip}/>`;
     } else if (o.t === 'line') {
       if (o.sw > 0) out += `<path d="M${o.pts.map(T).join('L')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap} stroke-linejoin="round"/>`;
-    } else if (o.t === 'contour') {
-      out += `<path d="${o.polys.map((p) => p.map((r) => ringD(r.slice(0, -1))).join('')).join('')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}" stroke-linejoin="round"/>`;
     } else if (o.t === 'shadow') {
       let clipS = ''; if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}"/></clipPath>`); clipS = ` clip-path="url(#${id})"`; }
       out += `<g opacity="${o.op}"${clipS}>` + o.polys.map((r) => `<path d="${ringD(r)}" fill="${o.color}"/>`).join('') + '</g>';
@@ -938,6 +1096,14 @@ function render(fast = false) {
       if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}" clip-rule="evenodd"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
       out += `<g${clip}><image href="${S.raster.href}" width="${S.raster.W}" height="${S.raster.H}" preserveAspectRatio="none" transform="matrix(${mm.join(' ')})" opacity="${o.op}"/></g>`;
     }
+  };
+  ground.forEach(emit);
+  for (const i of order) { const f = faces[i]; emit(f.op); if (f.extra) f.extra.forEach(emit); }
+  lineOps.forEach(emit);
+  if (silPaths.length) {
+    if (curG !== null) out += '</g>'; curG = null;
+    const byC = {}; silPaths.forEach((s) => { (byC[s.c] = byC[s.c] || []).push(s.pts); });
+    out += `<g id="L_Perfil" data-name="Perfil">` + Object.entries(byC).map(([c, ps]) => `<path d="${ps.map((pts) => 'M' + pts.map(T).join('L')).join('')}" fill="none" stroke="${c}" stroke-width="${st.contourW}" stroke-linecap="round" stroke-linejoin="round"/>`).join('') + '</g>';
   }
   if (curG !== null) out += '</g>';
 
@@ -955,7 +1121,7 @@ function render(fast = false) {
   S.lastSVG = svg;
   const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   host.style.background = 'transparent';
-  $('#hud').textContent = `${S.edit ? 'EDITANDO · ' : '🔒 '}${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}`;
+  $('#hud').textContent = `${S.edit ? 'EDITANDO · ' : '🔒 '}${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}${fast ? ' · prévia' : ''}`;
   if (sun) $('#sunInfo').textContent = sunUp ? `Sol: az ${Math.round(sun.az)}°, alt ${Math.round(sun.alt)}°` : 'Sol abaixo do horizonte';
   drawOverlay();
 }
@@ -1088,15 +1254,32 @@ async function fetchLayerFeatures(n, SL) {
   return feats;
 }
 const BASE_VEC = 'Mapa base (vetorial)';
+const BASE_KEYS = ['Mapa base · água', 'Mapa base · vegetação', 'Mapa base · uso do solo', 'Mapa base · vias'];
+const VEG_RE = /park|grass|wood|forest|scrub|wetland|garden|meadow|cemetery|golf|national|nature|green|vegetation|tree|landcover/i;
+async function captureBaseVector(SL) {
+  if (S.mode === 'demo') { BASE_KEYS.forEach((k) => (S.mapItems[k] = k.endsWith('vias') ? DEMO.buildLayer('Meio-fio') : [])); return; }
+  const cand = SL.filter((l) => (l.type === 'fill' || l.type === 'line') && l['source-layer'] && !/build/i.test(l['source-layer']));
+  const grp = { agua: [], vias: [], solo: [] };
+  for (const l of cand) { const sl = l['source-layer']; if (/water|ocean|sea|river|lake/i.test(sl)) grp.agua.push(l); else if (/road|street|transport|bridge|tunnel|path|aeroway|rail/i.test(sl)) grp.vias.push(l); else if (/landuse|landcover|park|national|wetland|pitch|place|natural|nature|green/i.test(sl)) grp.solo.push(l); }
+  log(`Mapa base vetorial: água ${grp.agua.length} · vias ${grp.vias.length} · solo ${grp.solo.length} layers · source-layers: ${[...new Set(cand.map((l) => l['source-layer']))].join(', ')}`);
+  const P = ensureProjector(DEMO.origin); const out = {}; BASE_KEYS.forEach((k) => (out[k] = []));
+  const colorOf = (l) => { const c = l.paint?.['fill-color'] || l.paint?.['line-color']; return typeof c === 'string' ? c : null; };
+  const take = async (layers, keyFn) => {
+    if (!layers.length) return; const feats = await queryFeatures(layers.map((l) => l.id)); logShape('Mapa base ' + layers[0]['source-layer'], feats);
+    for (const f of feats) { if (!f?.geometry) continue; const k = keyFn(f); pushFeature(out[k], { ...f, properties: { ...(f.properties || {}), color: null } }, 'map', P, { layer: k, z0: 0, z1: 0 }); }
+  };
+  await take(grp.agua, () => BASE_KEYS[0]);
+  await take(grp.solo, (f) => (VEG_RE.test(`${f.properties?.class || ''} ${f.properties?.type || ''} ${f.properties?.landuse || ''}`) ? BASE_KEYS[1] : BASE_KEYS[2]));
+  await take(grp.vias, () => BASE_KEYS[3]);
+  for (const k of BASE_KEYS) { S.mapItems[k] = out[k]; if (S.vis['map|' + k] == null) S.vis['map|' + k] = true; }
+  delete S.mapItems[BASE_VEC];
+}
 async function captureMapLayer(n) {
   if (S.mode === 'demo') { S.mapItems[n] = n === BASE_VEC ? DEMO.buildLayer('Meio-fio') : DEMO.buildLayer(n); return; }
   const SL = await styleLayers();
   let feats;
-  if (n === BASE_VEC) {
-    const ids = SL.filter((l) => (l.type === 'fill' || l.type === 'line') && !/^GIRPLA/i.test(String(l.id)) && !/raw|section|draw|giraffe|select|lens|project|temp|highlight/i.test(String(l.source) + ' ' + l.id)).map((l) => l.id);
-    log(`Mapa base vetorial: ${ids.length} layers · ${ids.slice(0, 25).join(', ')}`);
-    feats = ids.length ? await queryFeatures(ids) : []; logShape('Mapa base vetorial', feats);
-  } else feats = await fetchLayerFeatures(n, SL);
+  if (BASE_KEYS.includes(n) || n === BASE_VEC) { await captureBaseVector(SL); return; }
+  feats = await fetchLayerFeatures(n, SL);
   const treeR = /tree|[áa]rvor/i.test(n) ? 2.5 : 0;
   const styleById = Object.fromEntries(SL.map((l) => [l.id, l]));
   let ext = null; try { const ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; ext = ids.map((i) => styleById[i]).find((l) => l?.type === 'fill-extrusion') || null; } catch (e) { /* */ }
@@ -1110,7 +1293,7 @@ async function captureMapLayer(n) {
       if (isFinite(h) && h > 0) { z1 = h; z0 = isFinite(b) ? b : 0; }
     }
     const color = sl.paint?.['fill-color'] || sl.paint?.['fill-extrusion-color'] || sl.paint?.['line-color'];
-    pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: f.properties?.color ?? (typeof color === 'string' ? color : null) } }, 'map', P, { layer: n, z0, z1, points: treeR });
+    pushFeature(items, { ...f, properties: { ...(f.properties || {}), color: f.properties?.color ?? (typeof color === 'string' ? color : null) } }, 'map', P, { layer: n, z0, z1, tree: !!treeR });
   }
   S.mapItems[n] = items; log(`Camada "${n}": ${feats.length} feições → ${items.length} itens`);
   if (!items.length) toast(`"${n}": nada lido. Veja o diagnóstico.`);
@@ -1217,8 +1400,17 @@ async function captureRaster() {
       const img = await loadImg(href);
       const E = equirect(bounds[0]); const c1 = E.forward(bounds[1]); const arB = Math.abs(c1[0] / (c1[1] || 1)); const arI = img.naturalWidth / img.naturalHeight;
       log(`Raster ${img.naturalWidth}×${img.naturalHeight}px (proporção ${arI.toFixed(2)}) · limites ${Math.round(Math.abs(c1[0]))}×${Math.round(Math.abs(c1[1]))} m (proporção ${arB.toFixed(2)}) · topo: ${top ? 'sim' : 'não'}`);
-      if (Math.abs(Math.log(arI / arB)) > 0.15) toast('Atenção: a imagem não bate com uma vista de topo com norte para cima. Ajuste o mapa (2D, norte para cima) e capture de novo.');
-      S.raster = { href, W: img.naturalWidth, H: img.naturalHeight, bounds };
+      let bnds = bounds; const pad = mv?.padding || {}; const pl = +pad.left || 0, pr = +pad.right || 0, pt = +pad.top || 0, pb = +pad.bottom || 0;
+      if (Math.abs(Math.log(arI / arB)) > 0.03 && pl + pr + pt + pb > 0) {
+        // os limites do mapView descontam o padding da câmera: estende até as bordas reais da imagem
+        const den = arI - arB; const Hc = (pl + pr - arB * (pt + pb)) / den; const Wc = arI * Hc;
+        if (isFinite(Hc) && Hc > pt + pb + 10 && Wc > pl + pr + 10) {
+          const mpp = Math.abs(c1[0]) / (Wc - pl - pr);
+          bnds = [E.inverse([-pl * mpp, -pb * mpp]), E.inverse([Math.abs(c1[0]) + pr * mpp, Math.abs(c1[1]) + pt * mpp])];
+          log(`Imagem do mapa: padding corrigido (tela ≈ ${Math.round(Wc)}×${Math.round(Hc)} px, ${mpp.toFixed(3)} m/px)`);
+        }
+      } else if (Math.abs(Math.log(arI / arB)) > 0.15) toast('Atenção: a imagem não bate com uma vista de topo com norte para cima. Ajuste o mapa (2D, norte para cima) e capture de novo.');
+      S.raster = { href, W: img.naturalWidth, H: img.naturalHeight, bounds: bnds };
       ensureProjector(bounds[0]);
     }
     S.vis.raster = true; render(); toast('Imagem do mapa aplicada no terreno.');
@@ -1399,9 +1591,9 @@ function buildLayerUI() {
   const dl = drawLayers(); let h = '';
   const dnames = drawLayerNames().sort((a, b) => a.localeCompare(b, 'pt-BR'));
   h += `<div class="lyr-sec"><h3><span>Desenho do projeto</span><span>${dnames.length}</span></h3>${dnames.map((n) => { const k = 'draw|' + n; const has = !!dl[k]; return lyrRow(k, has ? dl[k].n : (S.mode === 'giraffe' && !giraffeVis(n) ? 'oculto' : '—'), !has); }).join('') || '<div class="lyr"><span class="check">Nenhum elemento desenhado</span></div>'}</div>`;
-  const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])].filter((n) => n !== BASE_VEC);
+  const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])].filter((n) => n !== BASE_VEC && !BASE_KEYS.includes(n));
   h += `<div class="lyr-sec"><h3><span>Camadas do Giraffe</span><span>${names.length}</span></h3>${names.map((n) => lyrRow('map|' + n, S.mapItems[n] ? S.mapItems[n].length : '—', true)).join('') || '<div class="lyr"><span class="check">Nenhuma camada no projeto</span></div>'}</div>`;
-  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>3</span></h3>${lyrRow('map|' + BASE_VEC, S.mapItems[BASE_VEC] ? S.mapItems[BASE_VEC].length : '—', true)}${lyrRow('ctx|Entorno', S.ctxItems.length ? S.ctxItems.length : '—', true).replace('>Entorno<', '>Edifícios do entorno<')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
+  h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>${BASE_KEYS.length + 2}</span></h3>${BASE_KEYS.map((k) => lyrRow('map|' + k, S.mapItems[k] ? S.mapItems[k].length : '—', true)).join('')}${lyrRow('ctx|Entorno', S.ctxItems.length ? S.ctxItems.length : '—', true).replace('>Entorno<', '>Edifícios do entorno<')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
   $('#layerUI').innerHTML = h;
 }
 async function captureLk(lk) {
@@ -1508,6 +1700,7 @@ function syncUI() {
   $('#preset').value = v.preset;
   $$('input[type=range]').forEach((r) => r._sync?.());
   $('#fEl').hidden = v.proj !== 'ortho'; $('#fK').hidden = v.proj === 'ortho';
+  const isPlan = v.proj === 'ortho' && v.el >= 89.5; $('#fPlanRot').hidden = !isPlan; $('#planRot').value = Math.round(((v.az - 180) % 360 + 360) % 360);
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
   $('#palette').value = st.palette; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
@@ -1528,7 +1721,7 @@ function setPreset(p) {
   const v = S.view; v.preset = p; const d = PRESETS[p]; if (!d) { syncUI(); return; }
   v.proj = d.proj; if (d.el != null) v.el = d.el; if (d.k) v.k = d.k;
   const quad = Math.round((v.az - (v._off || 0) - 45) / 90) * 90 + 45;
-  v._off = d.azOff; v.az = (((quad + d.azOff) % 360) + 360) % 360;
+  v._off = d.azOff; v.az = d.az != null ? d.az : (((quad + d.azOff) % 360) + 360) % 360; if (d.az != null) v._off = 0;
   syncUI(); render(); persist();
 }
 function setAz(a) { S.view.az = ((a % 360) + 360) % 360; }
@@ -1566,6 +1759,8 @@ function wireUI() {
 
   // view
   $('#preset').onchange = (e) => setPreset(e.target.value);
+  $('#planRot').onchange = (e) => { setAz(180 + (+e.target.value || 0)); syncUI(); render(); persist(); };
+  $('#btnNorthUp').onclick = () => { setAz(180); syncUI(); render(); persist(); };
   const viewChanged = (fast) => { if (!fast) persist(); syncUIQuick(); scheduleRender(fast); };
   bindRange('az', () => Math.round(S.view.az), (v) => setAz(v), viewChanged);
   bindRange('el', () => S.view.el, (v) => { S.view.el = v; S.view.preset = 'custom'; }, viewChanged);
@@ -1750,7 +1945,7 @@ function wireSidebar() {
   apply();
 }
 function buildShadowUI() {
-  const keys = [...new Set(allItems().filter((i) => i.kind === 'prism').map((i) => i.lk))].sort();
+  const keys = [...new Set(allItems().filter((i) => i.kind === 'prism' || i.kind === 'tree').map((i) => i.lk))].sort();
   const nc = S.style.sh.noCast || (S.style.sh.noCast = {});
   $('#shLayers').innerHTML = keys.length ? keys.map((lk) => `<label class="check"><input type="checkbox" data-cast="${esc(lk)}" ${nc[lk] ? '' : 'checked'}><span>${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span></label>`).join('') : '<div class="empty">Nenhum volume.</div>';
 }
