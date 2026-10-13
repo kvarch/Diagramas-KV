@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V13</title>
+<title>KV Axonometria — Beta V14</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -292,7 +292,8 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
       </select></div></div>
     <div class="field" id="fBuffer"><label for="buffer">Entorno (m)</label><div class="ctl"><input type="range" id="buffer" min="0" max="500" step="5"><input type="number" id="bufferN" min="0" max="2000" step="5" aria-label="Entorno em metros"></div></div>
     <div class="row"><button id="btnDrawArea">Desenhar no mapa</button><button id="btnMapArea">Usar área visível</button></div>
-    <p class="hint">Mapa base, 3D Buildings e árvores são lidos para esta área, sem depender do que está na tela do Giraffe (sem limite = projeto + 150 m). Camadas são cortadas no limite, como numa maquete; volumes do projeto nunca são cortados.</p>
+    <div class="field"><label for="baseSrc">Fonte do mapa base, 3D Buildings e árvores</label><div class="ctl"><select id="baseSrc"><option value="giraffe">Mapa do Giraffe</option><option value="osm">OpenStreetMap (pela área)</option></select></div></div>
+    <p class="hint">Camadas são cortadas no limite, como numa maquete; volumes do projeto nunca são cortados. Com “Mapa do Giraffe”, o mapa base, 3D Buildings e árvores vêm do que o mapa do Giraffe tem carregado (enquadre a área); se o Giraffe permitir leitura por área, ela é usada automaticamente. “OpenStreetMap” lê sempre a área inteira, independente da tela.</p>
 
     <h2>Imagem do mapa / análise</h2>
     <p class="hint">Para horas de sol ou o próprio mapa base: deixe a análise visível no Giraffe com norte para cima e capture. A imagem vai para o plano do terreno.</p>
@@ -349,22 +350,24 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button id="btnExportStyle">Exportar configuração</button><button id="btnImportStyle">Importar</button><input type="file" id="fileStyle" accept="application/json" hidden></div>
     <h2>Diagnóstico</h2>
     <div class="log" id="log" role="log" aria-live="polite"></div>
-    <div class="row"><button id="btnCopyDiag">Copiar diagnóstico</button></div>
+    <div class="row"><button id="btnCopyDiag">Copiar diagnóstico</button><button id="btnVecRetry">Testar leitura por área</button></div>
     <h2>Análise em fachadas — teste</h2>
     <p class="hint">Verifica se a exportação 3D do Giraffe (getGltf) carrega as cores da análise solar. Antes, ligue a análise de horas de sol nas fachadas no app Solar.</p>
     <label class="check"><input type="checkbox" id="gltfSave" checked>Baixar também o arquivo exportado</label>
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V13 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V14 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V13 */
-/* V13: sincronização com junção por versão (3 vias), nunca grava sem juntar o que está no projeto,
+/* KV Axonometria — Beta V14 */
+/* V14: leitura de camadas rápida de novo — API vetorial testada uma vez (6 s) e desligada se falhar,
+   OpenStreetMap só por escolha, leitura em paralelo e sem duplicar, getLayerContents uma vez só.
+   V13: sincronização com junção por versão (3 vias), nunca grava sem juntar o que está no projeto,
    ID do projeto na gravação, versão aberta/trava/painel são pessoais, nome de quem salvou, Enviar/Receber agora.
    V12: vistas e estilo salvos no projeto (updateProjectApp → public.kvAxono), compartilhados entre usuários,
    com cópia local; espera o 'project' antes de restaurar; sincroniza alterações de outros usuários.
@@ -392,7 +395,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V13';
+const VERSION = 'V14';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -424,6 +427,7 @@ const S = {
   area: { mode: 'project', buffer: 60, drawn: null, mapRect: null },
   cropUI: { on: true, ratio: '16:9', cw: 16, ch: 9, showOut: true, rect: null },
   style: { palette: 'paper', colorMode: 'paleta', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false,
+    baseSrc: 'giraffe',
     sh: { on: false, day: '06-21', date: '', min: 720, tz: -3, op: 0.32, color: '#3A3F55', noCast: {} } },
   lstyle: {}, colorMap: {}, usageMap: {},
   autoSync: true, tool: 'orbit', edit: false,
@@ -456,24 +460,33 @@ function captureArea() {
 const AREA_LAYERS = /3d buildings|landmark buildings|^trees$|tree/i;
 const rectIn = (a, b) => b && a.minx >= b.minx - 1 && a.miny >= b.miny - 1 && a.maxx <= b.maxx + 1 && a.maxy <= b.maxy + 1;
 let vecApi = null; // padrão de argumentos que funcionou
-async function vectorContents(styleLayer, A) {
+let vecState = (() => { try { const s = localStorage.getItem('kv-axono-vecapi'); if (s && s.startsWith('fail:') && Date.now() - +s.slice(5) < 864e5) return 'fail'; } catch (e) { /* */ } return 'unknown'; })();
+let vecProbe = null;
+async function vecApiReady(SL) {
+  if (vecState === 'ok') return true; if (vecState === 'fail') return false;
+  if (!vecProbe) vecProbe = (async () => {
+    const A = captureArea(); const l = (SL || []).find((x) => x['source-layer'] && /road|water|landuse|building/.test(x['source-layer']));
+    if (!A || !l) return false;
+    const t0 = Date.now(); const fs = await Promise.race([vectorContents(l, A, true), sleep(7000).then(() => null)]);
+    vecState = fs && fs.length ? 'ok' : 'fail';
+    log(`API vetorial do Giraffe: ${vecState === 'ok' ? 'disponível — camadas lidas pela Área do modelo' : 'indisponível — camadas lidas do mapa do Giraffe (tela)'} (${Date.now() - t0} ms)`);
+    if (vecState === 'fail') { try { localStorage.setItem('kv-axono-vecapi', 'fail:' + Date.now()); } catch (e) { /* */ } }
+    return vecState === 'ok';
+  })();
+  return vecProbe;
+}
+async function vectorContents(styleLayer, A, probing) {
+  if (!probing && vecState !== 'ok') return null;
   const sl = styleLayer['source-layer'];
-  const detTries = [[styleLayer.id], [sl], [{ id: styleLayer.id }], [{ sourceLayer: sl, source: styleLayer.source }]];
-  const conTries = (det) => [['fc', [det, A.fc]], ['bbox', [det, A.bbox]], ['feat', [det, A.fc.features[0]]], ['merge', [{ ...det, fc: A.fc }]], ['only', [det]]];
+  const detTries = [[sl], [styleLayer.id]];
+  const conTries = (det) => [['fc', [det, A.fc]], ['bbox', [det, A.bbox]], ['feat', [det, A.fc.features[0]]]];
   const order = vecApi ? [detTries[vecApi.d]] : detTries;
-  for (const [di, da] of order.entries()) {
-    let det = null; try { det = await call('getSourceLayerDetails', da, 15000); } catch (e) { continue; }
-    if (!det) continue; if (!vecApi) log(`getSourceLayerDetails(${JSON.stringify(da)}) → ${JSON.stringify(det).slice(0, 240)}`);
+  for (const da of order) {
+    let det = null; try { det = await call('getSourceLayerDetails', da, 6000); } catch (e) { continue; }
+    if (!det) continue; if (probing) log(`getSourceLayerDetails(${JSON.stringify(da)}) → ${JSON.stringify(det).slice(0, 240)}`);
     const tries = vecApi ? conTries(det).filter((t) => t[0] === vecApi.c) : conTries(det);
     for (const [cn, ca] of tries) {
-      try { const fs = toFeatures(await call('getVectorLayerContents', ca, 90000)); if (!vecApi) logShape(`getVectorLayerContents[${cn}] ${sl}`, fs); if (fs.some((f) => f?.geometry)) { if (!vecApi) { vecApi = { d: vecApi ? 0 : detTries.indexOf(da), c: cn }; log(`API vetorial do Giraffe: OK (${cn})`); } return fs; } } catch (e) { /* next */ }
-    }
-    // por tiles (getTiles → um pedido por tile)
-    if (!vecApi || vecApi.c === 'tiles') {
-      try {
-        const tiles = await call('getTiles', [A.fc, 15], 20000); const list = Array.isArray(tiles) ? tiles : toFeatures(tiles);
-        if (list && list.length && list.length <= 64) { let all = []; for (const t of list) { try { all = all.concat(toFeatures(await call('getVectorLayerContents', [det, t], 60000))); } catch (e) { /* */ } } logShape(`getVectorLayerContents[tiles×${list.length}] ${sl}`, all); if (all.some((f) => f?.geometry)) { vecApi = vecApi || { d: detTries.indexOf(da), c: 'tiles' }; return all; } }
-      } catch (e) { /* */ }
+      try { const fs = toFeatures(await call('getVectorLayerContents', ca, probing ? 8000 : 60000)); if (probing) logShape(`getVectorLayerContents[${cn}] ${sl}`, fs); if (fs.some((f) => f?.geometry)) { if (!vecApi) vecApi = { d: detTries.indexOf(da), c: cn }; return fs; } } catch (e) { /* next */ }
     }
   }
   return null;
@@ -487,7 +500,7 @@ async function osmFeatures(A) {
   const q = `[out:json][timeout:90];(way["building"](${bb});relation["building"](${bb});way["natural"](${bb});relation["natural"~"water|wood|wetland|scrub|beach"](${bb});way["waterway"](${bb});way["landuse"](${bb});relation["landuse"](${bb});way["leisure"](${bb});relation["leisure"~"park|nature_reserve|garden"](${bb});way["highway"](${bb});node["natural"="tree"](${bb}););out geom;`;
   let json = null;
   for (const url of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']) {
-    try { const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }); if (r.ok) { json = await r.json(); log(`OpenStreetMap (${new URL(url).hostname}): ${json.elements?.length || 0} elementos`); break; } log(`Overpass ${new URL(url).hostname}: HTTP ${r.status}`, true); } catch (err) { log(`Overpass ${new URL(url).hostname}: ${err.message}`, true); }
+    try { const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 45000); const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ac.signal }); clearTimeout(to); if (r.ok) { json = await r.json(); log(`OpenStreetMap (${new URL(url).hostname}): ${json.elements?.length || 0} elementos`); break; } log(`Overpass ${new URL(url).hostname}: HTTP ${r.status}`, true); } catch (err) { log(`Overpass ${new URL(url).hostname}: ${err.message}`, true); }
   }
   if (!json) throw new Error('OpenStreetMap indisponível');
   const feats = osmToFeatures(json); osmCache = { key, feats }; return feats;
@@ -554,7 +567,7 @@ async function areaLayerFromOSM(n, A) {
   return items;
 }
 async function refreshAreaLayers() {
-  if (S.mode !== 'giraffe') return; const A = captureArea(); if (!A) return;
+  if (S.mode !== 'giraffe' || (S.style.baseSrc !== 'osm' && vecState !== 'ok')) return; const A = captureArea(); if (!A) return;
   const names = Object.keys(S.mapItems).filter((n) => (BASE_KEYS.includes(n) || AREA_LAYERS.test(n)) && isVis('map|' + n) && !rectIn(A.R, S.capBox[n]));
   if (!names.length) return;
   log('Área do modelo mudou: relendo ' + names.join(', '));
@@ -1464,9 +1477,7 @@ function logShape(tag, feats) {
 }
 async function fetchLayerFeatures(n, SL) {
   // 1) getLayerContents (GeoJSON do layer do projeto)
-  for (const args of [[n], [n, undefined]]) {
-    try { const feats = toFeatures(await call('getLayerContents', args, 45000)); logShape(`getLayerContents("${n}")`, feats); if (feats.some((f) => f?.geometry)) return feats; } catch (e) { /* next */ }
-  }
+  try { const feats = toFeatures(await call('getLayerContents', [n], 30000)); logShape(`getLayerContents("${n}")`, feats); if (feats.some((f) => f?.geometry)) return feats; } catch (e) { /* next */ }
   // 2) queryRenderedFeatures (só o que está visível na tela)
   let ids = [];
   try { ids = (await call('getMapboxLayerIdsForLayer', [n])) || []; } catch (e) { /* */ }
@@ -1478,16 +1489,16 @@ async function fetchLayerFeatures(n, SL) {
   if (!ids.length) { if (skipped.some((i) => typeById[i] === 'raster')) toast(`"${n}" é uma imagem: use Mapa base → Imagem do mapa.`); return []; }
   // 2) API vetorial do Giraffe, pela Área do modelo
   const A = captureArea();
-  if (A) {
+  if (A && S.style.baseSrc === 'osm' && AREA_LAYERS.test(n)) {
+    try { const its = await areaLayerFromOSM(n, A); if (its.length) { S.capBox[n] = A.R; return { items: its }; } } catch (e) { log('OpenStreetMap: ' + e.message, true); toast('OpenStreetMap indisponível: lido do mapa do Giraffe.'); }
+  }
+  if (A && await vecApiReady(SL)) {
     const byId = Object.fromEntries(SL.map((l) => [l.id, l])); const seen = new Set(); let all = [];
     for (const id of ids) { const l = byId[id]; if (!l || !l['source-layer'] || seen.has(l['source-layer'])) continue; seen.add(l['source-layer']); const fs = await vectorContents(l, A); if (fs) all = all.concat(fs.map((f) => ({ ...f, layer: f.layer || { id } }))); }
     if (all.some((f) => f?.geometry)) { S.capBox[n] = A.R; return all; }
-    // 3) OpenStreetMap para edifícios e árvores
-    if (AREA_LAYERS.test(n)) { try { const its = await areaLayerFromOSM(n, A); if (its.length) { S.capBox[n] = A.R; return { items: its }; } } catch (e) { log('OpenStreetMap: ' + e.message, true); } }
   }
-  // 4) último recurso: só o que está visível na tela do Giraffe
-  const feats = await queryFeatures(ids); logShape(`queryRenderedFeatures("${n}") — só área visível`, feats);
-  if (feats.length && AREA_LAYERS.test(n)) toast(`"${n}": lido só da área visível no Giraffe.`);
+  // mapa do Giraffe: o que está carregado na tela (como até a V10)
+  const feats = await queryFeatures(ids); logShape(`queryRenderedFeatures("${n}")`, feats);
   return feats;
 }
 const BASE_VEC = 'Mapa base (vetorial)';
@@ -1505,21 +1516,19 @@ async function captureBaseVector(SL) {
   const add = (f, k) => { if (f?.geometry && !/Point/.test(f.geometry.type)) pushFeature(out[k], { ...f, properties: { ...(f.properties || {}), color: null } }, 'map', P, { layer: k, z0: 0, z1: 0 }); };
   const vegKey = (f) => (VEG_RE.test(`${f.properties?.class || ''} ${f.properties?.type || ''} ${f.properties?.landuse || ''}`) ? BASE_KEYS[1] : BASE_KEYS[2]);
   // 1) API vetorial do Giraffe pela Área do modelo
-  if (A) {
+  if (A && S.style.baseSrc === 'osm') {
+    try { const fs = await osmFeatures(A); for (const f of fs) { const c = osmClass(f.properties); const k = c === 'agua' ? BASE_KEYS[0] : c === 'veg' ? BASE_KEYS[1] : c === 'solo' ? BASE_KEYS[2] : c === 'vias' ? BASE_KEYS[3] : null; if (k) add(f, k); } mode = 'osm'; }
+    catch (e) { log('OpenStreetMap: ' + e.message, true); toast('OpenStreetMap indisponível: lido do mapa do Giraffe.'); }
+  }
+  if (A && mode === 'tela' && await vecApiReady(SL)) {
     let got = 0; const per = async (layers, keyFn) => { const seen = new Set(); for (const l of layers) { if (seen.has(l['source-layer'])) continue; seen.add(l['source-layer']); const fs = await vectorContents(l, A); if (fs) { fs.forEach((f) => add(f, keyFn(f))); got += fs.length; } } };
     await per(grp.agua, () => BASE_KEYS[0]); if (vecApi || got) { await per(grp.solo, vegKey); await per(grp.vias, () => BASE_KEYS[3]); }
     if (got) mode = 'giraffe';
-    // 2) OpenStreetMap
-    if (!got) {
-      try { const fs = await osmFeatures(A); for (const f of fs) { const c = osmClass(f.properties); const k = c === 'agua' ? BASE_KEYS[0] : c === 'veg' ? BASE_KEYS[1] : c === 'solo' ? BASE_KEYS[2] : c === 'vias' ? BASE_KEYS[3] : null; if (k) add(f, k); } mode = 'osm'; }
-      catch (e) { log('OpenStreetMap: ' + e.message, true); }
-    }
   }
   // 3) último recurso: só o que está visível na tela
   if (mode === 'tela') {
     const take = async (layers, keyFn) => { if (!layers.length) return; const feats = await queryFeatures(layers.map((l) => l.id)); logShape('Mapa base (tela) ' + layers[0]['source-layer'], feats); feats.forEach((f) => add(f, keyFn(f))); };
-    await take(grp.agua, () => BASE_KEYS[0]); await take(grp.solo, vegKey); await take(grp.vias, () => BASE_KEYS[3]);
-    toast('Mapa base lido só da área visível no Giraffe.');
+    await Promise.all([take(grp.agua, () => BASE_KEYS[0]), take(grp.solo, vegKey), take(grp.vias, () => BASE_KEYS[3])]);
   }
   log(`Mapa base: fonte ${mode === 'giraffe' ? 'Giraffe (API vetorial)' : mode === 'osm' ? 'OpenStreetMap' : 'tela do Giraffe'} · ${BASE_KEYS.map((k) => out[k].length).join('/')} itens`);
   if (A && mode !== 'tela') BASE_KEYS.forEach((k) => (S.capBox[k] = A.R));
@@ -1850,20 +1859,39 @@ function buildLayerUI() {
   h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>${BASE_KEYS.length + 1}</span></h3>${BASE_KEYS.map((k) => lyrRow('map|' + k, S.mapItems[k] ? S.mapItems[k].length : '—', true)).join('')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
   $('#layerUI').innerHTML = h;
 }
-async function captureLk(lk) {
-  busy(true, 'Lendo ' + lkName(lk) + '…');
-  try {
-    if (lk === 'raster') await captureRaster(true);
-    else if (lk.startsWith('ctx|')) await captureContext();
-    else if (lk.startsWith('map|')) await captureMapLayer(lk.slice(4));
-    else if (lk.startsWith('draw|')) await fetchDrawLayer(lk.slice(5));
-  } catch (e) { toast('Falha: ' + e.message); }
-  busy(false); buildLayerUI(); buildStyleUI(); render();
+const inflight = new Map();
+function captureLk(lk, quiet) {
+  const key = BASE_KEYS.includes(lkName(lk)) ? 'base' : lk; // as 4 camadas do mapa base são lidas juntas
+  if (inflight.has(key)) return inflight.get(key);
+  const pr = (async () => {
+    if (!quiet) busy(true, 'Lendo ' + lkName(lk) + '…');
+    try {
+      if (lk === 'raster') await captureRaster(true);
+      else if (lk.startsWith('ctx|')) await captureContext();
+      else if (lk.startsWith('map|')) await captureMapLayer(lk.slice(4));
+      else if (lk.startsWith('draw|')) await fetchDrawLayer(lk.slice(5));
+    } catch (e) { toast('Falha: ' + e.message); }
+    if (!quiet) { busy(false); buildLayerUI(); buildStyleUI(); render(); }
+  })().finally(() => inflight.delete(key));
+  inflight.set(key, pr); return pr;
 }
-async function ensureCapturedForVisible() {
-  for (const lk of Object.keys(S.vis)) if (S.vis[lk] && !hasData(lk) && lk !== 'raster' && !lk.startsWith('draw|') && !lk.startsWith('ctx|') && lk !== 'map|' + BASE_VEC) await captureLk(lk);
-  // layers de desenho ligados na versão mas sem elementos lidos (ocultos no Giraffe)
-  if (S.mode === 'giraffe') for (const n of drawLayerNames()) { const lk = 'draw|' + n; if (S.vis[lk] && !hasData(lk) && treeLayers().has(n)) await captureLk(lk); }
+let ensureRun = null;
+function ensureCapturedForVisible() {
+  if (ensureRun) return ensureRun;
+  ensureRun = (async () => {
+    const todo = Object.keys(S.vis).filter((lk) => S.vis[lk] && !hasData(lk) && lk !== 'raster' && !lk.startsWith('draw|') && !lk.startsWith('ctx|') && lk !== 'map|' + BASE_VEC);
+    if (S.mode === 'giraffe') for (const n of drawLayerNames()) { const lk = 'draw|' + n; if (S.vis[lk] && !hasData(lk) && treeLayers().has(n)) todo.push(lk); }
+    if (!todo.length) return;
+    const t0 = Date.now(); let done = 0; busy(true, `Lendo camadas… 0/${todo.length}`);
+    const draws = todo.filter((lk) => lk.startsWith('draw|')); const others = todo.filter((lk) => !lk.startsWith('draw|'));
+    // camadas do mapa em paralelo (até 4 por vez); layers ocultos do desenho um a um (mexem na visibilidade do Giraffe)
+    const queue = [...others]; const worker = async () => { while (queue.length) { const lk = queue.shift(); await captureLk(lk, true); done++; busy(true, `Lendo camadas… ${done}/${todo.length}`); scheduleRender(); } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    for (const lk of draws) { await captureLk(lk, true); done++; busy(true, `Lendo camadas… ${done}/${todo.length}`); }
+    busy(false); buildLayerUI(); buildStyleUI(); render();
+    log(`Camadas lidas: ${todo.length} em ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  })().finally(() => { ensureRun = null; });
+  return ensureRun;
 }
 
 /* ---------------- STYLE UI ---------------- */
@@ -2093,7 +2121,7 @@ function syncUI() {
   $('#fEl').hidden = v.proj !== 'ortho'; $('#fK').hidden = v.proj === 'ortho';
   const isPlan = v.proj === 'ortho' && v.el >= 89.5; $('#fPlanRot').hidden = !isPlan; $('#planRot').value = Math.round(((v.az - 180) % 360 + 360) % 360);
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
-  $('#palette').value = st.palette; $('#colorMode').value = st.colorMode;
+  $('#palette').value = st.palette; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
   $('#north').checked = st.north; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
   $('#cropOn').checked = c.on; $('#cropRatio').value = c.ratio; $('#cropShowOut').checked = c.showOut; $('#fCropCustom').hidden = c.ratio !== 'custom'; $('#cropCW').value = c.cw; $('#cropCH').value = c.ch;
@@ -2234,6 +2262,8 @@ function wireUI() {
     if (S.area.mode === 'drawn' && !S.area.drawn) await drawArea();
     render(); persist(); scheduleAreaRefresh();
   };
+  $('#baseSrc').onchange = (e) => { S.style.baseSrc = e.target.value; persist(); const lks = Object.keys(S.mapItems).filter((n) => BASE_KEYS.includes(n) || AREA_LAYERS.test(n)).map((n) => 'map|' + n); lks.forEach((lk) => delete S.mapItems[lk.slice(4)]); ensureCapturedForVisible(); };
+  $('#btnVecRetry').onclick = async () => { vecState = 'unknown'; vecProbe = null; vecApi = null; try { localStorage.removeItem('kv-axono-vecapi'); } catch (err) { /* */ } const ok = await vecApiReady(await styleLayers()); toast(ok ? 'API vetorial do Giraffe disponível.' : 'API vetorial do Giraffe indisponível — veja o diagnóstico.'); };
   $('#btnMapArea').onclick = () => useMapArea().catch(() => toast('Área do mapa indisponível.'));
   $('#btnDrawArea').onclick = drawArea;
   $('#btnCaptureRaster').onclick = () => { S.vis.raster = true; captureLk('raster'); };
