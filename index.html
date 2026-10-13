@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V14</title>
+<title>KV Axonometria — Beta V15</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -310,7 +310,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
       <select id="colorMode"><option value="paleta">Por layer (paleta)</option><option value="giraffe">Cores do Giraffe, por layer</option><option value="uso">Por uso</option></select></div></div>
 
     <h2>Linhas e faces</h2>
-    <div class="field"><label for="contourW">Perfil (contorno)</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
+    <div class="field"><label for="contourW">Perfil padrão</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
     <div class="field"><label for="shade">Sombreamento</label><div class="ctl"><input type="range" id="shade" min="0" max="0.8" step="0.02"><input type="number" id="shadeN" min="0" max="0.8" step="0.02" aria-label="Intensidade do sombreamento das fachadas"></div></div>
 
     <h2>Sombra projetada</h2>
@@ -357,15 +357,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V14 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V15 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V14 */
-/* V14: leitura de camadas rápida de novo — API vetorial testada uma vez (6 s) e desligada se falhar,
+/* KV Axonometria — Beta V15 */
+/* V15: arestas de volumes desenhadas uma vez só, testadas pelo buffer de profundidade (espessura e traço
+   por layer funcionam), perfil por layer.
+   V14: leitura de camadas rápida de novo — API vetorial testada uma vez (6 s) e desligada se falhar,
    OpenStreetMap só por escolha, leitura em paralelo e sem duplicar, getLayerContents uma vez só.
    V13: sincronização com junção por versão (3 vias), nunca grava sem juntar o que está no projeto,
    ID do projeto na gravação, versão aberta/trava/painel são pessoais, nome de quem salvou, Enviar/Receber agora.
@@ -395,7 +397,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V14';
+const VERSION = 'V15';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1093,7 +1095,8 @@ function render(fast = false) {
 
   let items = allItems().filter((it) => isVis(it.lk));
   items = applyArea(items, R);
-  const ground = []; const faces = []; const lineOps = []; const sil = [];
+  const ground = []; const faces = []; const lineOps = []; const edges = [];
+  const faceStroke = (L, col, opaque) => (fast ? { stroke: L.stroke, sw: L.strokeW, dash: L.dash } : opaque && col !== 'none' ? { stroke: col, sw: 0.35, dash: 'solid' } : { stroke: 'none', sw: 0, dash: 'solid' });
   const prj = (r, z) => r.map((p) => V.P(p[0], p[1], z));
   const P3 = (x, y, z) => { const p = V.P(x, y, z); p.push(V.depth(x, y, z)); return p; };
   const sun = st.sh.on ? sunPos() : null; const sunUp = sun && sun.alt > 1;
@@ -1177,26 +1180,29 @@ function render(fast = false) {
         if (shs) { const lit = nx * shs[0] + ny * shs[1]; tone = st.shade * (lit > 0 ? (1 - lit) * 0.6 : 1); }
         else { const lam = (nx * Lx + ny * Ly) / Ll; tone = st.shade * (1 - (lam + 1) / 2) * 1.25; }
         const q = [P3(a[0], a[1], it.z0), P3(b[0], b[1], it.z0), P3(b[0], b[1], it.z1), P3(a[0], a[1], it.z1)];
-        addFace([q], { t: 'poly', g, rings: [q], fill: fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.9, Math.max(0, tone))), fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash }, null).opaque = opaque;
+        const wc = fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.9, Math.max(0, tone)));
+        addFace([q], { t: 'poly', g, rings: [q], fill: wc, fop: L.fillOp, ...faceStroke(L, wc, opaque) }, null).opaque = opaque;
       }
       front.push(fr);
     }
     if (!V.elev) {
       const top = it.poly.map((r) => r.map((p) => P3(p[0], p[1], it.z1)));
       const extra = (S.raster && st.drapeRoofs && isVis('raster')) ? (() => { const m = rasterMatrix(V, it.z1); return m ? [{ t: 'img', g, m, op: st.rasterOp, clip: top }] : null; })() : null;
-      addFace(top, { t: 'poly', g, rings: top, fill, fop: L.fillOp, stroke: L.stroke, sw: L.strokeW, dash: L.dash }, extra).opaque = opaque;
+      addFace(top, { t: 'poly', g, rings: top, fill, fop: L.fillOp, ...faceStroke(L, fill, opaque) }, extra).opaque = opaque;
     }
-    // silhouette edges (perfil)
-    if (st.contourW > 0) {
+    // arestas (desenhadas uma vez só, depois das faces, só onde visíveis)
+    if (!fast) {
+      const wS = L.contourW ?? st.contourW, wI = L.strokeW; const c = L.stroke, dash = L.dash;
+      const E = (a, b, z0, z1, sil) => { const w = sil ? wS : wI; if (w > 0 && c !== 'none') edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, w, dash, g }); };
       it.poly.forEach((ring, ri) => {
         const fr = front[ri]; const n = ring.length;
         for (let i = 0; i < n; i++) {
           const a = ring[i], b = ring[(i + 1) % n]; const prev = fr[(i - 1 + n) % n];
-          if (V.plan) { sil.push({ a: [a[0], a[1], it.z1], b: [b[0], b[1], it.z1], c: L.stroke }); continue; }
-          if (fr[i] !== prev && !V.elev) sil.push({ a: [a[0], a[1], it.z0], b: [a[0], a[1], it.z1], c: L.stroke });
-          if (V.elev) { if (fr[i] !== prev) sil.push({ a: [a[0], a[1], it.z0], b: [a[0], a[1], it.z1], c: L.stroke }); if (fr[i]) { sil.push({ a: [a[0], a[1], it.z1], b: [b[0], b[1], it.z1], c: L.stroke }); sil.push({ a: [a[0], a[1], it.z0], b: [b[0], b[1], it.z0], c: L.stroke }); } continue; }
-          if (!fr[i]) sil.push({ a: [a[0], a[1], it.z1], b: [b[0], b[1], it.z1], c: L.stroke });
-          else sil.push({ a: [a[0], a[1], it.z0], b: [b[0], b[1], it.z0], c: L.stroke });
+          if (V.plan) { E(a, b, it.z1, it.z1, true); continue; }
+          if (V.elev) { if (fr[i] !== prev) E(a, a, it.z0, it.z1, true); else if (fr[i]) E(a, a, it.z0, it.z1, false); if (fr[i]) { E(a, b, it.z1, it.z1, true); E(a, b, it.z0, it.z0, true); } continue; }
+          if (fr[i] !== prev) E(a, a, it.z0, it.z1, true); else if (fr[i]) E(a, a, it.z0, it.z1, false);
+          E(a, b, it.z1, it.z1, !fr[i]);
+          if (fr[i]) E(a, b, it.z0, it.z0, true);
         }
       });
     }
@@ -1219,7 +1225,7 @@ function render(fast = false) {
       }
       const r3 = f.map((p) => P3(p[0], p[1], p[2]));
       if (Math.abs(sArea(r3)) < 1e-9) continue;
-      addFace([r3], { t: 'poly', g, rings: [r3], fill, fop, stroke, sw: L.strokeW, dash: it.dash ? null : L.dash, dashArr: it.dash ? it.dash.map((d) => d * Math.max(0.5, L.strokeW)).join(' ') : null }, null).opaque = fop >= 0.95;
+      addFace([r3], { t: 'poly', g, rings: [r3], fill, fop, stroke, sw: L.strokeW, dash: it.dash && L.dash === 'solid' ? null : L.dash, dashArr: it.dash && L.dash === 'solid' ? it.dash.map((d) => d * Math.max(0.5, L.strokeW)).join(' ') : null }, null).opaque = fop >= 0.95;
     }
   }
   // trees (tronco + copa esférica → círculo)
@@ -1297,17 +1303,17 @@ function render(fast = false) {
 
   // visible silhouette segments
   const silPaths = [];
-  if (!fast && zOp && sil.length) {
+  if (!fast && zOp && edges.length) {
     const eps0 = 0.08 + 2.5 / (sc * q);
     const zmax = (px, py) => { let m = -Infinity; for (let yy = py - 1; yy <= py + 1; yy++) for (let xx = px - 1; xx <= px + 1; xx++) { if (xx < 0 || yy < 0 || xx >= ZW || yy >= ZH) return Infinity; const v = zOp[yy * ZW + xx]; if (v > m) m = v; } return m; };
-    for (const e of sil) {
-      const A = P3(...e.a), B = P3(...e.b); const len = Math.hypot(tx(B) - tx(A), ty(B) - ty(A)); const n = Math.max(1, Math.ceil(len)); let cur = null;
+    for (const e of edges) {
+      const A = P3(...e.a), B = P3(...e.b); const len = Math.hypot(tx(B) - tx(A), ty(B) - ty(A)); if (len < 0.01) continue; const n = Math.max(1, Math.ceil(len)); let cur = null;
       for (let k = 0; k <= n; k++) {
         const t = k / n; const p = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; const d = A[2] + (B[2] - A[2]) * t;
         const px = Math.floor(tx(p)), py = Math.floor(ty(p)); const vis = d - eps0 <= zmax(px, py);
-        if (vis) { if (!cur) cur = [p]; else cur[1] = p; } else if (cur) { if (cur.length > 1) silPaths.push({ pts: cur, c: e.c }); cur = null; }
+        if (vis) { if (!cur) cur = [p]; else cur[1] = p; } else if (cur) { if (cur.length > 1) silPaths.push({ pts: cur, e }); cur = null; }
       }
-      if (cur && cur.length > 1) silPaths.push({ pts: cur, c: e.c });
+      if (cur && cur.length > 1) silPaths.push({ pts: cur, e });
     }
   }
 
@@ -1341,8 +1347,11 @@ function render(fast = false) {
   lineOps.forEach(emit);
   if (silPaths.length) {
     if (curG !== null) out += '</g>'; curG = null;
-    const byC = {}; silPaths.forEach((s) => { (byC[s.c] = byC[s.c] || []).push(s.pts); });
-    out += `<g id="L_Perfil" data-name="Perfil">` + Object.entries(byC).map(([c, ps]) => `<path d="${ps.map((pts) => 'M' + pts.map(T).join('L')).join('')}" fill="none" stroke="${c}" stroke-width="${st.contourW}" stroke-linecap="round" stroke-linejoin="round"/>`).join('') + '</g>';
+    const byG = {}; silPaths.forEach((s) => { const k = s.e.g; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
+    for (const [g, groups] of Object.entries(byG)) {
+      const nm = g + ' · arestas';
+      out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; return `<path d="${ps.map((pts) => 'M' + pts.map(T).join('L')).join('')}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${da ? (dash === 'dot' ? 'round' : 'butt') : 'round'}" stroke-linejoin="round"/>`; }).join('') + '</g>';
+    }
   }
   if (curG !== null) out += '</g>';
 
@@ -1920,6 +1929,7 @@ function buildStyleUI() {
         ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
         ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
+        ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><span class="out">vazio = padrão</span></div></div>` : ''}
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
         ${(cm === 'giraffe' || its.some((i) => i.ink || i.ls)) && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
       </div></details></div>`;
@@ -2293,6 +2303,7 @@ function wireUI() {
     const det = e.target.closest('details'); if (!det) return; const lk = det.dataset.lk;
     if (e.target.dataset.cmap) { (S.colorMap[lk] = S.colorMap[lk] || {})[e.target.dataset.cmap] = e.target.value; scheduleRender(); persist(); return; }
     const k = e.target.dataset.k; if (!k) return;
+    if (k === 'contourW' && e.target.value === '') { delete S.lstyle[lk].contourW; scheduleRender(); persist(); return; }
     const v = e.target.type === 'range' || e.target.type === 'number' ? +e.target.value : e.target.value; S.lstyle[lk][k] = v;
     const sw = det.querySelector('.sw'); if (k === 'fill') sw.style.background = v; if (k === 'stroke') sw.style.borderColor = v;
     if (k === 'fillOp') { const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = Math.round(v * 100) + '%'; }
