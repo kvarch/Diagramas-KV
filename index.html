@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V18</title>
+<title>KV Axonometria — Beta V20</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -214,7 +214,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
   <div class="seg" role="group" aria-label="Zoom">
     <button class="icon" id="zoomOut" aria-label="Afastar" title="Afastar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6M7 10h6"/></svg></button>
     <button class="icon" id="zoomIn" aria-label="Aproximar" title="Aproximar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6M7 10h6M10 7v6"/></svg></button>
-    <button class="icon" id="zoomFit" aria-label="Enquadrar tudo" title="Enquadrar tudo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+    <button class="icon" id="zoomFit" aria-label="Enquadrar o terreno" title="Enquadrar o terreno"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
   </div>
   <div class="seg" role="group" aria-label="Histórico">
     <button class="icon" id="btnUndo" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
@@ -261,7 +261,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="field" id="fEl"><label for="el">Elevação</label><div class="ctl"><input type="range" id="el" min="0" max="90" step="0.5"><input type="number" id="elN" min="0" max="90" step="0.5" aria-label="Elevação em graus"></div></div>
     <div class="field" id="fK" hidden><label for="k">Fator vertical</label><div class="ctl"><input type="range" id="k" min="0.3" max="1.2" step="0.05"><input type="number" id="kN" min="0.3" max="1.2" step="0.05" aria-label="Fator vertical"></div></div>
     <div class="field" id="fPlanRot" hidden><label for="planRot">Rotação da planta</label><div class="ctl"><input type="number" id="planRot" min="-360" max="360" step="1" aria-label="Rotação da planta em graus"><button id="btnNorthUp">Norte para cima</button></div></div>
-    <div class="field"><label for="zoom">Zoom (%)</label><div class="ctl"><input type="range" id="zoom" min="25" max="800" step="5"><input type="number" id="zoomN" min="10" max="2000" step="5" aria-label="Zoom em porcentagem"></div></div>
+    <div class="field"><label for="zoom">Zoom (%)</label><div class="ctl"><input type="range" id="zoom" min="10" max="2000" step="5"><input type="number" id="zoomN" min="2" max="50000" step="5" aria-label="Zoom em porcentagem"></div></div>
 
     <h2>Recorte da imagem</h2>
     <label class="check"><input type="checkbox" id="cropOn">Usar recorte na vista e na exportação</label>
@@ -280,7 +280,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
   <!-- CONTEÚDO -->
   <section class="panel" id="p-conteudo" role="tabpanel" aria-labelledby="tab-conteudo" hidden>
     <h2>Layers</h2>
-    <p class="hint">Todos os layers do projeto aparecem aqui. Na primeira leitura, cada layer entra ligado ou desligado conforme está no Giraffe; depois, o controle é do app (por versão). Layers ocultos no Giraffe são lidos ao ligar; use ↻ para ler de novo.</p>
+    <p class="hint">Todos os layers do projeto aparecem aqui. Na primeira leitura, cada layer entra ligado ou desligado conforme está no Giraffe; depois, o controle é do app (por versão). Layers ocultos no Giraffe são lidos ao ligar; use ↻ para ler de novo. Elementos atribuídos a scenarios aparecem se pelo menos um dos seus scenarios estiver ligado.</p>
     <div id="layerUI"></div>
     <label class="check"><input type="checkbox" id="autoSync">Atualizar o desenho do projeto automaticamente</label>
 
@@ -360,15 +360,19 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V18 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V20 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V18 */
-/* V18: sem linhas de junção entre faces coplanares da mesma cor; buffer de profundidade em resolução cheia;
+/* KV Axonometria — Beta V20 */
+/* V20: enquadramento de referência = limite do terreno (zoom 100% mostra o terreno); sem projeto, ignora
+   elementos muito distantes; faixa de zoom ampliada.
+   V19: scenarios — elementos com properties.scenario ligam/desligam por versão, como os layers
+   (padrão = visibilidade do Giraffe ao aparecer; 'Copiar do Giraffe').
+   V18: sem linhas de junção entre faces coplanares da mesma cor; buffer de profundidade em resolução cheia;
    perfil do conjunto com espessura/cor do layer do maior volume; cor do perfil por layer.
    V17: perfil só no contorno do conjunto (volumes que se tocam, ex.: torre + varandas); arestas testadas pelas
    próprias faces (sem sobras nas pontas), pontas retas nas arestas internas.
@@ -406,7 +410,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V18';
+const VERSION = 'V20';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -428,7 +432,7 @@ const PRESETS = {
 const S = {
   mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, bundleRaw: null,
   items: [],            // drawing (vol/flat)
-  extraDraw: {}, glbItems: [], glbKey: '', capBox: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
+  extraDraw: {}, glbItems: [], glbKey: '', capBox: {}, scnNames: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
   mapItems: {},         // layerName -> items
   ctxItems: [],
   raster: null,         // {href, W, H, bounds}
@@ -450,8 +454,8 @@ function setActive(i) { S.av = Math.max(0, Math.min(S.versions.length - 1, i)); 
 
 /* ---------------- LAYER KEYS & VISIBILITY ---------------- */
 function lkOf(src, layer) { return src === 'vol' || src === 'flat' ? 'draw|' + layer : src === 'map' ? 'map|' + layer : 'ctx|Entorno'; }
-function lkName(lk) { return lk === 'raster' ? 'Imagem do mapa' : lk.split('|').slice(1).join('|'); }
-function hasData(lk) { if (lk === 'raster') return !!S.raster; if (lk.startsWith('map|')) return !!S.mapItems[lk.slice(4)]; if (lk.startsWith('ctx|')) return S.ctxItems.length > 0; return S.items.some((i) => i.lk === lk); }
+function lkName(lk) { if (lk.startsWith('scn|')) { const id = lk.slice(4); return S.scnNames[id] || id; } return lk === 'raster' ? 'Imagem do mapa' : lk.split('|').slice(1).join('|'); }
+function hasData(lk) { if (lk.startsWith('scn|')) return true; if (lk === 'raster') return !!S.raster; if (lk.startsWith('map|')) return !!S.mapItems[lk.slice(4)]; if (lk.startsWith('ctx|')) return S.ctxItems.length > 0; return S.items.some((i) => i.lk === lk); }
 function isVis(lk) {
   const v = S.vis[lk]; if (v != null) return v; if (lk.startsWith('map|')) return false;
   // versão já configurada: layer que surgiu depois entra desligado
@@ -654,7 +658,7 @@ async function loadGltfObjects(fmap, key) {
           const faces = []; for (let t = 0; t + 2 < idx.length; t += 3) faces.push([pos[idx[t]], pos[idx[t + 1]], pos[idx[t + 2]]]);
           tris += faces.length;
           const layer = String(p.layerId ?? 'Objetos 3D');
-          items.push({ id: fid, src: 'vol', lk: lkOf('vol', layer), layer, usage: String(p.usage ?? 'Objeto 3D'), color: hex, colorReal: true, kind: 'mesh', glb: true, faces, fop: bc[3] < 0.98 ? bc[3] : undefined });
+          items.push({ id: fid, src: 'vol', lk: lkOf('vol', layer), layer, scn: scnOf(p), usage: String(p.usage ?? 'Objeto 3D'), color: hex, colorReal: true, kind: 'mesh', glb: true, faces, fop: bc[3] < 0.98 ? bc[3] : undefined });
         }
       }
     });
@@ -698,9 +702,36 @@ function giraffeVis(name) {
   const its = S.items.filter((i) => i.layer === name); if (its.length && its.every((i) => i.hiddenG)) return false;
   return true;
 }
+/* ---------------- SCENARIOS ----------------
+   properties.scenario = [ids] e _scenarioNames = [nomes]. Elemento em scenarios aparece se PELO MENOS UM
+   deles estiver ligado na versão; elemento sem scenario depende só do layer. */
+function scnOf(p) {
+  const sc = p?.scenario; if (!Array.isArray(sc) || !sc.length) return null;
+  const ids = sc.map(String); const nm = p._scenarioNames;
+  if (Array.isArray(nm)) ids.forEach((id, i) => { if (nm[i]) S.scnNames[id] = String(nm[i]); });
+  return ids;
+}
+function giraffeScnSet() { // mesma leitura defensiva do app de visuais
+  let v; try { v = S.gs?.get('visibleScenarios'); } catch (e) { return null; }
+  if (v === undefined || v === null) return null;
+  const ids = new Set();
+  const add = (x) => { if (typeof x === 'string' || typeof x === 'number') ids.add(String(x)); else if (x && typeof x === 'object') { const id = x.id ?? x.uuid ?? x.key ?? x.scenarioId; if (id != null && x.visible !== false && x.hidden !== true) ids.add(String(id)); } };
+  if (v instanceof Set || Array.isArray(v)) { v.forEach(add); return ids; }
+  if (typeof v === 'object') { if (Array.isArray(v.ids)) { v.ids.forEach(add); return ids; } for (const [k, val] of Object.entries(v)) { if (val === true) ids.add(k); else if (val && typeof val === 'object') add({ id: val.id ?? k, visible: val.visible, hidden: val.hidden }); } return ids; }
+  return null;
+}
+function scenarioIds() { const c = {}; for (const it of allItems()) if (it.scn) for (const id of it.scn) c[id] = (c[id] || 0) + 1; return c; }
+function scnVisible(it) { if (!it.scn) return true; return it.scn.some((id) => isVis('scn|' + id)); }
+function copyScnFromGiraffe() {
+  const gs = giraffeScnSet(); if (!gs) { toast('O Giraffe não informou os scenarios visíveis.'); return; }
+  for (const id of Object.keys(scenarioIds())) S.vis['scn|' + id] = gs.has(id);
+  persist(); buildLayerUI(); buildStyleUI(); render(); toast('Scenarios iguais aos do Giraffe nesta versão.');
+}
 function applyDefaultVis() {
   // layers ainda sem decisão na versão herdam a visibilidade atual do Giraffe
   if (S.mode !== 'giraffe') return;
+  const gsc = giraffeScnSet(); const sids = Object.keys(scenarioIds());
+  for (const v of S.versions) for (const id of sids) if (v.vis['scn|' + id] == null) v.vis['scn|' + id] = gsc ? gsc.has(id) : true;
   const names = drawLayerNames(); if (!names.length) return;
   for (const v of S.versions) {
     const init = v.visInit || Object.keys(v.vis).some((k) => k.startsWith('draw|'));
@@ -937,7 +968,7 @@ function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
   const meta = {
-    id: featId(f), src, lk: '', hiddenG: p._visible === false, colorReal: propColor(p) != null, fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
+    id: featId(f), src, lk: '', hiddenG: p._visible === false, colorReal: propColor(p) != null, scn: scnOf(p), fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
     layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? '').trim() || (p.sp_tag ? 'Temporário · ' + String(p.sp_tag).split(/[:_-]/)[0] : 'Sem camada'),
     usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
     color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
@@ -1023,6 +1054,7 @@ function ingestGiraffe() {
   log(`Sem fachada (lajes): ${items.filter((i) => i.slab).length} lajes`);
   if (baked[0]) log(`bakedSections: ${baked.length} · chaves: ${Object.keys(baked[0].properties || {}).slice(0, 14).join(', ')}`);
   { const c = {}; items.forEach((i) => { c[i.layer] = (c[i.layer] || 0) + 1; }); log('Layers do desenho: ' + Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([k, v]) => `${k} (${v})`).join(' · ')); }
+  { const sc = {}; items.forEach((i) => (i.scn || []).forEach((id) => { sc[id] = (sc[id] || 0) + 1; })); if (Object.keys(sc).length) { let vs; try { vs = JSON.stringify(S.gs.get('visibleScenarios')); } catch (e) { vs = '?'; } log('Scenarios: ' + Object.entries(sc).map(([id, n]) => `${S.scnNames[id] || id} (${n})`).join(' · ') + ' · visíveis no Giraffe: ' + String(vs).slice(0, 200)); } }
   log(`Itens: ${items.filter((i) => i.kind === 'prism').length} volumes, ${items.filter((i) => i.kind !== 'prism').length} 2D (raw extras: ${rawAdded})`);
 }
 
@@ -1085,18 +1117,34 @@ const fmt = (n) => (Math.round(n * 10) / 10).toString();
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function fitBox(V, R) {
-  // stable framing: drawing layers (visible or not) + model area
+  // referência estável do enquadramento: o limite do terreno (zoom 100% = terreno inteiro, com a altura dos volumes sobre ele)
   const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
-  let src = S.items; if (!src.length) src = allItems();
-  for (const it of src) {
-    if (it.kind === 'line') bboxOf(it.pts.map((p) => V.P(p[0], p[1], it.z || 0)), b);
-    else if (it.kind === 'mesh') it.faces.forEach((f) => bboxOf(f.map((p) => V.P(p[0], p[1], p[2])), b));
-    else if (it.kind === 'tree') continue;
-    else for (const r of it.poly) { bboxOf(r.map((p) => V.P(p[0], p[1], it.kind === 'prism' ? it.z0 : it.z || 0)), b); if (it.kind === 'prism') bboxOf(r.map((p) => V.P(p[0], p[1], it.z1)), b); }
+  const pg = projectGeom(); let T = null;
+  if (pg && S.projector) { const parts = geomToParts(pg, S.projector); const t = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity }; parts.polys.forEach((p) => bboxOf(p[0], t)); if (isFinite(t.minx) && t.maxx - t.minx < 20000) T = t; }
+  if (!T && R) T = R;
+  if (!T) T = robustItemsBox();
+  if (T) {
+    let zmax = 0; for (const it of S.items) if (it.kind === 'prism' && bbHit(itemBBox(it), T)) zmax = Math.max(zmax, it.z1);
+    const r = rectPoly(T)[0].slice(0, 4); bboxOf(r.map((p) => V.P(p[0], p[1], 0)), b); if (zmax > 0) bboxOf(r.map((p) => V.P(p[0], p[1], zmax)), b);
   }
-  if (R) bboxOf(rectPoly(R)[0].map((p) => V.P(p[0], p[1], 0)), b);
   if (!isFinite(b.minx) && S.raster) { const m = rasterMatrix(V, 0); bboxOf([[0, 0], [S.raster.W, 0], [S.raster.W, S.raster.H], [0, S.raster.H]].map(([u, v]) => [m[0] * u + m[2] * v + m[4], m[1] * u + m[3] * v + m[5]]), b); }
   return isFinite(b.minx) ? b : null;
+}
+function sanitizeView() {
+  // vista que não mostra o terreno (zoom muito longe ou deslocada para fora): volta ao enquadramento do terreno
+  const v = S.view; if (!v) return false; const W = S.W, H = S.H;
+  const off = Math.abs(v.panX) > W * (0.5 + 0.44 * v.zoom) || Math.abs(v.panY) > H * (0.5 + 0.44 * v.zoom);
+  if (v.zoom < 0.15 || !isFinite(v.zoom) || off) { v.zoom = 1; v.panX = 0; v.panY = 0; log('Vista fora do terreno: enquadramento restaurado'); return true; }
+  return false;
+}
+function robustItemsBox() {
+  // sem limite de terreno: caixa dos elementos do desenho ignorando os muito distantes (5%–95%)
+  let src = S.items; if (!src.length) src = allItems(); if (!src.length) return null;
+  const xs = [], ys = []; for (const it of src) { const bb = itemBBox(it); if (!isFinite(bb.minx)) continue; xs.push((bb.minx + bb.maxx) / 2); ys.push((bb.miny + bb.maxy) / 2); }
+  if (!xs.length) return null; xs.sort((a, b) => a - b); ys.sort((a, b) => a - b);
+  const q = (a, f) => a[Math.min(a.length - 1, Math.max(0, Math.round(f * (a.length - 1))))];
+  const x0 = q(xs, 0.05), x1 = q(xs, 0.95), y0 = q(ys, 0.05), y1 = q(ys, 0.95); const pad = Math.max(20, 0.15 * Math.max(x1 - x0, y1 - y0));
+  return { minx: x0 - pad, miny: y0 - pad, maxx: x1 + pad, maxy: y1 + pad };
 }
 
 function render(fast = false) {
@@ -1113,7 +1161,7 @@ function render(fast = false) {
   const T = (p) => fmt(p[0] * sc + ox) + ' ' + fmt(p[1] * sc + oy);
   const ringD = (r) => 'M' + r.map(T).join('L') + 'Z';
 
-  let items = allItems().filter((it) => isVis(it.lk));
+  let items = allItems().filter((it) => isVis(it.lk) && scnVisible(it));
   items = applyArea(items, R);
   const ground = []; const faces = []; const lineOps = []; const edges = [];
   const faceStroke = (L, col, opaque) => (fast ? { stroke: L.stroke, sw: L.strokeW, dash: L.dash } : opaque && col !== 'none' ? { stroke: col, sw: 0.6, dash: 'solid' } : { stroke: 'none', sw: 0, dash: 'solid' });
@@ -1910,7 +1958,7 @@ function renderVersions() {
     <button class="icon" data-act="dup" data-i="${i}" aria-label="Duplicar ${esc(v.name)}" title="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
     <button class="icon" data-act="del" data-i="${i}" aria-label="Excluir ${esc(v.name)}" title="Excluir" ${S.versions.length < 2 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('');
 }
-function switchVersion(i) { setActive(i); renderVersions(); syncUI(); buildLayerUI(); render(); persist(); ensureCapturedForVisible(); }
+function switchVersion(i) { setActive(i); sanitizeView(); renderVersions(); syncUI(); buildLayerUI(); render(); persist(); ensureCapturedForVisible(); }
 function duplicateVersion(i) {
   const v = S.versions[i]; const n = S.versions.length + 1;
   S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis }, visInit: true });
@@ -1928,6 +1976,8 @@ function buildLayerUI() {
   const dnames = drawLayerNames().sort((a, b) => a.localeCompare(b, 'pt-BR'));
   h += `<div class="lyr-sec"><h3><span>Desenho do projeto</span><span>${dnames.length}</span></h3>${dnames.map((n) => { const k = 'draw|' + n; const has = !!dl[k]; return lyrRow(k, has ? dl[k].n : (S.mode === 'giraffe' && !giraffeVis(n) ? 'oculto' : '—'), !has); }).join('') || '<div class="lyr"><span class="check">Nenhum elemento desenhado</span></div>'}</div>`;
   const names = [...new Set([...projectLayerNames(), ...Object.keys(S.mapItems)])].filter((n) => n !== BASE_VEC && !BASE_KEYS.includes(n));
+  const sc = scenarioIds(); const sk = Object.keys(sc).sort((a, b) => lkName('scn|' + a).localeCompare(lkName('scn|' + b), 'pt-BR'));
+  if (sk.length) h += `<div class="lyr-sec"><h3><span>Scenarios</span><span>${sk.length}</span></h3>${sk.map((id) => lyrRow('scn|' + id, sc[id])).join('')}<div class="lyr"><button id="btnScnGiraffe" style="flex:1;border:0">Copiar visibilidade do Giraffe</button></div></div>`;
   h += `<div class="lyr-sec"><h3><span>Camadas do Giraffe</span><span>${names.length}</span></h3>${names.map((n) => lyrRow('map|' + n, S.mapItems[n] ? S.mapItems[n].length : '—', true)).join('') || '<div class="lyr"><span class="check">Nenhuma camada no projeto</span></div>'}</div>`;
   h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>${BASE_KEYS.length + 1}</span></h3>${BASE_KEYS.map((k) => lyrRow('map|' + k, S.mapItems[k] ? S.mapItems[k].length : '—', true)).join('')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
   $('#layerUI').innerHTML = h;
@@ -2219,7 +2269,7 @@ function setPreset(p) {
 }
 function setAz(a) { S.view.az = ((a % 360) + 360) % 360; }
 function setZoom(z, at) {
-  const v = S.view; const nz = Math.max(0.1, Math.min(20, z));
+  const v = S.view; const nz = Math.max(0.02, Math.min(500, z));
   if (at) { const W2 = S.W / 2, H2 = S.H / 2; v.panX = at.x - W2 - (at.x - W2 - v.panX) * nz / v.zoom; v.panY = at.y - H2 - (at.y - H2 - v.panY) * nz / v.zoom; }
   else { v.panX *= nz / v.zoom; v.panY *= nz / v.zoom; }
   v.zoom = nz;
@@ -2328,7 +2378,7 @@ function wireUI() {
     const lk = e.target.dataset.vis; if (!lk) return; S.vis[lk] = e.target.checked; persist();
     if (e.target.checked && !hasData(lk)) await captureLk(lk); else { buildStyleUI(); render(); }
   });
-  $('#layerUI').addEventListener('click', (e) => { const b = e.target.closest('button[data-reload]'); if (b) { S.vis[b.dataset.reload] = true; captureLk(b.dataset.reload); } });
+  $('#layerUI').addEventListener('click', (e) => { if (e.target.closest('#btnScnGiraffe')) { copyScnFromGiraffe(); return; } const b = e.target.closest('button[data-reload]'); if (b) { S.vis[b.dataset.reload] = true; captureLk(b.dataset.reload); } });
   bindRange('buffer', () => S.area.buffer, (v) => { S.area.buffer = v; }, (f) => { viewChanged(f); if (!f) scheduleAreaRefresh(); });
   $('#areaMode').onchange = async (e) => {
     S.area.mode = e.target.value; syncUI();
@@ -2577,6 +2627,7 @@ async function enterGiraffe(reason) {
   S.gs.addListener(['bakedSections', 'rawSections'], onModelChange);
   S.gs.addListener(['projectLayers'], () => buildLayerUI());
   S.gs.addListener(['layerTree'], () => { applyDefaultVis(); buildLayerUI(); });
+  S.gs.addListener(['visibleScenarios'], () => { log('visibleScenarios: ' + JSON.stringify(S.gs.get('visibleScenarios')).slice(0, 200)); });
   S.gs.addListener(['views'], () => listViews());
   S.gs.addListener(['selectedProjectApp'], onProjectAppChange);
   S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
@@ -2584,6 +2635,7 @@ async function enterGiraffe(reason) {
   restore(); if (!S.cropUI.rect) fitRatio();
   sync(false); listViews(); renderVersions(); syncUI();
   if (!S.items.length) fetchBundleFallback();
+  if (sanitizeView()) { syncUI(); render(); }
   ensureCapturedForVisible(); histReset(); setEdit(false);
 }
 async function boot() {
