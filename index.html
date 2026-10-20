@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V21</title>
+<title>KV Axonometria — Beta V22</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -360,15 +360,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V21 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V22 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V21 */
-/* V21: 'sem fachada' só pela propriedade noFacade (facadeCost = 0 achatava volumes em uma laje).
+/* KV Axonometria — Beta V22 */
+/* V22: elementos com 'patch' (Path do Giraffe: elevação por vértice) viram superfícies 3D — terreno em
+   triangulação e ruas/calçadas que seguem o relevo (patchType slab com espessura).
+   V21: 'sem fachada' só pela propriedade noFacade (facadeCost = 0 achatava volumes em uma laje).
    V20: enquadramento de referência = limite do terreno (zoom 100% mostra o terreno); sem projeto, ignora
    elementos muito distantes; faixa de zoom ampliada.
    V19: scenarios — elementos com properties.scenario ligam/desligam por versão, como os layers
@@ -411,7 +413,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V21';
+const VERSION = 'V22';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -783,6 +785,7 @@ function specialStyle(lk) {
   if (/vegetação$/.test(n)) return { ...base, fill: '#DCEBCF', stroke: '#B9D3A2', strokeW: 0 };
   if (/uso do solo$/.test(n)) return { ...base, fill: '#F2F0EA', stroke: '#E2E2E2', strokeW: 0 };
   if (/vias$/.test(n)) return { ...base, fill: '#FFFFFF', stroke: '#C4C7C7', strokeW: 0.9 };
+  if (lk.startsWith('draw|') && S.items.some((i) => i.lk === lk && i.patch) && S.items.filter((i) => i.lk === lk).every((i) => i.patch || i.kind !== 'prism')) return { ...base, fill: '#E2E2E2', stroke: '#747878', strokeW: 0.5 };
   if (lk.startsWith('map|') && /tree|[áa]rvor/i.test(n)) return { ...base, fill: '#B9D3A2', stroke: '#5E7F52', strokeW: 0.5 };
   if (lk.startsWith('map|') && allItems().some((i) => i.lk === lk && i.kind === 'prism')) return { ...base, fill: '#F3F3F3', stroke: '#747878', strokeW: 0.45 };
   return null;
@@ -957,6 +960,26 @@ function geomToParts(g, P) {
 /* ---------------- INGEST (Giraffe features → items) ---------------- */
 function propColor(p) { return p.color ?? p._color ?? p.fill ?? p.fillColor ?? p.colour ?? p['fill-color'] ?? p.stroke ?? null; }
 function featId(f) { return String(f?.properties?.id ?? f?.id ?? ''); }
+function patchMesh(polys, p) {
+  const base = +(p._baseHeight ?? p.baseHeight ?? 0) || 0; const pz = p.patch.map((v) => +v || 0);
+  let th = +(p._height ?? NaN) - base; if (!isFinite(th) || th < 0) th = +(p.height ?? 0) || 0; if (String(p.patchType || 'slab') !== 'slab') th = 0;
+  const faces = []; let k = 0;
+  for (const poly of polys) {
+    const rings = []; const zs = [];
+    poly.forEach((r0, ri) => { const r = openRing(r0); const z = r.map(() => base + pz[Math.min(k++, pz.length - 1)]); const ccw = sArea(r) > 0; if ((ri === 0) !== ccw) { r.reverse(); z.reverse(); } rings.push(r); zs.push(z); });
+    const flat = [], holes = [], pts = [];
+    rings.forEach((r, ri) => { if (ri) holes.push(pts.length); r.forEach((q, i) => { flat.push(q[0], q[1]); pts.push([q[0], q[1], zs[ri][i]]); }); });
+    const ids = window.earcut(flat, holes.length ? holes : null, 2);
+    for (let t = 0; t + 2 < ids.length; t += 3) {
+      let a = pts[ids[t]], b = pts[ids[t + 1]], c = pts[ids[t + 2]];
+      if ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) < 0) [b, c] = [c, b]; // normal para cima
+      faces.push([[a[0], a[1], a[2] + th], [b[0], b[1], b[2] + th], [c[0], c[1], c[2] + th]]);
+      if (th > 0.05) faces.push([a, c, b]); // face de baixo
+    }
+    if (th > 0.05) rings.forEach((r, ri) => { const z = zs[ri]; for (let i = 0; i < r.length; i++) { const j = (i + 1) % r.length; faces.push([[r[i][0], r[i][1], z[i]], [r[j][0], r[j][1], z[j]], [r[j][0], r[j][1], z[j] + th], [r[i][0], r[i][1], z[i] + th]]); } });
+  }
+  return faces.length ? faces : null;
+}
 function isNoFacade(p) {
   // só as propriedades de exibição da fachada (noFacade do Giraffe); custos como facadeCost não contam
   const yes = (v) => v === true || ['true', '1', 'yes'].includes(String(v).toLowerCase());
@@ -981,6 +1004,11 @@ function pushFeature(list, f, src, P, opts = {}) {
   let z1 = +(p._height ?? NaN);
   if (!isFinite(z1)) { const h = +(p.height ?? 0) || 0; z1 = z0 + h; }
   if (opts.z0 != null) z0 = opts.z0; if (opts.z1 != null) z1 = opts.z1;
+  // Path do Giraffe: 'patch' = elevação de cada vértice (relativa à base); vira superfície 3D
+  if (Array.isArray(p.patch) && p.patch.length >= 3 && parts.polys.length && window.earcut) {
+    const pm = patchMesh(parts.polys, p);
+    if (pm) { list.push({ ...meta, kind: 'mesh', faces: pm, shaded: true, patch: true }); return; }
+  }
   const nf = z1 - z0 > 0.05 && isNoFacade(p);
   const f2f = +(p.floorToFloor ?? p.floor_to_floor ?? p._floorToFloor ?? p.floorHeight ?? NaN);
   const lv = +(p.levels ?? NaN);
@@ -1301,13 +1329,13 @@ function render(fast = false) {
     const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const fop = L.fillOp * (it.fop ?? 1); const stroke = it.strokeHex ? (S.colorMap[it.lk]?.[it.strokeHex] || it.strokeHex) : L.stroke;
     for (const f of it.faces) {
       if (f.length < 3) continue;
-      if (it.glb) {
+      if (it.glb || it.shaded) {
         const [a, b, c] = f; const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
         let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const nl = Math.hypot(nx, ny, nz); if (nl < 1e-12) continue; nx /= nl; ny /= nl; nz /= nl;
         if (V.depth(nx, ny, nz) - d0 > 1e-6) continue; // de costas
-        const lam = nx * L3[0] + ny * L3[1] + nz * L3[2]; const col = fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.85, Math.max(0, st.shade * (1 - (lam + 1) / 2) * 1.3)));
+        const lam = nx * L3[0] + ny * L3[1] + nz * L3[2]; const tone = Math.round(Math.min(0.85, Math.max(0, st.shade * (1 - (lam + 1) / 2) * 1.3)) * 50) / 50; const col = fill === 'none' ? 'none' : mix(fill, '#000000', tone);
         const r3 = f.map((p) => P3(p[0], p[1], p[2]));
-        addFace([r3], { t: 'poly', g, rings: [r3], fill: col, fop, stroke: col, sw: 0.3, dash: 'solid' }, null, true).opaque = fop >= 0.95;
+        addFace([r3], { t: 'poly', g, rings: [r3], fill: col, fop, stroke: fop >= 0.95 ? col : 'none', sw: fop >= 0.95 ? 0.9 : 0, dash: 'solid' }, null, false).opaque = fop >= 0.95;
         continue;
       }
       const r3 = f.map((p) => P3(p[0], p[1], p[2]));
