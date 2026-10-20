@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V17</title>
+<title>KV Axonometria — Beta V18</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -312,6 +312,8 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <h2>Linhas e faces</h2>
     <div class="field"><label for="contourW">Perfil padrão</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
     <label class="check"><input type="checkbox" id="perfilGroup" checked>Perfil só no contorno do conjunto (varandas e volumes encostados não recebem perfil)</label>
+    <label class="check"><input type="checkbox" id="mergeCoplanar" checked>Sem linhas de junção entre faces no mesmo plano e da mesma cor</label>
+    <p class="hint">No conjunto, o perfil usa espessura, cor e traço do layer de maior volume.</p>
     <div class="field"><label for="shade">Sombreamento</label><div class="ctl"><input type="range" id="shade" min="0" max="0.8" step="0.02"><input type="number" id="shadeN" min="0" max="0.8" step="0.02" aria-label="Intensidade do sombreamento das fachadas"></div></div>
 
     <h2>Sombra projetada</h2>
@@ -358,15 +360,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V17 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V18 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V17 */
-/* V17: perfil só no contorno do conjunto (volumes que se tocam, ex.: torre + varandas); arestas testadas pelas
+/* KV Axonometria — Beta V18 */
+/* V18: sem linhas de junção entre faces coplanares da mesma cor; buffer de profundidade em resolução cheia;
+   perfil do conjunto com espessura/cor do layer do maior volume; cor do perfil por layer.
+   V17: perfil só no contorno do conjunto (volumes que se tocam, ex.: torre + varandas); arestas testadas pelas
    próprias faces (sem sobras nas pontas), pontas retas nas arestas internas.
    V16: layers novos entram desligados nas versões já existentes; layer sem nome vira 'Sem camada';
    caminhos SVG agrupados (muito menos elementos); layers com muitos polígonos nascem sem linhas.
@@ -402,7 +406,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V17';
+const VERSION = 'V18';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1112,7 +1116,7 @@ function render(fast = false) {
   let items = allItems().filter((it) => isVis(it.lk));
   items = applyArea(items, R);
   const ground = []; const faces = []; const lineOps = []; const edges = [];
-  const faceStroke = (L, col, opaque) => (fast ? { stroke: L.stroke, sw: L.strokeW, dash: L.dash } : opaque && col !== 'none' ? { stroke: col, sw: 0.35, dash: 'solid' } : { stroke: 'none', sw: 0, dash: 'solid' });
+  const faceStroke = (L, col, opaque) => (fast ? { stroke: L.stroke, sw: L.strokeW, dash: L.dash } : opaque && col !== 'none' ? { stroke: col, sw: 0.6, dash: 'solid' } : { stroke: 'none', sw: 0, dash: 'solid' });
   const prj = (r, z) => r.map((p) => V.P(p[0], p[1], z));
   const P3 = (x, y, z) => { const p = V.P(x, y, z); p.push(V.depth(x, y, z)); return p; };
   const sun = st.sh.on ? sunPos() : null; const sunUp = sun && sun.alt > 1;
@@ -1193,6 +1197,9 @@ function render(fast = false) {
           if (b.z0 > a.z1 + 0.05 || a.z0 > b.z1 + 0.05) continue; const ri = fnd(i), rj = fnd(j); if (ri !== rj) par[ri] = rj; } }
     }
     prismsAll.forEach((it, i) => gidOf.set(it, fnd(i))); }
+  const domOf = new Map(); // gid → layer do maior volume (define o perfil do conjunto)
+  for (const it of prismsAll) { const gid = gidOf.get(it); const b = itemBBox(it); const vol = (b.maxx - b.minx) * (b.maxy - b.miny) * (it.z1 - it.z0); const cur = domOf.get(gid); if (!cur || vol > cur.vol) domOf.set(gid, { vol, lk: it.lk }); }
+  const perfilOf = (lk) => { const L = LS[lk]; return { w: L.contourW ?? st.contourW, c: L.contourC || L.stroke, dash: L.dash }; };
   for (const it of prismsAll) {
     nVol++;
     const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const opaque = L.fillOp >= 0.95 && fill !== 'none';
@@ -1209,7 +1216,7 @@ function render(fast = false) {
         else { const lam = (nx * Lx + ny * Ly) / Ll; tone = st.shade * (1 - (lam + 1) / 2) * 1.25; }
         const q = [P3(a[0], a[1], it.z0), P3(b[0], b[1], it.z0), P3(b[0], b[1], it.z1), P3(a[0], a[1], it.z1)];
         const wc = fill === 'none' ? 'none' : mix(fill, '#000000', Math.min(0.9, Math.max(0, tone)));
-        const wface = addFace([q], { t: 'poly', g, rings: [q], fill: wc, fop: L.fillOp, ...faceStroke(L, wc, opaque) }, null); wface.opaque = opaque; wface.gid = gid; wf[i] = wface;
+        const wface = addFace([q], { t: 'poly', g, rings: [q], fill: wc, fop: L.fillOp, ...faceStroke(L, wc, opaque) }, null); wface.opaque = opaque; wface.gid = gid; wface.pl = [nx, ny, 0, nx * a[0] + ny * a[1]]; wf[i] = wface;
       }
       front.push(fr);
     }
@@ -1217,12 +1224,12 @@ function render(fast = false) {
     if (!V.elev) {
       const top = it.poly.map((r) => r.map((p) => P3(p[0], p[1], it.z1)));
       const extra = (S.raster && st.drapeRoofs && isVis('raster')) ? (() => { const m = rasterMatrix(V, it.z1); return m ? [{ t: 'img', g, m, op: st.rasterOp, clip: top }] : null; })() : null;
-      topF = addFace(top, { t: 'poly', g, rings: top, fill, fop: L.fillOp, ...faceStroke(L, fill, opaque) }, extra); topF.opaque = opaque; topF.gid = gid;
+      topF = addFace(top, { t: 'poly', g, rings: top, fill, fop: L.fillOp, ...faceStroke(L, fill, opaque) }, extra); topF.opaque = opaque; topF.gid = gid; topF.pl = [0, 0, 1, it.z1];
     }
     // arestas (desenhadas uma vez só, depois das faces, só onde visíveis)
     if (!fast) {
-      const wS = L.contourW ?? st.contourW, wI = L.strokeW; const c = L.stroke, dash = L.dash;
-      const E = (a, b, z0, z1, sil, fs) => { if (c === 'none' || (wS <= 0 && wI <= 0)) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS, wI, sil, dash, g, fs: fs.filter(Boolean) }); };
+      const pf = perfilOf(st.perfilGroup !== false ? domOf.get(gid).lk : it.lk); const wS = pf.w, wI = L.strokeW; const c = L.stroke, dash = L.dash;
+      const E = (a, b, z0, z1, sil, fs) => { if (c === 'none' || (wS <= 0 && wI <= 0)) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS, wI, sil, dash, pc: pf.c, pdash: pf.dash, g, fs: fs.filter(Boolean) }); };
       it.poly.forEach((ring, ri) => {
         const fr = front[ri]; const wf = wallF[ri]; const n = ring.length;
         for (let i = 0; i < n; i++) {
@@ -1270,7 +1277,7 @@ function render(fast = false) {
   }
 
   // ---- visibility: software depth buffer → painter order + visible silhouettes
-  const q = 0.5; const ZW = Math.ceil(W * q), ZH = Math.ceil(H * q);
+  const q = fast ? 0.5 : 1; const ZW = Math.ceil(W * q), ZH = Math.ceil(H * q);
   const tx = (p) => (p[0] * sc + ox) * q, ty = (p) => (p[1] * sc + oy) * q;
   faces.forEach((f, i) => { f.i = i; let s = 0, n = 0; for (const r of f.rings3) for (const p of r) { s += p[2]; n++; } f.d = n ? s / n : 0; });
   let order;
@@ -1334,21 +1341,25 @@ function render(fast = false) {
   // visible silhouette segments
   const silPaths = [];
   if (!fast && zOp && edges.length) {
-    const eps0 = 0.04 + 1.2 / (sc * q); const grp = st.perfilGroup !== false;
+    const eps0 = 0.04 + 1.2 / (sc * q); const grp = st.perfilGroup !== false; const seam = st.mergeCoplanar !== false;
     const at = (px, py, arr) => (px < 0 || py < 0 || px >= ZW || py >= ZH ? -1 : arr[py * ZW + px]);
     for (const e of edges) {
       const A = P3(...e.a), B = P3(...e.b); const ax = tx(A), ay = ty(A), bx = tx(B), by = ty(B); const len = Math.hypot(bx - ax, by - ay); if (len < 0.01) continue;
       const own = new Set(e.fs.map((f) => f.i)); const nx = -(by - ay) / len * 1.8, ny = (bx - ax) / len * 1.8; const n = Math.max(1, Math.ceil(len));
-      const eP = e.wS > 0 ? (e._p = e._p || { ...e, w: e.wS }) : null, eI = e.wI > 0 ? (e._i = e._i || { ...e, w: e.wI }) : null;
+      const eP = e.wS > 0 ? { ...e, w: e.wS, c: e.pc, dash: e.pdash, perf: true } : null, eI = e.wI > 0 ? { ...e, w: e.wI } : null;
       let cur = null, curE = null;
       const close = () => { if (cur && cur.length > 1 && curE) silPaths.push({ pts: cur, e: curE }); cur = null; curE = null; };
       for (let k = 0; k <= n; k++) {
         const t = k / n; const p = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; const d = A[2] + (B[2] - A[2]) * t;
         const fx = ax + (bx - ax) * t, fy = ay + (by - ay) * t; const px = Math.floor(fx), py = Math.floor(fy);
         // visível se uma das próprias faces aparece no ponto, ou se nada opaco está à frente
-        let vis = false; for (let yy = py - 1; yy <= py + 1 && !vis; yy++) for (let xx = px - 1; xx <= px + 1; xx++) { if (own.has(at(xx, yy, idOp))) { vis = true; break; } }
+        let vis = own.has(at(px, py, idOp)) || own.has(at(px + 1, py, idOp)) || own.has(at(px - 1, py, idOp)) || own.has(at(px, py + 1, idOp)) || own.has(at(px, py - 1, idOp));
         if (!vis) { const z = at(px, py, zOp); vis = z === -1 || d - eps0 <= z; }
         let use = null;
+        if (vis && seam) { // junção entre faces coplanares da mesma cor (ou a mesma face dos dois lados): sem linha
+          const f1 = at(Math.floor(fx + nx), Math.floor(fy + ny), idOp), f2 = at(Math.floor(fx - nx), Math.floor(fy - ny), idOp);
+          if (f1 >= 0 && f2 >= 0) { const F1 = faces[f1], F2 = faces[f2]; if (F1 === F2 || (F1.pl && F2.pl && F1.op.fill === F2.op.fill && Math.abs(F1.pl[0] - F2.pl[0]) + Math.abs(F1.pl[1] - F2.pl[1]) + Math.abs(F1.pl[2] - F2.pl[2]) < 2e-3 && Math.abs(F1.pl[3] - F2.pl[3]) < 0.05)) vis = false; }
+        }
         if (vis) {
           let isP = e.sil;
           if (isP && grp) { const g1 = at(Math.floor(fx + nx), Math.floor(fy + ny), gOp), g2 = at(Math.floor(fx - nx), Math.floor(fy - ny), gOp); isP = g1 !== g2; }
@@ -1400,7 +1411,7 @@ function render(fast = false) {
   flush();
   if (silPaths.length) {
     if (curG !== null) out += '</g>'; curG = null;
-    const byG = {}; silPaths.forEach((s) => { const k = s.e.g; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}|${s.e.w === s.e.wS ? 'P' : 'I'}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
+    const byG = {}; silPaths.forEach((s) => { const k = s.e.g; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}|${s.e.perf ? 'P' : 'I'}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
     for (const [g, groups] of Object.entries(byG)) {
       const nm = g + ' · arestas';
       out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash, pf] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; return `<path d="${ps.map((pts) => 'M' + pts.map(T).join('L')).join('')}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${dash === 'dot' ? 'round' : pf === 'P' && !da ? 'round' : 'butt'}" stroke-linejoin="round"/>`; }).join('') + '</g>';
@@ -1982,7 +1993,7 @@ function buildStyleUI() {
         ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
         ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
-        ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><span class="out">vazio = padrão</span></div></div>` : ''}
+        ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
         ${(cm === 'giraffe' || its.some((i) => i.ink || i.ls)) && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
       </div></details></div>`;
@@ -2184,7 +2195,7 @@ function syncUI() {
   $('#fEl').hidden = v.proj !== 'ortho'; $('#fK').hidden = v.proj === 'ortho';
   const isPlan = v.proj === 'ortho' && v.el >= 89.5; $('#fPlanRot').hidden = !isPlan; $('#planRot').value = Math.round(((v.az - 180) % 360 + 360) % 360);
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
-  $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
+  $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
   $('#north').checked = st.north; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
   $('#cropOn').checked = c.on; $('#cropRatio').value = c.ratio; $('#cropShowOut').checked = c.showOut; $('#fCropCustom').hidden = c.ratio !== 'custom'; $('#cropCW').value = c.cw; $('#cropCH').value = c.ch;
@@ -2351,6 +2362,7 @@ function wireUI() {
   $('#shColor').oninput = (e) => { S.style.sh.color = e.target.value; scheduleRender(); persist(); };
   const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); drawOverlay(); persist(); });
   $('#perfilGroup').onchange = (e) => { S.style.perfilGroup = e.target.checked; render(); persist(); };
+  $('#mergeCoplanar').onchange = (e) => { S.style.mergeCoplanar = e.target.checked; render(); persist(); };
   sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); sty('north', 'north', 'checked'); sty('drapeRoofs', 'drapeRoofs', 'checked');
   const sui = $('#styleUI');
   sui.addEventListener('input', (e) => {
@@ -2364,7 +2376,7 @@ function wireUI() {
     scheduleRender(e.target.type === 'range'); persist();
   });
   sui.addEventListener('change', () => render());
-  sui.addEventListener('click', (e) => { const b = e.target.closest('button[data-creset]'); if (!b) return; const lk = b.closest('details').dataset.lk; if (S.colorMap[lk]) delete S.colorMap[lk][b.dataset.creset]; buildStyleUI(); render(); persist(); });
+  sui.addEventListener('click', (e) => { const pb = e.target.closest('button[data-preset]'); if (pb) { const lk = pb.closest('details').dataset.lk; delete S.lstyle[lk][pb.dataset.preset]; buildStyleUI(); render(); persist(); return; } const b = e.target.closest('button[data-creset]'); if (!b) return; const lk = b.closest('details').dataset.lk; if (S.colorMap[lk]) delete S.colorMap[lk][b.dataset.creset]; buildStyleUI(); render(); persist(); });
   $('#usageUI').addEventListener('input', (e) => { const u = e.target.dataset.usage; if (u == null) return; S.usageMap[u] = e.target.value; scheduleRender(); persist(); });
 
   // export
