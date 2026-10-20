@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V20</title>
+<title>KV Axonometria — Beta V21</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -360,15 +360,16 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V20 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V21 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V20 */
-/* V20: enquadramento de referência = limite do terreno (zoom 100% mostra o terreno); sem projeto, ignora
+/* KV Axonometria — Beta V21 */
+/* V21: 'sem fachada' só pela propriedade noFacade (facadeCost = 0 achatava volumes em uma laje).
+   V20: enquadramento de referência = limite do terreno (zoom 100% mostra o terreno); sem projeto, ignora
    elementos muito distantes; faixa de zoom ampliada.
    V19: scenarios — elementos com properties.scenario ligam/desligam por versão, como os layers
    (padrão = visibilidade do Giraffe ao aparecer; 'Copiar do Giraffe').
@@ -410,7 +411,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V20';
+const VERSION = 'V21';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -957,11 +958,13 @@ function geomToParts(g, P) {
 function propColor(p) { return p.color ?? p._color ?? p.fill ?? p.fillColor ?? p.colour ?? p['fill-color'] ?? p.stroke ?? null; }
 function featId(f) { return String(f?.properties?.id ?? f?.id ?? ''); }
 function isNoFacade(p) {
-  for (const [k, v] of Object.entries(p || {})) {
-    if (!/fa[cç]ade/i.test(k)) continue; const s = String(v).toLowerCase();
-    if (/^(no|hide|without|sem)/i.test(k) || /(off|hidden|none)$/i.test(k)) { if (v === true || s === 'true' || s === '1' || s === 'yes') return true; }
-    else if (v === false || ['false', 'none', '0', 'no', 'off', 'hidden', 'nofacade', 'no facade'].includes(s)) return true;
-  }
+  // só as propriedades de exibição da fachada (noFacade do Giraffe); custos como facadeCost não contam
+  const yes = (v) => v === true || ['true', '1', 'yes'].includes(String(v).toLowerCase());
+  const no = (v) => v === false || ['false', '0', 'no', 'none', 'off', 'hidden'].includes(String(v).toLowerCase());
+  if (p == null) return false;
+  if (yes(p.noFacade) || yes(p.hideFacade) || yes(p.no_facade)) return true;
+  if (p.facade !== undefined && no(p.facade)) return true;
+  if (p.showFacade !== undefined && no(p.showFacade)) return true;
   return false;
 }
 function pushFeature(list, f, src, P, opts = {}) {
