@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V22</title>
+<title>KV Axonometria — Beta V23</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -56,7 +56,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stro
 .field>label,.field>.lbl{font-size:13px;color:var(--md-sys-color-on-surface-variant)}
 .field .ctl{display:flex;gap:8px;align-items:center;min-width:0}
 input,select{font-family:inherit;font-size:14px}
-select,input[type=number],input[type=text]{min-height:48px;padding:0 12px;background:var(--md-sys-color-surface-container-low);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline);width:100%;min-width:0}
+select,input[type=number],input[type=text],input[type=search]{min-height:48px;padding:0 12px;background:var(--md-sys-color-surface-container-low);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline);width:100%;min-width:0}
 input[type=number]{width:84px;flex:0 0 84px;padding:0 8px}
 input[type=range]{flex:1;min-height:48px;accent-color:var(--md-sys-color-primary);min-width:0}
 input[type=color]{width:48px;height:48px;padding:6px;border:1px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container-low);cursor:pointer;flex:0 0 48px}
@@ -281,6 +281,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
   <section class="panel" id="p-conteudo" role="tabpanel" aria-labelledby="tab-conteudo" hidden>
     <h2>Layers</h2>
     <p class="hint">Todos os layers do projeto aparecem aqui. Na primeira leitura, cada layer entra ligado ou desligado conforme está no Giraffe; depois, o controle é do app (por versão). Layers ocultos no Giraffe são lidos ao ligar; use ↻ para ler de novo. Elementos atribuídos a scenarios aparecem se pelo menos um dos seus scenarios estiver ligado.</p>
+    <div class="field"><label for="lyrSearch">Buscar</label><div class="ctl"><input type="search" id="lyrSearch" placeholder="Nome do layer ou scenario" autocomplete="off"></div></div>
     <div id="layerUI"></div>
     <label class="check"><input type="checkbox" id="autoSync">Atualizar o desenho do projeto automaticamente</label>
 
@@ -337,6 +338,8 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
 
     <h2>Layers</h2>
     <p class="hint" id="styleHint"></p>
+    <div class="field"><label for="styleSearch">Buscar</label><div class="ctl"><input type="search" id="styleSearch" placeholder="Nome do layer" autocomplete="off"></div></div>
+    <label class="check"><input type="checkbox" id="styleOnlyOn" checked>Só os layers ligados nesta vista</label>
     <div id="usageUI"></div>
     <div id="styleUI"></div>
   </section>
@@ -360,15 +363,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V22 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V23 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V22 */
-/* V22: elementos com 'patch' (Path do Giraffe: elevação por vértice) viram superfícies 3D — terreno em
+/* KV Axonometria — Beta V23 */
+/* V23: linhas de pavimento (levels/floorToFloor; respeita hideFloors) com espessura e cor por layer;
+   busca de layers em Conteúdo e Estilo; Estilo mostra só os layers ligados na vista.
+   V22: elementos com 'patch' (Path do Giraffe: elevação por vértice) viram superfícies 3D — terreno em
    triangulação e ruas/calçadas que seguem o relevo (patchType slab com espessura).
    V21: 'sem fachada' só pela propriedade noFacade (facadeCost = 0 achatava volumes em uma laje).
    V20: enquadramento de referência = limite do terreno (zoom 100% mostra o terreno); sem projeto, ignora
@@ -413,7 +418,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V22';
+const VERSION = 'V23';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1026,7 +1031,10 @@ function pushFeature(list, f, src, P, opts = {}) {
       else if (isFinite(lv) && lv > 0) { const st = (z1 - z0) / lv; for (let i = 0; i < lv; i++) zs.push(z0 + i * st); }
       else zs.push(z0);
       for (const zb of zs) list.push({ ...meta, kind: 'prism', poly: o, z0: zb, z1: zb + thk, slab: true });
-    } else if (z1 - z0 > 0.05) list.push({ ...meta, kind: 'prism', poly: o, z0, z1 });
+    } else if (z1 - z0 > 0.05) {
+      let lv = 0; if (p.hideFloors !== true && String(p.hideFloors) !== 'true') { const L0 = Math.round(+p.levels || 0), f2 = +(p.floorToFloor ?? p.floor_to_floor ?? 0); lv = L0 > 1 ? L0 : f2 > 0.5 ? Math.round((z1 - z0) / f2) : 0; if (lv > 400) lv = 0; }
+      list.push({ ...meta, kind: 'prism', poly: o, z0, z1, lv });
+    }
     else { list.push({ ...meta, kind: 'poly', poly: o, z: z0, noStroke: !!olG }); pushInk(z0); }
   }
   if (parts.lines.length) {
@@ -1320,6 +1328,11 @@ function render(fast = false) {
           if (fr[i]) E(a, b, it.z0, it.z0, true, [wf[i]]);
         }
       });
+      // linhas de pavimento nas fachadas visíveis
+      const wF = L.floorW ?? L.strokeW, cF = L.floorC || L.stroke;
+      if (it.lv > 1 && wF > 0 && !V.plan) it.poly.forEach((ring, ri) => { const fr = front[ri]; const wf = wallF[ri]; const n = ring.length; const st2 = (it.z1 - it.z0) / it.lv;
+        for (let i = 0; i < n; i++) { if (!fr[i] || !wf[i]) continue; const a = ring[i], b = ring[(i + 1) % n];
+          for (let k = 1; k < it.lv; k++) { const z = it.z0 + k * st2; edges.push({ a: [a[0], a[1], z], b: [b[0], b[1], z], c: cF, wS: 0, wI: wF, sil: false, floor: true, dash: 'solid', g, fs: [wf[i]] }); } } });
     }
   }
   // meshes (envoltórias, objetos 3D)
@@ -1435,7 +1448,7 @@ function render(fast = false) {
         let vis = own.has(at(px, py, idOp)) || own.has(at(px + 1, py, idOp)) || own.has(at(px - 1, py, idOp)) || own.has(at(px, py + 1, idOp)) || own.has(at(px, py - 1, idOp));
         if (!vis) { const z = at(px, py, zOp); vis = z === -1 || d - eps0 <= z; }
         let use = null;
-        if (vis && seam) { // junção entre faces coplanares da mesma cor (ou a mesma face dos dois lados): sem linha
+        if (vis && seam && !e.floor) { // junção entre faces coplanares da mesma cor (ou a mesma face dos dois lados): sem linha
           const f1 = at(Math.floor(fx + nx), Math.floor(fy + ny), idOp), f2 = at(Math.floor(fx - nx), Math.floor(fy - ny), idOp);
           if (f1 >= 0 && f2 >= 0) { const F1 = faces[f1], F2 = faces[f2]; if (F1 === F2 || (F1.pl && F2.pl && F1.op.fill === F2.op.fill && Math.abs(F1.pl[0] - F2.pl[0]) + Math.abs(F1.pl[1] - F2.pl[1]) + Math.abs(F1.pl[2] - F2.pl[2]) < 2e-3 && Math.abs(F1.pl[3] - F2.pl[3]) < 0.05)) vis = false; }
         }
@@ -1998,10 +2011,18 @@ function duplicateVersion(i) {
 
 /* ---------------- LAYERS UI (Conteúdo) ---------------- */
 const ICON_RELOAD = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M4 20v-5h5"/></svg>';
+const normTxt = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 function lyrRow(lk, count, reload) {
   const on = isVis(lk) && hasData(lk); const nm = esc(lkName(lk));
-  return `<div class="lyr"><label class="check"><input type="checkbox" data-vis="${esc(lk)}" ${on ? 'checked' : ''}><span class="nm">${nm}</span></label><span class="ct">${count}</span>${reload ? `<button class="icon" data-reload="${esc(lk)}" aria-label="Ler de novo ${nm}" title="Ler de novo">${ICON_RELOAD}</button>` : ''}</div>`;
+  return `<div class="lyr" data-name="${esc(normTxt(lkName(lk)))}"><label class="check"><input type="checkbox" data-vis="${esc(lk)}" ${on ? 'checked' : ''}><span class="nm">${nm}</span></label><span class="ct">${count}</span>${reload ? `<button class="icon" data-reload="${esc(lk)}" aria-label="Ler de novo ${nm}" title="Ler de novo">${ICON_RELOAD}</button>` : ''}</div>`;
 }
+function applyListFilter(hostSel, q, onlyOn) {
+  const host = $(hostSel); if (!host) return; const t = normTxt(q || '').trim();
+  host.querySelectorAll('.lyr[data-name], .grp[data-name]').forEach((r) => { r.hidden = (t && !r.dataset.name.includes(t)) || (onlyOn && r.dataset.on === '0'); });
+  host.querySelectorAll('.lyr-sec, .grp-sec').forEach((s) => { const rows = s.querySelectorAll('.lyr[data-name], .grp[data-name]'); if (rows.length) s.hidden = [...rows].every((r) => r.hidden); });
+}
+function filterLayerUI() { applyListFilter('#layerUI', $('#lyrSearch')?.value); }
+function filterStyleUI() { applyListFilter('#styleUI', $('#styleSearch')?.value, $('#styleOnlyOn')?.checked); }
 function buildLayerUI() {
   const dl = drawLayers(); let h = '';
   const dnames = drawLayerNames().sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -2011,7 +2032,7 @@ function buildLayerUI() {
   if (sk.length) h += `<div class="lyr-sec"><h3><span>Scenarios</span><span>${sk.length}</span></h3>${sk.map((id) => lyrRow('scn|' + id, sc[id])).join('')}<div class="lyr"><button id="btnScnGiraffe" style="flex:1;border:0">Copiar visibilidade do Giraffe</button></div></div>`;
   h += `<div class="lyr-sec"><h3><span>Camadas do Giraffe</span><span>${names.length}</span></h3>${names.map((n) => lyrRow('map|' + n, S.mapItems[n] ? S.mapItems[n].length : '—', true)).join('') || '<div class="lyr"><span class="check">Nenhuma camada no projeto</span></div>'}</div>`;
   h += `<div class="lyr-sec"><h3><span>Mapa base</span><span>${BASE_KEYS.length + 1}</span></h3>${BASE_KEYS.map((k) => lyrRow('map|' + k, S.mapItems[k] ? S.mapItems[k].length : '—', true)).join('')}${lyrRow('raster', S.raster ? `${S.raster.W}×${S.raster.H}` : '—', true)}</div>`;
-  $('#layerUI').innerHTML = h;
+  $('#layerUI').innerHTML = h; filterLayerUI();
 }
 const inflight = new Map();
 function captureLk(lk, quiet) {
@@ -2070,18 +2091,19 @@ function buildStyleUI() {
       const colors = {}; its.forEach((i) => { if (i.color && i.colorReal !== false) colors[i.color] = (colors[i.color] || 0) + 1; });
       const showFill = !lineOnly && (cm === 'paleta' || lk.startsWith('ctx|') || its.some((i) => fillOf(i) === L.fill));
       const sw = lineOnly ? (cm === 'giraffe' && its[0].color ? its[0].color : 'transparent') : (cm === 'paleta' || lk.startsWith('ctx|') ? L.fill : fillOf(its[0]));
-      h += `<div class="grp${isVis(lk) ? '' : ' off'}"><details data-lk="${esc(lk)}" ${openSet.has(lk) ? 'open' : ''}><summary><span class="sw" style="background:${sw};border-color:${L.stroke}"></span><span class="nm">${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span><span class="ct">${its.length}</span></summary><div class="body">
+      h += `<div class="grp${isVis(lk) ? '' : ' off'}" data-name="${esc(normTxt(lkName(lk)))}" data-on="${isVis(lk) ? 1 : 0}"><details data-lk="${esc(lk)}" ${openSet.has(lk) ? 'open' : ''}><summary><span class="sw" style="background:${sw};border-color:${L.stroke}"></span><span class="nm">${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span><span class="ct">${its.length}</span></summary><div class="body">
         ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
         ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
         ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
+        ${its.some((i) => i.kind === 'prism' && i.lv > 1) ? `<div class="field"><label for="${id}v">Pavimentos</label><div class="ctl"><input type="number" id="${id}v" data-k="floorW" min="0" max="12" step="0.1" value="${L.floorW ?? ''}" placeholder="= linha (${L.strokeW})" aria-label="Espessura das linhas de pavimento"><input type="color" data-k="floorC" value="${toHex(L.floorC || L.stroke)}" aria-label="Cor das linhas de pavimento"><button class="icon" data-preset="floorC" aria-label="Cor dos pavimentos igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
         ${(cm === 'giraffe' || its.some((i) => i.ink || i.ls)) && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
       </div></details></div>`;
     }
     h += '</div>';
   }
-  $('#styleUI').innerHTML = h || '<p class="hint">Os layers aparecem aqui quando houver conteúdo.</p>';
+  $('#styleUI').innerHTML = h || '<p class="hint">Os layers aparecem aqui quando houver conteúdo.</p>'; filterStyleUI();
 }
 
 /* ---------------- EXPORT ---------------- */
@@ -2427,6 +2449,7 @@ function wireUI() {
   $('#fileRaster').onchange = (e) => { const f = e.target.files[0]; if (f) importRaster(f); e.target.value = ''; };
 
   // style
+  $('#lyrSearch').oninput = filterLayerUI; $('#styleSearch').oninput = filterStyleUI; $('#styleOnlyOn').onchange = filterStyleUI;
   $('#btnApplyPalette').onclick = () => { applyPalette($('#palette').value); syncUI(); buildStyleUI(); render(); persist(); };
   $('#colorMode').onchange = (e) => { S.style.colorMode = e.target.value; buildStyleUI(); render(); persist(); };
   const after = (f) => { scheduleRender(f); if (!f) persist(); };
@@ -2450,7 +2473,7 @@ function wireUI() {
     const det = e.target.closest('details'); if (!det) return; const lk = det.dataset.lk;
     if (e.target.dataset.cmap) { (S.colorMap[lk] = S.colorMap[lk] || {})[e.target.dataset.cmap] = e.target.value; scheduleRender(); persist(); return; }
     const k = e.target.dataset.k; if (!k) return;
-    if (k === 'contourW' && e.target.value === '') { delete S.lstyle[lk].contourW; scheduleRender(); persist(); return; }
+    if ((k === 'contourW' || k === 'floorW') && e.target.value === '') { delete S.lstyle[lk][k]; scheduleRender(); persist(); return; }
     const v = e.target.type === 'range' || e.target.type === 'number' ? +e.target.value : e.target.value; S.lstyle[lk][k] = v;
     const sw = det.querySelector('.sw'); if (k === 'fill') sw.style.background = v; if (k === 'stroke') sw.style.borderColor = v;
     if (k === 'fillOp') { const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = Math.round(v * 100) + '%'; }
