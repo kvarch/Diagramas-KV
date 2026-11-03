@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V23</title>
+<title>KV Axonometria — Beta V24</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -352,6 +352,12 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnSVG">Baixar SVG</button><button class="primary" id="btnPNG">Baixar PNG</button></div>
     <div class="row"><button id="btnAllPNG">PNG de todas as versões</button></div>
     <p class="hint">Exporta exatamente o recorte. O SVG é vetorial e editável; cada layer vira um grupo nomeado.</p>
+    <h2>Publicar para o KV Pranchas</h2>
+    <p class="hint">As versões marcadas ficam disponíveis no KV Pranchas (Imagens › Vistas da Axonometria) como desenho vetorial, cortado no recorte. Quando uma versão muda (ângulo, estilo, layers ou o modelo), ela é republicada sozinha — enquanto este app estiver aberto.</p>
+    <div class="list" id="pubList"></div>
+    <label class="check"><input type="checkbox" id="autoPub" checked>Republicar automaticamente quando a vista mudar</label>
+    <div class="row"><button class="primary" id="btnPublish">Publicar agora</button></div>
+    <p class="hint save-status" id="pubStatus" aria-live="polite"></p>
     <h2>Estilo</h2>
     <div class="row"><button id="btnExportStyle">Exportar configuração</button><button id="btnImportStyle">Importar</button><input type="file" id="fileStyle" accept="application/json" hidden></div>
     <h2>Diagnóstico</h2>
@@ -363,15 +369,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V23 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V24 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V23 */
-/* V23: linhas de pavimento (levels/floorToFloor; respeita hideFloors) com espessura e cor por layer;
+/* KV Axonometria — Beta V24 */
+/* V24: publicação de versões para o KV Pranchas (anexos kv-axono-views.json + kv-axono-view-<id>.json, SVG
+   cortado no recorte), republicação automática quando a vista muda.
+   V23: linhas de pavimento (levels/floorToFloor; respeita hideFloors) com espessura e cor por layer;
    busca de layers em Conteúdo e Estilo; Estilo mostra só os layers ligados na vista.
    V22: elementos com 'patch' (Path do Giraffe: elevação por vértice) viram superfícies 3D — terreno em
    triangulação e ruas/calçadas que seguem o relevo (patchType slab com espessura).
@@ -418,7 +426,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V23';
+const VERSION = 'V24';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1469,23 +1477,37 @@ function render(fast = false) {
   const safeId = (s) => { const b = 'L_' + s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_'); idUse[b] = (idUse[b] || 0) + 1; return idUse[b] > 1 ? `${b}_${idUse[b]}` : b; };
   let out = ''; let curG = null; let clipN = 0; const defs = [];
   const open = (g) => { if (g === curG) return; if (curG !== null) out += '</g>'; out += `<g id="${esc(safeId(g))}" data-name="${esc(g)}">`; curG = g; };
+  // modo publicação (KV Pranchas): geometria cortada exatamente no recorte, para o desenho importado não passar da moldura
+  const PR = S._pubRect || null; const PRR = PR ? { minx: PR.x, miny: PR.y, maxx: PR.x + PR.w, maxy: PR.y + PR.h } : null;
+  const toF = (p) => [p[0] * sc + ox, p[1] * sc + oy]; const F = (q) => fmt(q[0]) + ' ' + fmt(q[1]);
+  const clipPolyD = (rings, nz) => {
+    const fr = rings.map((r) => r.map(toF)); const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity }; fr.forEach((r) => bboxOf(r, b));
+    const plain = () => fr.map((r) => 'M' + r.map(F).join('L') + 'Z').join('');
+    if (!bbHit(b, PRR)) return ''; if ((b.minx >= PRR.minx && b.maxx <= PRR.maxx && b.miny >= PRR.miny && b.maxy <= PRR.maxy) || !PC()) return plain();
+    let polys; if (nz) { polys = []; for (const r of fr) { if (sArea(r) > 0 || !polys.length) polys.push([r]); else polys[polys.length - 1].push(r); } } else polys = [fr];
+    try { return PC().intersection(polys.map((p) => p.map((r) => [...r, r[0]])), rectPoly(PRR)).map((pp) => pp.map((r) => 'M' + r.slice(0, -1).map(F).join('L') + 'Z').join('')).join(''); } catch (e) { return plain(); }
+  };
+  const clipLineD = (pts) => clipLine(pts.map(toF), PRR).map((l) => 'M' + l.map(F).join('L')).join('');
+  if (PR) defs.push(`<clipPath id="kvcrop"><rect x="${fmt(PR.x)}" y="${fmt(PR.y)}" width="${fmt(PR.w)}" height="${fmt(PR.h)}"/></clipPath>`);
   const emit = (o) => {
     open(o.g);
     const dash = o.dashArr ? ` stroke-dasharray="${o.dashArr}"` : DASH[o.dash] ? ` stroke-dasharray="${DASH[o.dash]}"` : ''; const cap = o.cap ? ` stroke-linecap="${o.cap}"` : o.dash === 'dot' ? ' stroke-linecap="round"' : '';
     if (o.t === 'poly') {
-      const d = o.rings.map(ringD).join(''); const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
+      const d = PR ? clipPolyD(o.rings, o.nz) : o.rings.map(ringD).join(''); if (!d) return; const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
       const sw = o.sw > 0 && o.stroke !== 'none' ? ` stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap}` : ' stroke="none"';
       let clip = ''; if (o.clipCircle) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><circle cx="${fmt(o.clipCircle.c[0] * sc + ox)}" cy="${fmt(o.clipCircle.c[1] * sc + oy)}" r="${fmt(o.clipCircle.r * sc)}"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
-      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${+o.fop.toFixed(3)}"` : ''} fill-rule="${o.nz ? 'nonzero' : 'evenodd'}"${sw} stroke-linejoin="round"${clip}/>`;
+      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${+o.fop.toFixed(3)}"` : ''} fill-rule="${o.nz && !PR ? 'nonzero' : 'evenodd'}"${sw} stroke-linejoin="round"${clip}/>`;
     } else if (o.t === 'line') {
-      if (o.sw > 0) out += `<path d="M${o.pts.map(T).join('L')}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap} stroke-linejoin="round"/>`;
+      const ld = PR ? clipLineD(o.pts) : 'M' + o.pts.map(T).join('L');
+      if (o.sw > 0 && ld) out += `<path d="${ld}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap} stroke-linejoin="round"/>`;
     } else if (o.t === 'shadow') {
       let clipS = ''; if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}"/></clipPath>`); clipS = ` clip-path="url(#${id})"`; }
-      out += `<g opacity="${o.op}"${clipS}>` + o.polys.map((r) => `<path d="${ringD(r)}" fill="${o.color}"/>`).join('') + '</g>';
+      out += `<g opacity="${o.op}"${clipS}>` + o.polys.map((r) => { const d = PR ? clipPolyD([r], false) : ringD(r); return d ? `<path d="${d}" fill="${o.color}"/>` : ''; }).join('') + '</g>';
     } else if (o.t === 'img') {
       const M = o.m; const mm = [M[0] * sc, M[1] * sc, M[2] * sc, M[3] * sc, M[4] * sc + ox, M[5] * sc + oy].map((v) => +v.toFixed(5));
       let clip = '';
       if (o.clip) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><path d="${o.clip.map(ringD).join('')}" clip-rule="evenodd"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
+      if (PR) clip = clip ? clip : ' clip-path="url(#kvcrop)"';
       out += `<g${clip}><image href="${S.raster.href}" width="${S.raster.W}" height="${S.raster.H}" preserveAspectRatio="none" transform="matrix(${mm.join(' ')})" opacity="${o.op}"/></g>`;
     }
   };
@@ -1506,7 +1528,7 @@ function render(fast = false) {
     const byG = {}; silPaths.forEach((s) => { const k = s.e.g; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}|${s.e.perf ? 'P' : 'I'}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
     for (const [g, groups] of Object.entries(byG)) {
       const nm = g + ' · arestas';
-      out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash, pf] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; return `<path d="${ps.map((pts) => 'M' + pts.map(T).join('L')).join('')}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${dash === 'dot' ? 'round' : pf === 'P' && !da ? 'round' : 'butt'}" stroke-linejoin="round"/>`; }).join('') + '</g>';
+      out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash, pf] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; const dd = ps.map((pts) => (PR ? clipLineD(pts) : 'M' + pts.map(T).join('L'))).join(''); return dd ? `<path d="${dd}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${dash === 'dot' ? 'round' : pf === 'P' && !da ? 'round' : 'butt'}" stroke-linejoin="round"/>` : ''; }).join('') + '</g>';
     }
   }
   if (curG !== null) out += '</g>';
@@ -1520,9 +1542,9 @@ function render(fast = false) {
     const tip = [cx2 + vx * s, cy2 + vy * s], bl = [cx2 - vx * s * 0.6 + px * s * 0.45, cy2 - vy * s * 0.6 + py * s * 0.45], br = [cx2 - vx * s * 0.6 - px * s * 0.45, cy2 - vy * s * 0.6 - py * s * 0.45], mid = [cx2 - vx * s * 0.2, cy2 - vy * s * 0.2];
     north = `<g id="L_Norte" data-name="Norte"><path d="M${P2(tip)}L${P2(bl)}L${P2(mid)}Z" fill="#1B1B1B"/><path d="M${P2(tip)}L${P2(br)}L${P2(mid)}Z" fill="#FFFFFF" stroke="#1B1B1B" stroke-width="1.2" stroke-linejoin="round"/><text x="${fmt(cx2 + vx * (s + 15))}" y="${fmt(cy2 + vy * (s + 15) + 6)}" text-anchor="middle" font-family="Hind, Arial, sans-serif" font-size="17" font-weight="600" fill="#1B1B1B">N</text></g>`;
   }
-  const bgRect = st.bgT ? '' : `<rect id="L_Fundo" x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${st.bg}"/>`;
+  const bgRect = PR ? `<rect id="L_Fundo" x="${fmt(PR.x)}" y="${fmt(PR.y)}" width="${fmt(PR.w)}" height="${fmt(PR.h)}" fill="${st.bgT ? 'none' : st.bg}"/>` : st.bgT ? '' : `<rect id="L_Fundo" x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${st.bg}"/>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join('')}</defs>${bgRect}${out}${north}</svg>`;
-  S.lastSVG = svg;
+  S.lastSVG = svg; if (!fast && !S._pubRect && typeof schedulePublish === 'function') schedulePublish();
   const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   host.style.background = 'transparent';
   $('#hud').textContent = `${S.edit ? 'EDITANDO · ' : '🔒 '}${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}${fast ? ' · prévia' : ''}`;
@@ -1994,7 +2016,84 @@ async function drawArea() {
 
 
 /* ---------------- VERSIONS ---------------- */
+
+/* ---------------- PUBLICAÇÃO PARA O KV PRANCHAS ----------------
+   Índice: anexo kv-axono-views.json { fmt, views:[{ id, name, rev, hash, savedAt, savedBy, w, h, att }] }
+   Vista:  anexo kv-axono-view-<id>.json { fmt, id, name, rev, hash, savedAt, savedBy, w, h, svg }
+   (arquivos acima de 8 MB vão em partes <nome>.partN, no mesmo formato do KV Pranchas) */
+const PUB_INDEX = 'kv-axono-views.json'; const pubAttName = (id) => `kv-axono-view-${id}.json`;
+let pubAtts = [], pubT = null, pubBusy = false, pubAgain = false; const pubHash = {}, pubKnown = {};
+function strHash(s) { let h = 0, g = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; if ((i & 1023) === 0) g = (g * 17 + h) | 0; } return (h >>> 0).toString(36) + (g >>> 0).toString(36) + '-' + s.length; }
+async function pubRefreshAtts() { const raw = await call('fetchProjectDetails', [projId()], 20000); pubAtts = Array.isArray(raw?.attachments) ? raw.attachments : []; return pubAtts; }
+const pubAttBy = (n) => pubAtts.filter((a) => a && a.name === n).sort((a, b) => (+a.id || 0) - (+b.id || 0))[0] || null;
+async function pubFetch(a) {
+  let u = a.url; try { const t = await call('getTempUrl', [a.url], 15000); u = typeof t === 'string' ? t : (t?.url || t?.tempUrl || t?.signedUrl || u); } catch (e) { /* endereço direto */ }
+  const r = await fetch(new URL(u, 'https://app.giraffe.build').href, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json();
+}
+async function pubUpload(name, obj) {
+  const text = JSON.stringify(obj); const MAX = 8 * 1024 * 1024;
+  const up = async (n, t) => { const ex = pubAttBy(n); const id = ex ? ex.id : pubKnown[n]; const res = await call('uploadProjectAttachment', [{ buffer: new TextEncoder().encode(t), contentType: 'application/json', name: n, ...(id != null ? { attachmentId: id } : {}) }], 120000); const nid = [res?.attachmentId, res?.id, res?.data?.id].find((v) => typeof v === 'number') ?? id; if (nid != null) pubKnown[n] = nid; };
+  if (text.length <= MAX) return up(name, text);
+  const n = Math.ceil(text.length / MAX), stamp = Date.now().toString(36);
+  for (let i = 0; i < n; i++) await up(`${name}.part${i + 1}`, JSON.stringify({ stamp, i: i + 1, n, data: text.slice(i * MAX, (i + 1) * MAX) }));
+  return up(name, JSON.stringify({ chunked: true, n, stamp }));
+}
+function renderVersionSVG(i) {
+  const cur = S.av; setActive(i); const c = S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: S.W, h: S.H }; const r = { x: +c.x.toFixed(2), y: +c.y.toFixed(2), w: +c.w.toFixed(2), h: +c.h.toFixed(2) };
+  S._pubRect = r; let o = null;
+  try { render(false); if (S.lastSVG) o = { svg: S.lastSVG.replace(/^<svg[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-generator="KV Axonometria Beta ${VERSION}" viewBox="${r.x} ${r.y} ${r.w} ${r.h}" width="${Math.round(r.w)}" height="${Math.round(r.h)}">`), w: r.w, h: r.h, upm: S.fit ? S.fit.s0 * S.view.zoom : null, view: { az: S.view.az, el: S.view.el, proj: S.view.proj, preset: S.view.preset } }; }
+  finally { S._pubRect = null; setActive(cur); }
+  return o;
+}
+function setPubStatus(t, err) { const el = $('#pubStatus'); if (el) { el.textContent = t; el.dataset.state = err ? 'err' : 'ok'; } }
+function renderPubList() {
+  const box = $('#pubList'); if (!box) return;
+  box.innerHTML = S.versions.map((v) => `<label class="check" style="padding-right:12px;border-bottom:1px solid var(--md-sys-color-outline-variant)"><input type="checkbox" data-pub="${esc(v.id)}" ${v.pub ? 'checked' : ''}><span style="flex:1">${esc(v.name)}</span><span class="ct">${pubHash[v.id] ? 'publicada' : v.pub ? 'pendente' : ''}</span></label>`).join('');
+  $('#autoPub').checked = S.style.autoPub !== false;
+}
+function schedulePublish() {
+  if (S.mode !== 'giraffe' || S.style.autoPub === false || pubBusy || !S.versions.some((v) => v.pub)) return;
+  clearTimeout(pubT); pubT = setTimeout(() => publishAll(false, false), 8000);
+}
+async function publishAll(force, manual) {
+  if (S.mode !== 'giraffe') { if (manual) toast('A publicação para o Pranchas só funciona dentro do Giraffe.'); return; }
+  const list = S.versions.map((v, i) => ({ v, i })).filter((x) => x.v.pub);
+  if (pubBusy) { pubAgain = true; return; }
+  pubBusy = true; clearTimeout(pubT);
+  try {
+    const out = []; for (const { v, i } of list) { const o = renderVersionSVG(i); if (o) out.push({ v, o, h: strHash(o.svg) }); }
+    render(false);
+    const anyChange = force || out.some((x) => pubHash[x.v.id] !== x.h) || list.length !== Object.keys(pubHash).filter((id) => S.versions.some((v) => v.id === id && v.pub)).length || S._pubDirtyIndex;
+    if (!anyChange) { if (manual) toast('As vistas publicadas já estão atualizadas.'); return; }
+    setPubStatus('Publicando…');
+    const me = await userName(); await pubRefreshAtts();
+    let index = { fmt: 1, app: 'KV Axonometria', views: [] }; const ia = pubAttBy(PUB_INDEX);
+    if (ia) { try { const d = await pubFetch(ia); if (d && Array.isArray(d.views)) index = d; } catch (e) { log('Índice de publicação ilegível: ' + e.message, true); } }
+    if (!force) for (const x of out) { const e = index.views.find((q) => q.id === x.v.id); if (e && e.hash === x.h) pubHash[x.v.id] = x.h; }
+    let n = 0;
+    for (const x of out) {
+      if (!force && pubHash[x.v.id] === x.h && index.views.some((q) => q.id === x.v.id)) continue;
+      setPubStatus(`Publicando “${x.v.name}”…`);
+      const rev = Date.now().toString(36) + '-' + SESSION;
+      const data = { fmt: 1, app: 'KV Axonometria', version: VERSION, projectId: projId(), id: x.v.id, name: x.v.name, rev, hash: x.h, savedAt: Date.now(), savedBy: me, w: x.o.w, h: x.o.h, upm: x.o.upm, view: x.o.view, svg: x.o.svg };
+      await pubUpload(pubAttName(x.v.id), data); pubHash[x.v.id] = x.h; n++;
+      const e = { id: x.v.id, name: x.v.name, rev, hash: x.h, savedAt: data.savedAt, savedBy: me, w: x.o.w, h: x.o.h, att: pubAttName(x.v.id) };
+      const k = index.views.findIndex((q) => q.id === x.v.id); if (k >= 0) index.views[k] = e; else index.views.push(e);
+    }
+    const pubIds = new Set(list.map((x) => x.v.id)); const before = JSON.stringify(index.views.map((e) => [e.id, e.name]));
+    index.views = index.views.filter((e) => pubIds.has(e.id) || !S.versions.some((v) => v.id === e.id));   // despublica as desmarcadas aqui
+    index.views.forEach((e) => { const v = S.versions.find((q) => q.id === e.id); if (v) e.name = v.name; });
+    if (n || JSON.stringify(index.views.map((e) => [e.id, e.name])) !== before || S._pubDirtyIndex || force) { index.savedAt = Date.now(); index.projectId = projId(); await pubUpload(PUB_INDEX, index); }
+    S._pubDirtyIndex = false;
+    setPubStatus(`${list.length} versão(ões) publicada(s) para o KV Pranchas — ${n} atualizada(s) às ${hm(Date.now())}.`);
+    log(`Publicação para o Pranchas: ${n} vista(s) enviada(s)`);
+    if (manual) toast(n ? `${n} vista(s) publicada(s) para o KV Pranchas.` : 'Índice de vistas atualizado.');
+  } catch (e) { setPubStatus('Falha ao publicar: ' + e.message, true); log('Publicação: ' + e.message, true); if (manual) toast('Falha ao publicar: ' + e.message); }
+  finally { pubBusy = false; renderPubList(); if (pubAgain) { pubAgain = false; schedulePublish(); } }
+}
+
 function renderVersions() {
+  setTimeout(renderPubList, 0);
   $('#verSel').innerHTML = S.versions.map((v, i) => `<option value="${i}" ${i === S.av ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
   $('#verList').innerHTML = S.versions.map((v, i) => `<div class="saved-item${i === S.av ? ' on' : ''}">
     <input type="text" value="${esc(v.name)}" data-ren="${i}" aria-label="Nome da versão ${i + 1}" title="${v.updatedBy ? esc(`Última alteração: ${v.updatedBy}, ${new Date(v.updatedAt).toLocaleString('pt-BR')}`) : ''}">
@@ -2484,6 +2583,9 @@ function wireUI() {
   $('#usageUI').addEventListener('input', (e) => { const u = e.target.dataset.usage; if (u == null) return; S.usageMap[u] = e.target.value; scheduleRender(); persist(); });
 
   // export
+  $('#pubList').addEventListener('change', (e) => { const id = e.target.dataset.pub; if (!id) return; const v = S.versions.find((q) => q.id === id); if (v) { v.pub = e.target.checked; S._pubDirtyIndex = true; persist(); schedulePublish(); renderPubList(); } });
+  $('#autoPub').onchange = (e) => { S.style.autoPub = e.target.checked; persist(); if (e.target.checked) schedulePublish(); };
+  $('#btnPublish').onclick = () => publishAll(true, true);
   $('#btnSVG').onclick = exportSVG; $('#btnPNG').onclick = exportPNG; $('#btnAllPNG').onclick = exportAllPNG;
   $('#btnExportStyle').onclick = () => download(`KV_axonometria_config_${stamp()}.json`, new Blob([JSON.stringify(snapshot(), null, 2)], { type: 'application/json' }));
   $('#btnImportStyle').onclick = () => $('#fileStyle').click();
