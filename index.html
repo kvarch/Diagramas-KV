@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V26</title>
+<title>KV Axonometria — Beta V27</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -382,15 +382,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V26 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V27 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V26 */
-/* V26: linhas comuns voltam a usar a cor de Linha do layer (substituição na lista de cores do layer continua valendo).
+/* KV Axonometria — Beta V27 */
+/* V27: linhas com estilo do Giraffe (curvas, tracejadas, setas) seguem a cor de Linha do layer fora do modo Cores do Giraffe;
+   linhas sem cor própria usam a cor de Linha (antes recebiam uma cor inventada que não aparecia na lista).
+   V26: linhas comuns voltam a usar a cor de Linha do layer (substituição na lista de cores do layer continua valendo).
    V25: paletas guardam o estilo de cada uma (voltar à anterior restaura); linhas 2D seguem as Cores do Giraffe e
    ficam por cima das hachuras (stackOrder); corte do solo na área do modelo; símbolos de norte do Pranchas;
    ordenar versões.
@@ -443,7 +445,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V26';
+const VERSION = 'V27';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1237,7 +1239,9 @@ function render(fast = false) {
   const sun = st.sh.on ? sunPos() : null; const sunUp = sun && sun.alt > 1;
   const shs = sunUp ? [Math.sin(sun.az * D2R), Math.cos(sun.az * D2R)] : null;
   const Lx = -0.8 * V.rx - 0.6 * V.fx, Ly = -0.8 * V.ry - 0.6 * V.fy; const Ll = Math.hypot(Lx, Ly) || 1;
-  const inkOf = (it, L) => (it.color ? (S.colorMap[it.lk]?.[it.color] || it.color) : L.stroke);
+  // linhas com estilo do Giraffe (tracejadas, setas, curvas): cor do Giraffe só no modo Cores do Giraffe; nos outros, a cor de Linha do layer.
+  // Sem cor própria no Giraffe → cor de Linha do layer (nunca uma cor inventada)
+  const inkOf = (it, L) => (st.colorMode === 'giraffe' && it.color && it.colorReal !== false ? (S.colorMap[it.lk]?.[it.color] || it.color) : L.stroke);
   const addFace = (rings3, op, extra, mesh) => { const f = { rings3, op, extra, mesh }; faces.push(f); return f; };
 
   if (st.soil?.on && R && !V.plan) { // corte do solo: laterais do bloco de terreno sob a área do modelo
@@ -2264,7 +2268,7 @@ function buildStyleUI() {
         ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         ${its.some((i) => i.kind === 'prism' && i.lv > 1) ? `<div class="field"><label for="${id}v">Pavimentos</label><div class="ctl"><input type="number" id="${id}v" data-k="floorW" min="0" max="12" step="0.1" value="${L.floorW ?? ''}" placeholder="= linha (${L.strokeW})" aria-label="Espessura das linhas de pavimento"><input type="color" data-k="floorC" value="${toHex(L.floorC || L.stroke)}" aria-label="Cor das linhas de pavimento"><button class="icon" data-preset="floorC" aria-label="Cor dos pavimentos igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
-        ${(cm === 'giraffe' || its.some((i) => i.ink || i.ls)) && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
+        ${cm === 'giraffe' && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
       </div></details></div>`;
     }
     h += '</div>';
