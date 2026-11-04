@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V25</title>
+<title>KV Axonometria — Beta V26</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -382,15 +382,16 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V25 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V26 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V25 */
-/* V25: paletas guardam o estilo de cada uma (voltar à anterior restaura); linhas 2D seguem as Cores do Giraffe e
+/* KV Axonometria — Beta V26 */
+/* V26: linhas comuns voltam a usar a cor de Linha do layer (substituição na lista de cores do layer continua valendo).
+   V25: paletas guardam o estilo de cada uma (voltar à anterior restaura); linhas 2D seguem as Cores do Giraffe e
    ficam por cima das hachuras (stackOrder); corte do solo na área do modelo; símbolos de norte do Pranchas;
    ordenar versões.
    V24: publicação de versões para o KV Pranchas (anexos kv-axono-views.json + kv-axono-view-<id>.json, SVG
@@ -442,7 +443,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V25';
+const VERSION = 'V26';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1254,7 +1255,8 @@ function render(fast = false) {
     if (it.ink) { const c = inkOf(it, L); out.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: c, fop: 1, stroke: c, sw: 0.25, dash: 'solid' }); return out; }
     if (it.kind === 'line') {
       const ls = it.ls; const pts = it.pts.map((p) => V.P(p[0], p[1], z));
-      if (!ls) { out.push({ t: 'line', g, pts, stroke: st.colorMode === 'giraffe' && it.colorReal !== false ? inkOf(it, L) : L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
+      // linha comum: cor de Linha do layer; no modo Cores do Giraffe, uma cor substituída na lista do layer tem prioridade
+      if (!ls) { const mapped = st.colorMode === 'giraffe' && it.color ? S.colorMap[it.lk]?.[it.color] : null; out.push({ t: 'line', g, pts, stroke: mapped || L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
       const c = inkOf(it, L); const w = ls.w > 0 ? Math.max(L.strokeW, ls.w * 0.35) : L.strokeW;
       out.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: ls.dash ? ls.dash.map((d) => d * w).join(' ') : null, dash: ls.dash ? null : L.dash, cap: ls.cap });
       const arrow = (a, b, len, ang) => {
