@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V24</title>
+<title>KV Axonometria — Beta V25</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -307,6 +307,8 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <h2>Padrão gráfico</h2>
     <div class="field"><label for="palette">Paleta base</label><div class="ctl">
       <select id="palette"><option value="paper">Papel — branco e preto</option><option value="kv">Destaque KV — projeto em ciano</option><option value="mono">Cinzas</option></select><button id="btnApplyPalette">Aplicar</button></div></div>
+    <div class="row"><button id="btnResetPalette">Restaurar padrão da paleta</button></div>
+    <p class="hint">Cada paleta guarda as edições feitas nela: trocar de paleta e voltar recupera o estilo anterior.</p>
     <div class="field"><label for="colorMode">Cor dos volumes</label><div class="ctl">
       <select id="colorMode"><option value="paleta">Por layer (paleta)</option><option value="giraffe">Cores do Giraffe, por layer</option><option value="uso">Por uso</option></select></div></div>
 
@@ -335,6 +337,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="field"><label for="rasterOp">Imagem do mapa</label><div class="ctl"><input type="range" id="rasterOp" min="0" max="1" step="0.05"><input type="number" id="rasterOpN" min="0" max="1" step="0.05" aria-label="Opacidade da imagem do mapa"></div></div>
     <label class="check"><input type="checkbox" id="drapeRoofs">Aplicar a imagem também nas coberturas</label>
     <label class="check"><input type="checkbox" id="north">Indicação de norte</label>
+    <div id="northBox">
+      <div class="field"><label for="northStyle">Símbolo</label><div class="ctl"><select id="northStyle"></select></div></div>
+      <div class="field"><label for="northSize">Tamanho</label><div class="ctl"><input type="range" id="northSize" min="24" max="200" step="2"><input type="number" id="northSizeN" min="16" max="400" step="2" aria-label="Tamanho do norte"></div></div>
+      <div class="field"><label for="northC1">Cores</label><div class="ctl"><input type="color" id="northC1" aria-label="Cor principal do norte"><input type="color" id="northC2" aria-label="Cor secundária do norte"><label class="check" style="flex:1"><input type="checkbox" id="northLabel">Letra N</label></div></div>
+      <div class="field"><label for="northPos">Posição</label><div class="ctl"><select id="northPos"><option value="br">Inferior direito</option><option value="tr">Superior direito</option><option value="bl">Inferior esquerdo</option><option value="tl">Superior esquerdo</option></select></div></div>
+    </div>
+    <h2>Corte do solo</h2>
+    <label class="check"><input type="checkbox" id="soilOn">Mostrar o solo cortado na área do modelo (efeito maquete)</label>
+    <div class="field"><label for="soilDepth">Profundidade (m)</label><div class="ctl"><input type="range" id="soilDepth" min="1" max="40" step="0.5"><input type="number" id="soilDepthN" min="0.5" max="200" step="0.5" aria-label="Profundidade do corte do solo"></div></div>
+    <div class="field"><label for="soilColor">Cores</label><div class="ctl"><input type="color" id="soilColor" aria-label="Cor do solo"><input type="color" id="soilLine" aria-label="Cor da linha do corte"></div></div>
+    <p class="hint">Precisa de uma Área do modelo com limite (aba Conteúdo). As camadas e o mapa base já são cortados nesse limite.</p>
 
     <h2>Layers</h2>
     <p class="hint" id="styleHint"></p>
@@ -369,15 +382,18 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V24 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V25 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V24 */
-/* V24: publicação de versões para o KV Pranchas (anexos kv-axono-views.json + kv-axono-view-<id>.json, SVG
+/* KV Axonometria — Beta V25 */
+/* V25: paletas guardam o estilo de cada uma (voltar à anterior restaura); linhas 2D seguem as Cores do Giraffe e
+   ficam por cima das hachuras (stackOrder); corte do solo na área do modelo; símbolos de norte do Pranchas;
+   ordenar versões.
+   V24: publicação de versões para o KV Pranchas (anexos kv-axono-views.json + kv-axono-view-<id>.json, SVG
    cortado no recorte), republicação automática quando a vista muda.
    V23: linhas de pavimento (levels/floorToFloor; respeita hideFloors) com espessura e cor por layer;
    busca de layers em Conteúdo e Estilo; Estilo mostra só os layers ligados na vista.
@@ -426,7 +442,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V24';
+const VERSION = 'V25';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -810,11 +826,14 @@ function ensureStyles() {
     if (it.lk.startsWith('draw|') && it.usage && !S.usageMap[it.usage]) S.usageMap[it.usage] = it.color || hashColor(it.usage);
   }
 }
-function applyPalette(pal) {
-  S.style.palette = pal;
-  for (const lk of Object.keys(S.lstyle)) S.lstyle[lk] = defaultLayerStyle(layerKind(lk), pal);
-  S.colorMap = {};
-  if (pal === 'mono') S.style.shade = 0.25;
+function applyPalette(pal, reset) {
+  // cada paleta guarda o estilo em que foi deixada: voltar a ela restaura as edições (Restaurar padrão zera)
+  const st = S.style; st.palStore = st.palStore || {};
+  st.palStore[st.palette || 'paper'] = JSON.parse(JSON.stringify({ lstyle: S.lstyle, colorMap: S.colorMap, shade: st.shade }));
+  st.palette = pal; const saved = !reset && st.palStore[pal];
+  if (saved) { S.lstyle = JSON.parse(JSON.stringify(saved.lstyle || {})); S.colorMap = JSON.parse(JSON.stringify(saved.colorMap || {})); if (saved.shade != null) st.shade = saved.shade; }
+  else { for (const lk of Object.keys(S.lstyle)) S.lstyle[lk] = specialStyle(lk) || defaultLayerStyle(layerKind(lk), pal); S.colorMap = {}; if (pal === 'mono') st.shade = 0.25; }
+  return !!saved;
 }
 function fillOf(it) {
   const L = S.lstyle[it.lk]; const cm = S.style.colorMode;
@@ -1007,7 +1026,7 @@ function pushFeature(list, f, src, P, opts = {}) {
   const p = f.properties || {};
   const parts = geomToParts(f.geometry, P);
   const meta = {
-    id: featId(f), src, lk: '', hiddenG: p._visible === false, colorReal: propColor(p) != null, scn: scnOf(p), fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
+    id: featId(f), src, lk: '', hiddenG: p._visible === false, colorReal: propColor(p) != null, so: +(p.stackOrder ?? p._stackOrder ?? 0) || 0, scn: scnOf(p), fop: p.fillOpacity != null && isFinite(+p.fillOpacity) ? +p.fillOpacity : undefined,
     layer: String(opts.layer ?? p.layerId ?? p.layer ?? p.layerName ?? '').trim() || (p.sp_tag ? 'Temporário · ' + String(p.sp_tag).split(/[:_-]/)[0] : 'Sem camada'),
     usage: String(p.usage ?? p._usage ?? p.use ?? 'Sem uso'),
     color: toHex(propColor(p), hashColor(p.usage ?? p.layerId ?? src)),
@@ -1220,6 +1239,12 @@ function render(fast = false) {
   const inkOf = (it, L) => (it.color ? (S.colorMap[it.lk]?.[it.color] || it.color) : L.stroke);
   const addFace = (rings3, op, extra, mesh) => { const f = { rings3, op, extra, mesh }; faces.push(f); return f; };
 
+  if (st.soil?.on && R && !V.plan) { // corte do solo: laterais do bloco de terreno sob a área do modelo
+    const d = Math.max(0.5, +st.soil.depth || 6), c4 = rectPoly(R)[0].slice(0, 4); const sc0 = st.soil.color || '#C8B89A';
+    for (let i = 0; i < 4; i++) { const a = c4[i], b = c4[(i + 1) % 4]; const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1; const nx = dy / len, ny = -dx / len;
+      if (nx * V.fx + ny * V.fy > -1e-4) continue; const lam = (nx * Lx + ny * Ly) / Ll; const tone = st.shade * (1 - (lam + 1) / 2) * 1.25;
+      ground.push({ t: 'poly', g: 'Corte do solo', rings: [[V.P(a[0], a[1], 0), V.P(b[0], b[1], 0), V.P(b[0], b[1], -d), V.P(a[0], a[1], -d)]], fill: mix(sc0, '#000000', Math.min(0.6, Math.max(0, tone))), fop: 1, stroke: st.soil.line || '#5D4A33', sw: 0.8, dash: 'solid' }); }
+  }
   if (st.ground && R) ground.push({ t: 'poly', g: 'Terreno', rings: [prj(rectPoly(R)[0].slice(0, 4), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
   if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ground.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null }); }
 
@@ -1229,7 +1254,7 @@ function render(fast = false) {
     if (it.ink) { const c = inkOf(it, L); out.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: c, fop: 1, stroke: c, sw: 0.25, dash: 'solid' }); return out; }
     if (it.kind === 'line') {
       const ls = it.ls; const pts = it.pts.map((p) => V.P(p[0], p[1], z));
-      if (!ls) { out.push({ t: 'line', g, pts, stroke: L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
+      if (!ls) { out.push({ t: 'line', g, pts, stroke: st.colorMode === 'giraffe' && it.colorReal !== false ? inkOf(it, L) : L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
       const c = inkOf(it, L); const w = ls.w > 0 ? Math.max(L.strokeW, ls.w * 0.35) : L.strokeW;
       out.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: ls.dash ? ls.dash.map((d) => d * w).join(' ') : null, dash: ls.dash ? null : L.dash, cap: ls.cap });
       const arrow = (a, b, len, ang) => {
@@ -1247,7 +1272,8 @@ function render(fast = false) {
   const flats = items.filter((i) => i.kind === 'poly' || i.kind === 'line');
   const BPRI = { 'Mapa base · uso do solo': 0, 'Mapa base · vegetação': 1, 'Mapa base · água': 2, 'Mapa base · vias': 3 };
   const pri = (it) => { const n = lkName(it.lk); return n in BPRI ? BPRI[n] : it.lk.startsWith('map|') ? 4 : 5; };
-  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => (a.z || 0) - (b.z || 0) || pri(a) - pri(b) || (a.kind === 'line') - (b.kind === 'line') || (a.lk < b.lk ? -1 : a.lk > b.lk ? 1 : 0)).forEach((it) => ground.push(...flatOps(it)));
+  const lineish = (i) => (i.kind === 'line' || i.ink ? 1 : 0);
+  flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => lineish(a) - lineish(b) || (a.z || 0) - (b.z || 0) || pri(a) - pri(b) || (a.so || 0) - (b.so || 0) || (a.lk < b.lk ? -1 : a.lk > b.lk ? 1 : 0)).forEach((it) => ground.push(...flatOps(it)));
   for (const it of flats.filter((i) => (i.z || 0) > 0.05)) {
     const z = it.z;
     for (const o of flatOps(it)) {
@@ -1535,12 +1561,12 @@ function render(fast = false) {
 
   let north = '';
   if (st.north && !V.elev) {
-    const a = V.P(0, 0, 0), b = V.P(0, 1, 0); let vx = b[0] - a[0], vy = b[1] - a[1]; const l = Math.hypot(vx, vy) || 1; vx /= l; vy /= l;
-    const c = S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: W, h: H };
-    const cx2 = c.x + c.w - 64, cy2 = c.y + c.h - 64, s = 30; const px = -vy, py = vx;
-    const P2 = (p) => fmt(p[0]) + ' ' + fmt(p[1]);
-    const tip = [cx2 + vx * s, cy2 + vy * s], bl = [cx2 - vx * s * 0.6 + px * s * 0.45, cy2 - vy * s * 0.6 + py * s * 0.45], br = [cx2 - vx * s * 0.6 - px * s * 0.45, cy2 - vy * s * 0.6 - py * s * 0.45], mid = [cx2 - vx * s * 0.2, cy2 - vy * s * 0.2];
-    north = `<g id="L_Norte" data-name="Norte"><path d="M${P2(tip)}L${P2(bl)}L${P2(mid)}Z" fill="#1B1B1B"/><path d="M${P2(tip)}L${P2(br)}L${P2(mid)}Z" fill="#FFFFFF" stroke="#1B1B1B" stroke-width="1.2" stroke-linejoin="round"/><text x="${fmt(cx2 + vx * (s + 15))}" y="${fmt(cy2 + vy * (s + 15) + 6)}" text-anchor="middle" font-family="Hind, Arial, sans-serif" font-size="17" font-weight="600" fill="#1B1B1B">N</text></g>`;
+    const a = V.P(0, 0, 0), b = V.P(0, 1, 0); const vx = b[0] - a[0], vy = b[1] - a[1];
+    const c = PR || (S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: W, h: H });
+    const D = Math.max(16, +st.northSize || 72), m = D * 0.5 + 18; const pos = st.northPos || 'br';
+    const cx2 = pos.endsWith('l') ? c.x + m : c.x + c.w - m, cy2 = pos.startsWith('t') ? c.y + m + D * 0.25 : c.y + c.h - m;
+    const ang = Math.atan2(vx, -vy) * 180 / Math.PI;
+    north = `<g id="L_Norte" data-name="Norte" transform="translate(${fmt(cx2)} ${fmt(cy2)}) rotate(${ang.toFixed(2)})">${northSVG(st.northStyle || 'crossN', D / 2, st.northC1 || '#1B1B1B', st.northC2 || '#FFFFFF', st.northLabel !== false)}</g>`;
   }
   const bgRect = PR ? `<rect id="L_Fundo" x="${fmt(PR.x)}" y="${fmt(PR.y)}" width="${fmt(PR.w)}" height="${fmt(PR.h)}" fill="${st.bgT ? 'none' : st.bg}"/>` : st.bgT ? '' : `<rect id="L_Fundo" x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${st.bg}"/>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join('')}</defs>${bgRect}${out}${north}</svg>`;
@@ -1556,6 +1582,43 @@ function drawEmpty() {
   host.setAttribute('viewBox', `0 0 ${S.W} ${S.H}`);
   host.innerHTML = `<text x="800" y="490" text-anchor="middle" font-family="Hind, sans-serif" font-size="34" fill="#747878">Nada para desenhar ainda</text><text x="800" y="540" text-anchor="middle" font-family="Hind, sans-serif" font-size="24" fill="#747878">Desenhe no Giraffe ou ligue camadas na aba Conteúdo</text>`;
   S.lastSVG = ''; $('#hud').textContent = 'Sem conteúdo';
+}
+/* símbolos de norte — mesmos estilos do KV Pranchas (desenhados para cima, centro em 0,0) */
+const NORTH_STYLES = [['crossN', 'Cruz com N'], ['triN', 'Triângulo e N'], ['arrowCircle', 'Seta no círculo'], ['tick', 'Marcador simples'], ['lineTri', 'Triângulo aberto'], ['house', 'Flecha pentagonal'],
+  ['triChord', 'Triângulo com N interno'], ['discChevron', 'Disco com seta'], ['chevron', 'Seta em chevron'], ['crossBar', 'Cruz com barra'], ['crossDouble', 'Cruz com linha dupla'], ['construct', 'Traçado construtivo'],
+  ['triOpenCross', 'Triângulo e cruz'], ['triFillCross', 'Triângulo cheio e cruz'], ['barN', 'Barra e N'], ['chevronOpen', 'Chevron vazado'], ['arrowSmall', 'Seta simples'], ['fan', 'Leque']];
+function northSVG(style, R, c1, c2, label) {
+  const sw = Math.max(0.8, R * 0.035); let s = ''; let hasN = false; const f = (v) => +v.toFixed(2);
+  const circle = (r, fill, w) => { s += `<circle r="${f(r)}" fill="${fill || 'none'}" stroke="${c1}" stroke-width="${f(w ?? sw)}"/>`; };
+  const line = (x1, y1, x2, y2, w, col) => { s += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${col || c1}" stroke-width="${f(w ?? sw)}"/>`; };
+  const poly = (pts, fill, w, col) => { const ww = w ?? sw; s += `<polygon points="${pts.map(([x, y]) => f(x) + ',' + f(y)).join(' ')}" fill="${fill || 'none'}" stroke="${ww > 0 ? (col === undefined ? c1 : col) : 'none'}" stroke-width="${f(ww)}" stroke-linejoin="miter"/>`; };
+  const open = (pts, w, col) => { s += `<polyline points="${pts.map(([x, y]) => f(x) + ',' + f(y)).join(' ')}" fill="none" stroke="${col || c1}" stroke-width="${f(w ?? sw)}" stroke-linejoin="miter"/>`; };
+  const N = (y, inside) => { hasN = true; if (label) s += `<text x="0" y="${f(inside ? y : y)}" text-anchor="middle"${inside ? ' dominant-baseline="central"' : ''} font-family="Hind, Arial, sans-serif" font-weight="600" font-size="${f(Math.max(5, R * (inside ? 0.62 : 0.7)))}" fill="${c1}">N</text>`; };
+  const cross = (ext) => { line(-R * ext, 0, R * ext, 0); line(0, -R * ext, 0, R * ext); };
+  const bar = (y1, y2, wmul) => { const w = sw * (wmul || 4); s += `<rect x="${f(-w / 2)}" y="${f(Math.min(y1, y2))}" width="${f(w)}" height="${f(Math.abs(y2 - y1))}" fill="${c1}"/>`; };
+  const gap = R * 0.12, k = Math.sqrt(3) / 2;
+  switch (style) {
+    case 'triN': circle(R); poly([[0, -R], [R * 0.97, 0], [-R * 0.97, 0]], c1, 0); N(R * 0.45, true); break;
+    case 'arrowCircle': circle(R); poly([[0, -R * 0.82], [0, R * 0.42], [-R * 0.42, R * 0.72]], c1); poly([[0, -R * 0.82], [R * 0.42, R * 0.72], [0, R * 0.42]], c2); break;
+    case 'tick': circle(R); bar(-R, -R * 0.28); break;
+    case 'lineTri': circle(R); open([[-R * k, R * 0.5], [0, -R], [R * k, R * 0.5]]); line(0, -R, 0, R); N(-R - gap); break;
+    case 'house': poly([[0, -R * 0.55], [R, 0], [R * 0.55, 0], [R * 0.55, R * 0.4], [-R * 0.55, R * 0.4], [-R * 0.55, 0], [-R, 0]], c1, 0); N(-R * 0.55 - gap); break;
+    case 'triChord': circle(R); poly([[0, -R], [R * 0.95, R * 0.3], [-R * 0.95, R * 0.3]], '', sw); N(R * 0.62, true); break;
+    case 'discChevron': circle(R, c1, 0); open([[-R * 0.6, -R * 0.12], [0, -R * 0.72], [R * 0.6, -R * 0.12]], sw * 3, c2); line(0, -R * 0.72, 0, R * 0.95, sw * 3, c2); break;
+    case 'chevron': circle(R); open([[-R * 0.62, -R * 0.1], [0, -R * 0.72], [R * 0.62, -R * 0.1]], sw * 3.4); line(0, -R * 0.72, 0, R, sw * 3.4); break;
+    case 'crossBar': circle(R); cross(1); bar(-R, 0); break;
+    case 'crossDouble': circle(R); line(-R, 0, R, 0); line(0, 0, 0, R); line(-R * 0.05, -R, -R * 0.05, 0); line(R * 0.05, -R, R * 0.05, 0); break;
+    case 'construct': circle(R); cross(1.15); open([[-R, 0], [0, -R], [R, 0]]); { const q = R * 0.14, y = -R * 1.12; line(-q, y - q, q, y + q); line(-q, y + q, q, y - q); } break;
+    case 'triOpenCross': circle(R); cross(1); open([[-R, 0], [0, -R], [R, 0]], sw * 2.6); break;
+    case 'triFillCross': circle(R); cross(1); poly([[0, -R], [R, 0], [-R, 0]], c1, 0); break;
+    case 'barN': circle(R); bar(-R, R, 5); N(-R - gap); break;
+    case 'chevronOpen': { circle(R); const t = R * 0.09; open([[-t, R], [-t, -R * 0.5], [-R * 0.56, -R * 0.05], [-R * 0.7, -R * 0.2], [0, -R * 0.82], [R * 0.7, -R * 0.2], [R * 0.56, -R * 0.05], [t, -R * 0.5], [t, R]]); break; }
+    case 'arrowSmall': line(0, R, 0, -R * 0.2); poly([[0, -R], [R * 0.2, -R * 0.1], [-R * 0.2, -R * 0.1]], c1, 0); N(-R - gap); break;
+    case 'fan': circle(R); [-0.55, -0.2, 0.2, 0.55].forEach((a) => { const g = Math.PI / 2 + a; line(0, -R, Math.cos(g) * R, Math.sin(g) * R); }); break;
+    default: circle(R); circle(R * 0.88, '', sw * 0.7); cross(1.18); bar(-R, 0); N(-R * 1.18 - gap * 0.4);
+  }
+  if (!hasN) N(style === 'construct' ? -R * 1.3 - gap * 0.3 : -R - gap);
+  return s;
 }
 function presetName() { const o = $('#preset').selectedOptions[0]; return o ? o.textContent : ''; }
 
@@ -2097,6 +2160,8 @@ function renderVersions() {
   $('#verSel').innerHTML = S.versions.map((v, i) => `<option value="${i}" ${i === S.av ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
   $('#verList').innerHTML = S.versions.map((v, i) => `<div class="saved-item${i === S.av ? ' on' : ''}">
     <input type="text" value="${esc(v.name)}" data-ren="${i}" aria-label="Nome da versão ${i + 1}" title="${v.updatedBy ? esc(`Última alteração: ${v.updatedBy}, ${new Date(v.updatedAt).toLocaleString('pt-BR')}`) : ''}">
+    <button class="icon" data-act="up" data-i="${i}" aria-label="Mover ${esc(v.name)} para cima" title="Mover para cima" ${i === 0 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+    <button class="icon" data-act="down" data-i="${i}" aria-label="Mover ${esc(v.name)} para baixo" title="Mover para baixo" ${i === S.versions.length - 1 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
     <button class="icon" data-act="go" data-i="${i}" aria-label="Abrir ${esc(v.name)}" title="Abrir"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
     <button class="icon" data-act="dup" data-i="${i}" aria-label="Duplicar ${esc(v.name)}" title="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
     <button class="icon" data-act="del" data-i="${i}" aria-label="Excluir ${esc(v.name)}" title="Excluir" ${S.versions.length < 2 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('');
@@ -2399,7 +2464,8 @@ function syncUI() {
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
   $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
-  $('#north').checked = st.north; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
+  $('#north').checked = st.north; $('#northBox').hidden = !st.north; $('#northStyle').value = st.northStyle || 'crossN'; $('#northC1').value = st.northC1 || '#1B1B1B'; $('#northC2').value = st.northC2 || '#FFFFFF'; $('#northLabel').checked = st.northLabel !== false; $('#northPos').value = st.northPos || 'br';
+  const so = st.soil || {}; $('#soilOn').checked = !!so.on; $('#soilColor').value = so.color || '#C8B89A'; $('#soilLine').value = so.line || '#5D4A33'; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
   $('#cropOn').checked = c.on; $('#cropRatio').value = c.ratio; $('#cropShowOut').checked = c.showOut; $('#fCropCustom').hidden = c.ratio !== 'custom'; $('#cropCW').value = c.cw; $('#cropCH').value = c.ch;
   $('#shOn').checked = st.sh.on; $('#shBox').hidden = !st.sh.on; $('#shDay').value = st.sh.day; $('#fShDate').hidden = st.sh.day !== 'custom'; $('#shDate').value = st.sh.date;
   $('#shTimeOut').textContent = hhmm(st.sh.min); $('#shTime').setAttribute('aria-valuetext', hhmm(st.sh.min)); $('#shColor').value = st.sh.color; $('#shTz').value = st.sh.tz;
@@ -2448,6 +2514,7 @@ function wireUI() {
   $('#btnPullProj').onclick = () => syncPull(true);
   $('#verList').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-act]'); if (!b) return; const i = +b.dataset.i;
+    if (b.dataset.act === 'up' || b.dataset.act === 'down') { const j = i + (b.dataset.act === 'up' ? -1 : 1); if (j < 0 || j >= S.versions.length) return; const cur = S.versions[S.av].id; [S.versions[i], S.versions[j]] = [S.versions[j], S.versions[i]]; setActive(S.versions.findIndex((v) => v.id === cur)); renderVersions(); persist(); setTimeout(() => { const nb = $(`#verList button[data-act="${b.dataset.act}"][data-i="${j}"]`); if (nb && !nb.disabled) nb.focus(); }, 0); return; }
     if (b.dataset.act === 'go') switchVersion(i);
     else if (b.dataset.act === 'dup') duplicateVersion(i);
     else if (b.dataset.act === 'del' && S.versions.length > 1) { const nm = S.versions[i].name; S.versions.splice(i, 1); switchVersion(Math.min(S.av, S.versions.length - 1)); toast(`“${nm}” excluída.`); }
@@ -2549,7 +2616,8 @@ function wireUI() {
 
   // style
   $('#lyrSearch').oninput = filterLayerUI; $('#styleSearch').oninput = filterStyleUI; $('#styleOnlyOn').onchange = filterStyleUI;
-  $('#btnApplyPalette').onclick = () => { applyPalette($('#palette').value); syncUI(); buildStyleUI(); render(); persist(); };
+  $('#btnApplyPalette').onclick = () => { const r = applyPalette($('#palette').value); syncUI(); buildStyleUI(); render(); persist(); toast(r ? 'Paleta aplicada com as edições que ela tinha.' : 'Paleta aplicada (padrão).'); };
+  $('#btnResetPalette').onclick = () => { applyPalette(S.style.palette, true); syncUI(); buildStyleUI(); render(); persist(); toast('Estilos dos layers voltaram ao padrão da paleta.'); };
   $('#colorMode').onchange = (e) => { S.style.colorMode = e.target.value; buildStyleUI(); render(); persist(); };
   const after = (f) => { scheduleRender(f); if (!f) persist(); };
   bindRange('contourW', () => S.style.contourW, (v) => { S.style.contourW = v; }, after);
@@ -2566,7 +2634,16 @@ function wireUI() {
   const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); drawOverlay(); persist(); });
   $('#perfilGroup').onchange = (e) => { S.style.perfilGroup = e.target.checked; render(); persist(); };
   $('#mergeCoplanar').onchange = (e) => { S.style.mergeCoplanar = e.target.checked; render(); persist(); };
-  sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); sty('north', 'north', 'checked'); sty('drapeRoofs', 'drapeRoofs', 'checked');
+  $('#northStyle').innerHTML = NORTH_STYLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const nst = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); persist(); });
+  nst('northStyle', 'northStyle'); nst('northC1', 'northC1'); nst('northC2', 'northC2'); nst('northLabel', 'northLabel', 'checked'); nst('northPos', 'northPos');
+  $('#northStyle').onchange = (e) => { S.style.northStyle = e.target.value; render(); persist(); }; $('#northPos').onchange = (e) => { S.style.northPos = e.target.value; render(); persist(); };
+  bindRange('northSize', () => S.style.northSize || 72, (v) => { S.style.northSize = v; }, after);
+  const soil = () => (S.style.soil = S.style.soil || { on: false, depth: 6, color: '#C8B89A', line: '#5D4A33' });
+  $('#soilOn').onchange = (e) => { soil().on = e.target.checked; if (e.target.checked && !areaRect()) toast('Defina uma Área do modelo (aba Conteúdo) para ver o corte do solo.'); render(); persist(); };
+  $('#soilColor').oninput = (e) => { soil().color = e.target.value; scheduleRender(); persist(); }; $('#soilLine').oninput = (e) => { soil().line = e.target.value; scheduleRender(); persist(); };
+  bindRange('soilDepth', () => (S.style.soil?.depth ?? 6), (v) => { soil().depth = v; }, after);
+  sty('bg', 'bg'); sty('bgT', 'bgT', 'checked'); sty('ground', 'ground', 'checked'); sty('groundFill', 'groundFill'); $('#north').oninput = (e) => { S.style.north = e.target.checked; $('#northBox').hidden = !e.target.checked; scheduleRender(); persist(); }; sty('drapeRoofs', 'drapeRoofs', 'checked');
   const sui = $('#styleUI');
   sui.addEventListener('input', (e) => {
     const det = e.target.closest('details'); if (!det) return; const lk = det.dataset.lk;
