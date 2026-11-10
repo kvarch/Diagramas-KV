@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V28</title>
+<title>KV Axonometria — Beta V29</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -401,15 +401,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V28 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V29 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V28 */
-/* V28: limite do modelo como polígono (o desenho feito no mapa), cortando todo o conteúdo (volumes, linhas, terreno);
+/* KV Axonometria — Beta V29 */
+/* V29: modo Por uso — preenchimento personalizado por layer e volta ao padrão (layer e uso); tipo de traço do
+   layer passa a valer para linhas importadas (DXF) e linhas com estilo do Giraffe.
+   V28: limite do modelo como polígono (o desenho feito no mapa), cortando todo o conteúdo (volumes, linhas, terreno);
    linha do perímetro; lupa de visualização com a vista travada (roda/arrastar) + botões na vista; corte horizontal
    por altura com superfície de corte hachurável; o limite desenhado vira um elemento do Giraffe (visível e editável no mapa)
    e a Axonometria acompanha as edições.
@@ -468,7 +470,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V28';
+const VERSION = 'V29';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -490,7 +492,7 @@ const PRESETS = {
 const S = {
   mode: 'demo', rpc: null, gs: null, sdk: null, projector: null, bundleRaw: null,
   items: [],            // drawing (vol/flat)
-  extraDraw: {}, glbItems: [], glbKey: '', capBox: {}, scnNames: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
+  extraDraw: {}, glbItems: [], glbKey: '', capBox: {}, scnNames: {}, usageDef: {},        // drawing layers read on demand (hidden in Giraffe) name -> items
   mapItems: {},         // layerName -> items
   ctxItems: [],
   raster: null,         // {href, W, H, bounds}
@@ -849,7 +851,7 @@ function ensureStyles() {
   const seen = new Set();
   for (const it of allItems()) {
     if (!seen.has(it.lk)) { seen.add(it.lk); if (!S.lstyle[it.lk]) { const st0 = specialStyle(it.lk) || defaultLayerStyle(layerKind(it.lk)); if (allItems().filter((i) => i.lk === it.lk && i.kind === 'poly').length > 300) st0.strokeW = 0; S.lstyle[it.lk] = st0; } }
-    if (it.lk.startsWith('draw|') && it.usage && !S.usageMap[it.usage]) S.usageMap[it.usage] = it.color || hashColor(it.usage);
+    if (it.lk.startsWith('draw|') && it.usage && !S.usageDef[it.usage]) S.usageDef[it.usage] = it.colorReal !== false && it.color ? it.color : hashColor(it.usage);
   }
 }
 function applyPalette(pal, reset) {
@@ -864,7 +866,7 @@ function applyPalette(pal, reset) {
 function fillOf(it) {
   const L = S.lstyle[it.lk]; const cm = S.style.colorMode;
   if (cm === 'giraffe' && it.color && it.colorReal !== false && !it.lk.startsWith('ctx|') && !BASE_KEYS.includes(lkName(it.lk))) return S.colorMap[it.lk]?.[it.color] || it.color;
-  if (cm === 'uso' && it.lk.startsWith('draw|')) return S.usageMap[it.usage] || it.color || L.fill;
+  if (cm === 'uso' && it.lk.startsWith('draw|')) return L.useFill || S.usageMap[it.usage] || S.usageDef[it.usage] || it.color || L.fill;
   return L.fill;
 }
 
@@ -1091,8 +1093,11 @@ function pushFeature(list, f, src, P, opts = {}) {
     else { list.push({ ...meta, kind: 'poly', poly: o, z: z0, noStroke: !!olG }); pushInk(z0); }
   }
   if (parts.lines.length) {
-    if (!pushInk(z0)) {
-      const ls = (p.strokeWidth != null || p.arrowEnd || p.arrowStart || p.strokeDasharray) ? { w: +p.strokeWidth || 0, dash: Array.isArray(p.strokeDasharray) ? p.strokeDasharray : null, cap: p.strokeLinecap || null, aS: !!p.arrowStart, aE: !!p.arrowEnd, aSL: +p.arrowStartLength || 0, aEL: +p.arrowEndLength || 0, aSA: +p.arrowStartYawn || 40, aEA: +p.arrowEndYawn || 40 } : null;
+    const inked = pushInk(z0);
+    // com contorno pronto do Giraffe também guarda a linha de centro: usada quando o layer recebe um tipo de traço próprio
+    if (inked) { const lsA = { w: +p.strokeWidth || 0, dash: null, cap: p.strokeLinecap || null, aS: !!p.arrowStart, aE: !!p.arrowEnd, aSL: +p.arrowStartLength || 0, aEL: +p.arrowEndLength || 0, aSA: +p.arrowStartYawn || 40, aEA: +p.arrowEndYawn || 40 }; for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, color: inkHex, kind: 'line', pts: l, z: z0, ls: lsA, alt: true }); }
+    if (!inked) {
+      const ls = (p.strokeWidth != null || p.arrowEnd || p.arrowStart || p.strokeDasharray) ? { w: +p.strokeWidth || 0, dash: Array.isArray(p.strokeDasharray) && p.strokeDasharray.some((d) => +d > 0) ? p.strokeDasharray.map(Number) : null, cap: p.strokeLinecap || null, aS: !!p.arrowStart, aE: !!p.arrowEnd, aSL: +p.arrowStartLength || 0, aEL: +p.arrowEndLength || 0, aSA: +p.arrowStartYawn || 40, aEA: +p.arrowEndYawn || 40 } : null;
       for (const l of parts.lines) if (l.length >= 2) list.push({ ...meta, color: inkHex, kind: 'line', pts: l, z: z0, ls });
     }
   }
@@ -1328,13 +1333,17 @@ function render(fast = false) {
   // flats → ops (ground) or faces (elevated)
   const flatOps = (it) => {
     const L = LS[it.lk]; const g = lkName(it.lk); const z = it.z || 0; const out = [];
+    const ownDash = L.dash && L.dash !== 'solid';
+    if (it.ink && ownDash) return out; // traço do layer: usa a linha de centro (alt)
+    if (it.alt && !ownDash) return out;
     if (it.ink) { const c = inkOf(it, L); out.push({ t: 'poly', g, rings: it.poly.map((r) => prj(r, z)), fill: c, fop: 1, stroke: c, sw: 0.25, dash: 'solid' }); return out; }
     if (it.kind === 'line') {
       const ls = it.ls; const pts = it.pts.map((p) => V.P(p[0], p[1], z));
       // linha comum: cor de Linha do layer; no modo Cores do Giraffe, uma cor substituída na lista do layer tem prioridade
       if (!ls) { const mapped = st.colorMode === 'giraffe' && it.color ? S.colorMap[it.lk]?.[it.color] : null; out.push({ t: 'line', g, pts, stroke: mapped || L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
       const c = inkOf(it, L); const w = ls.w > 0 ? Math.max(L.strokeW, ls.w * 0.35) : L.strokeW;
-      out.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: ls.dash ? ls.dash.map((d) => d * w).join(' ') : null, dash: ls.dash ? null : L.dash, cap: ls.cap });
+      const useOwn = ls.dash && !ownDash; // traço do layer (não contínuo) tem prioridade sobre o tracejado vindo do Giraffe/DXF
+      out.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: useOwn ? ls.dash.map((d) => d * w).join(' ') : null, dash: useOwn ? null : L.dash, cap: ownDash ? (L.dash === 'dot' ? 'round' : 'butt') : ls.cap });
       const arrow = (a, b, len, ang) => {
         const dx = a[0] - b[0], dy = a[1] - b[1]; const l = Math.hypot(dx, dy) || 1; const ux = dx / l, uy = dy / l; const h = (ang / 2) * D2R; const L2 = len || 6;
         const w1 = [a[0] - L2 * (ux * Math.cos(h) - uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) + ux * Math.sin(h))];
@@ -2361,7 +2370,7 @@ function buildStyleUI() {
   // usages
   if (cm === 'uso') {
     const u = {}; S.items.forEach((i) => { u[i.usage] = (u[i.usage] || 0) + 1; });
-    $('#usageUI').innerHTML = `<div class="lyr-sec"><h3><span>Usos</span><span>${Object.keys(u).length}</span></h3><div class="card">${Object.keys(u).sort().map((k) => `<div class="crow"><input type="color" data-usage="${esc(k)}" value="${toHex(S.usageMap[k])}" aria-label="Cor do uso ${esc(k)}"><span class="ct">${esc(k)} · ${u[k]}</span></div>`).join('')}</div></div>`;
+    $('#usageUI').innerHTML = `<div class="lyr-sec"><h3><span>Usos</span><span>${Object.keys(u).length}</span></h3><div class="card">${Object.keys(u).sort().map((k) => `<div class="crow"><input type="color" data-usage="${esc(k)}" value="${toHex(S.usageMap[k] || S.usageDef[k])}" aria-label="Cor do uso ${esc(k)}"><span class="ct">${esc(k)} · ${u[k]}${S.usageMap[k] && S.usageMap[k] !== S.usageDef[k] ? ' · personalizada' : ''}</span><button class="icon" data-ureset="${esc(k)}" aria-label="Voltar à cor padrão do uso ${esc(k)}" title="Cor padrão do uso" ${S.usageMap[k] ? '' : 'disabled'}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div></div>`;
   } else $('#usageUI').innerHTML = '';
   const all = allItems(); const by = {}; all.forEach((i) => { (by[i.lk] = by[i.lk] || []).push(i); });
   const secs = [['draw|', 'Desenho do projeto'], ['map|', 'Camadas do Giraffe'], ['ctx|', 'Mapa base']];
@@ -2373,10 +2382,12 @@ function buildStyleUI() {
       const L = S.lstyle[lk]; const its = by[lk]; const lineOnly = its.every((i) => i.kind === 'line' || i.ink); const id = 'g' + Math.abs([...lk].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
       const colors = {}; its.forEach((i) => { if (i.color && i.colorReal !== false) colors[i.color] = (colors[i.color] || 0) + 1; });
       const showFill = !lineOnly && (cm === 'paleta' || lk.startsWith('ctx|') || its.some((i) => fillOf(i) === L.fill));
+      const useOv = cm === 'uso' && lk.startsWith('draw|') && !lineOnly;
       const sw = lineOnly ? (cm === 'giraffe' && its[0].color ? its[0].color : 'transparent') : (cm === 'paleta' || lk.startsWith('ctx|') ? L.fill : fillOf(its[0]));
       h += `<div class="grp${isVis(lk) ? '' : ' off'}" data-name="${esc(normTxt(lkName(lk)))}" data-on="${isVis(lk) ? 1 : 0}"><details data-lk="${esc(lk)}" ${openSet.has(lk) ? 'open' : ''}><summary><span class="sw" style="background:${sw};border-color:${L.stroke}"></span><span class="nm">${esc(lkName(lk).replace(/^Entorno$/, 'Edifícios do entorno'))}</span><span class="ct">${its.length}</span></summary><div class="body">
         ${showFill ? `<div class="field"><label for="${id}f">Preenchimento</label><div class="ctl"><input type="color" id="${id}f" data-k="fill" value="${toHex(L.fill, '#FFFFFF')}"></div></div>` : ''}
         ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
+        ${useOv ? `<div class="field"><label for="${id}u">Preenchimento</label><div class="ctl"><input type="color" id="${id}u" data-k="useFill" value="${toHex(L.useFill || fillOf(its[0]))}" aria-label="Preenchimento personalizado deste layer"><span class="out">${L.useFill ? 'personalizado' : 'pela cor do uso'}</span><button class="icon" data-preset="useFill" aria-label="Voltar às cores de uso neste layer" title="Voltar às cores de uso" ${L.useFill ? '' : 'disabled'}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
         ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         ${its.some((i) => i.kind === 'prism' && i.lv > 1) ? `<div class="field"><label for="${id}v">Pavimentos</label><div class="ctl"><input type="number" id="${id}v" data-k="floorW" min="0" max="12" step="0.1" value="${L.floorW ?? ''}" placeholder="= linha (${L.strokeW})" aria-label="Espessura das linhas de pavimento"><input type="color" data-k="floorC" value="${toHex(L.floorC || L.stroke)}" aria-label="Cor das linhas de pavimento"><button class="icon" data-preset="floorC" aria-label="Cor dos pavimentos igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
@@ -2794,9 +2805,11 @@ function wireUI() {
     if (k === 'fillOp') { const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = Math.round(v * 100) + '%'; }
     scheduleRender(e.target.type === 'range'); persist();
   });
-  sui.addEventListener('change', () => render());
+  sui.addEventListener('change', (e) => { render(); if (e.target.dataset.k === 'useFill') buildStyleUI(); });
   sui.addEventListener('click', (e) => { const pb = e.target.closest('button[data-preset]'); if (pb) { const lk = pb.closest('details').dataset.lk; delete S.lstyle[lk][pb.dataset.preset]; buildStyleUI(); render(); persist(); return; } const b = e.target.closest('button[data-creset]'); if (!b) return; const lk = b.closest('details').dataset.lk; if (S.colorMap[lk]) delete S.colorMap[lk][b.dataset.creset]; buildStyleUI(); render(); persist(); });
   $('#usageUI').addEventListener('input', (e) => { const u = e.target.dataset.usage; if (u == null) return; S.usageMap[u] = e.target.value; scheduleRender(); persist(); });
+  $('#usageUI').addEventListener('change', (e) => { if (e.target.dataset.usage != null) buildStyleUI(); });
+  $('#usageUI').addEventListener('click', (e) => { const b = e.target.closest('button[data-ureset]'); if (!b) return; delete S.usageMap[b.dataset.ureset]; buildStyleUI(); render(); persist(); });
 
   // export
   $('#pubList').addEventListener('change', (e) => { const id = e.target.dataset.pub; if (!id) return; const v = S.versions.find((q) => q.id === id); if (v) { v.pub = e.target.checked; S._pubDirtyIndex = true; persist(); schedulePublish(); renderPubList(); } });
