@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V27</title>
+<title>KV Axonometria — Beta V28</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -160,7 +160,11 @@ body.resizing{cursor:col-resize;user-select:none}
 .toolbar{flex-wrap:wrap}
 button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
 .stage[data-edit="1"]{border:2px solid var(--md-sys-color-primary)}
-.stage[data-edit="0"]{cursor:default!important}
+.stage[data-edit="0"]{cursor:grab}.stage[data-edit="0"]:active{cursor:grabbing}
+.stage-actions{position:absolute;top:8px;right:8px;display:flex;gap:8px;align-items:center;z-index:3}
+.stage-actions button{background:var(--md-sys-color-surface-container-lowest)}
+.stage-actions button.primary{background:var(--md-sys-color-primary)}
+.stage-actions .badge{background:var(--md-sys-color-surface-container-lowest)}
 
 .save-status[data-state=err]{color:var(--md-sys-color-error)}
 .save-status[data-state=ok]::before,.save-status[data-state=remote]::before{content:'● ';color:var(--md-extended-color-custom-color1-color)}
@@ -197,10 +201,11 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
   <button class="icon" id="btnVerNew" aria-label="Nova versão a partir da atual" title="Nova versão (duplica a atual)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
 
-<div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Travado por padrão: ative Editar ou dê duplo clique para girar, mover, aproximar e recortar.">
+<div class="stage" id="stage" tabindex="0" role="img" aria-roledescription="desenho axonométrico interativo" aria-label="Desenho axonométrico. Com a vista travada, a roda do mouse e o arrastar só aproximam e movem a exibição (lupa). Ative Editar ou dê duplo clique para alterar a vista.">
   <svg id="drawing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet"></svg>
   <svg id="overlay" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
   <div class="hud" id="hud" aria-live="polite"></div>
+  <div class="stage-actions"><span class="badge" id="navInfo" hidden></span><button id="btnNavReset" hidden>Vista inteira</button><button class="primary" id="btnExitEdit" hidden>Concluir edição</button></div>
   <div class="busy" id="busy">Processando…</div>
 </div>
 
@@ -263,6 +268,10 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="field" id="fPlanRot" hidden><label for="planRot">Rotação da planta</label><div class="ctl"><input type="number" id="planRot" min="-360" max="360" step="1" aria-label="Rotação da planta em graus"><button id="btnNorthUp">Norte para cima</button></div></div>
     <div class="field"><label for="zoom">Zoom (%)</label><div class="ctl"><input type="range" id="zoom" min="10" max="2000" step="5"><input type="number" id="zoomN" min="2" max="50000" step="5" aria-label="Zoom em porcentagem"></div></div>
 
+    <h2>Corte horizontal</h2>
+    <label class="check"><input type="checkbox" id="cutOn">Cortar o modelo numa altura (mostra só o que está abaixo)</label>
+    <div class="field" id="fCutH"><label for="cutH">Altura do corte (m)</label><div class="ctl"><input type="range" id="cutH" min="0" max="100" step="0.1"><input type="number" id="cutHN" min="-50" max="2000" step="0.1" aria-label="Altura do corte em metros"></div></div>
+    <p class="hint">O corte vale para esta versão da vista. A aparência da superfície cortada fica em Estilo › Superfície de corte.</p>
     <h2>Recorte da imagem</h2>
     <label class="check"><input type="checkbox" id="cropOn">Usar recorte na vista e na exportação</label>
     <div class="field"><label for="cropRatio">Proporção</label><div class="ctl">
@@ -293,8 +302,12 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
       </select></div></div>
     <div class="field" id="fBuffer"><label for="buffer">Entorno (m)</label><div class="ctl"><input type="range" id="buffer" min="0" max="500" step="5"><input type="number" id="bufferN" min="0" max="2000" step="5" aria-label="Entorno em metros"></div></div>
     <div class="row"><button id="btnDrawArea">Desenhar no mapa</button><button id="btnMapArea">Usar área visível</button></div>
+    <label class="check"><input type="checkbox" id="areaOnMap">Mostrar o limite desenhado no mapa do Giraffe (editável lá: as edições voltam para cá)</label>
+    <label class="check"><input type="checkbox" id="cutAll">Cortar também o desenho do projeto (volumes, linhas e terreno)</label>
+    <label class="check"><input type="checkbox" id="areaLineOn">Desenhar a linha do limite</label>
+    <div class="field" id="fAreaLine"><label for="areaLineC">Linha do limite</label><div class="ctl"><input type="color" id="areaLineC" aria-label="Cor da linha do limite"><input type="number" id="areaLineW" min="0.1" max="12" step="0.1" aria-label="Espessura da linha do limite"><select id="areaLineD" aria-label="Traço da linha do limite"><option value="solid">Contínuo</option><option value="dash">Tracejado</option><option value="dot">Pontilhado</option><option value="dashdot">Traço-ponto</option></select></div></div>
     <div class="field"><label for="baseSrc">Fonte do mapa base, 3D Buildings e árvores</label><div class="ctl"><select id="baseSrc"><option value="giraffe">Mapa do Giraffe</option><option value="osm">OpenStreetMap (pela área)</option></select></div></div>
-    <p class="hint">Camadas são cortadas no limite, como numa maquete; volumes do projeto nunca são cortados. Com “Mapa do Giraffe”, o mapa base, 3D Buildings e árvores vêm do que o mapa do Giraffe tem carregado (enquadre a área); se o Giraffe permitir leitura por área, ela é usada automaticamente. “OpenStreetMap” lê sempre a área inteira, independente da tela.</p>
+    <p class="hint">Tudo é cortado no limite, como numa maquete (o desenho do projeto também, se a opção acima estiver ligada). O limite desenhado fica salvo no projeto. Com “Mapa do Giraffe”, o mapa base, 3D Buildings e árvores vêm do que o mapa do Giraffe tem carregado (enquadre a área); se o Giraffe permitir leitura por área, ela é usada automaticamente. “OpenStreetMap” lê sempre a área inteira, independente da tela.</p>
 
     <h2>Imagem do mapa / análise</h2>
     <p class="hint">Para horas de sol ou o próprio mapa base: deixe a análise visível no Giraffe com norte para cima e capture. A imagem vai para o plano do terreno.</p>
@@ -319,6 +332,12 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <p class="hint">No conjunto, o perfil usa espessura, cor e traço do layer de maior volume.</p>
     <div class="field"><label for="shade">Sombreamento</label><div class="ctl"><input type="range" id="shade" min="0" max="0.8" step="0.02"><input type="number" id="shadeN" min="0" max="0.8" step="0.02" aria-label="Intensidade do sombreamento das fachadas"></div></div>
 
+    <h2>Superfície de corte</h2>
+    <div class="field"><label for="cutMode">Preenchimento</label><div class="ctl"><select id="cutMode"><option value="element">Cor do próprio elemento</option><option value="custom">Cor única</option></select><input type="color" id="cutColor" aria-label="Cor da superfície de corte"></div></div>
+    <div class="field"><label for="cutHatch">Hachura</label><div class="ctl"><select id="cutHatch"><option value="none">Sem hachura</option><option value="diag">Diagonal</option><option value="cross">Cruzada</option></select><input type="color" id="cutHatchC" aria-label="Cor da hachura"></div></div>
+    <div class="field"><label for="cutSpacing">Espaçamento</label><div class="ctl"><input type="range" id="cutSpacing" min="2" max="30" step="0.5"><input type="number" id="cutSpacingN" min="2" max="80" step="0.5" aria-label="Espaçamento da hachura"></div></div>
+    <div class="field"><label for="cutLineW">Linha de corte</label><div class="ctl"><input type="number" id="cutLineW" min="0" max="12" step="0.1" placeholder="= perfil" aria-label="Espessura da linha de corte"><input type="color" id="cutLineC" aria-label="Cor da linha de corte"></div></div>
+    <p class="hint">Vale quando o Corte horizontal está ligado na aba Vista.</p>
     <h2>Sombra projetada</h2>
     <label class="check"><input type="checkbox" id="shOn">Mostrar sombra projetada no terreno</label>
     <div id="shBox">
@@ -382,15 +401,19 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V27 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V28 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V27 */
-/* V27: linhas com estilo do Giraffe (curvas, tracejadas, setas) seguem a cor de Linha do layer fora do modo Cores do Giraffe;
+/* KV Axonometria — Beta V28 */
+/* V28: limite do modelo como polígono (o desenho feito no mapa), cortando todo o conteúdo (volumes, linhas, terreno);
+   linha do perímetro; lupa de visualização com a vista travada (roda/arrastar) + botões na vista; corte horizontal
+   por altura com superfície de corte hachurável; o limite desenhado vira um elemento do Giraffe (visível e editável no mapa)
+   e a Axonometria acompanha as edições.
+   V27: linhas com estilo do Giraffe (curvas, tracejadas, setas) seguem a cor de Linha do layer fora do modo Cores do Giraffe;
    linhas sem cor própria usam a cor de Linha (antes recebiam uma cor inventada que não aparecia na lista).
    V26: linhas comuns voltam a usar a cor de Linha do layer (substituição na lista de cores do layer continua valendo).
    V25: paletas guardam o estilo de cada uma (voltar à anterior restaura); linhas 2D seguem as Cores do Giraffe e
@@ -445,7 +468,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V27';
+const VERSION = 'V28';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -729,7 +752,7 @@ function drawLayerNames() {
   const T = treeLayers(); const maps = new Set(projectLayerNames());
   if (!treeLogged && S.gs?.get('layerTree')) { treeLogged = true; log(`layerTree: ${T.size} layers · amostra: ${JSON.stringify(S.gs.get('layerTree')).slice(0, 500)}`); }
   const names = new Set(S.items.map((i) => i.layer));
-  for (const n of T.keys()) if (!maps.has(n)) names.add(n);
+  for (const n of T.keys()) if (!maps.has(n) && n !== 'KV Axonometria · Limite') names.add(n);
   return [...names];
 }
 function giraffeVis(name) {
@@ -1063,7 +1086,7 @@ function pushFeature(list, f, src, P, opts = {}) {
       for (const zb of zs) list.push({ ...meta, kind: 'prism', poly: o, z0: zb, z1: zb + thk, slab: true });
     } else if (z1 - z0 > 0.05) {
       let lv = 0; if (p.hideFloors !== true && String(p.hideFloors) !== 'true') { const L0 = Math.round(+p.levels || 0), f2 = +(p.floorToFloor ?? p.floor_to_floor ?? 0); lv = L0 > 1 ? L0 : f2 > 0.5 ? Math.round((z1 - z0) / f2) : 0; if (lv > 400) lv = 0; }
-      list.push({ ...meta, kind: 'prism', poly: o, z0, z1, lv });
+      list.push({ ...meta, kind: 'prism', poly: o, z0, z1, lv, fstep: lv > 1 ? (z1 - z0) / lv : 0 });
     }
     else { list.push({ ...meta, kind: 'poly', poly: o, z: z0, noStroke: !!olG }); pushInk(z0); }
   }
@@ -1098,12 +1121,15 @@ function ingestGiraffe() {
   const P = ensureProjector(sample);
   if (!P) { S.items = []; log('Nenhuma geometria no projeto ainda.'); return; }
   const items = []; const bakedIds = new Set();
+  followAreaFeature(raw.length ? raw : baked);
   for (const f of baked) {
+    if (f?.properties?.kv_axo_area) continue;
     bakedIds.add(featId(f));
     pushFeature(items, f, 'vol', P);
   }
   let rawAdded = 0;
   for (const f of raw) {
+    if (f?.properties?.kv_axo_area) continue;
     if (bakedIds.has(featId(f))) continue;
     const t = f.geometry?.type; if (!t || t.includes('Point')) continue;
     const rp = f.properties || {}; const z0r = +(rp._baseHeight ?? rp.baseHeight ?? 0) || 0; const hr = +(rp.height ?? 0) || ((+rp.levels || 0) * (+rp.floorToFloor || +rp.floor_to_floor || 0)) || 0;
@@ -1143,16 +1169,48 @@ function makeView(v) {
 
 /* ---------------- AREA (limite geográfico) ---------------- */
 function areaRect() {
+  // limite do modelo: caixa (minx…maxy) + ring = polígono do limite em metros (anti-horário, aberto) + isRect
   const c = S.area; const P = S.projector; if (!P) return null;
-  const buf = (b, d) => ({ minx: b.minx - d, miny: b.miny - d, maxx: b.maxx + d, maxy: b.maxy + d });
+  const mk = (ring, isRect) => { if (!ring || ring.length < 3) return null; ring = openRing(ring); if (sArea(ring) < 0) ring = ring.slice().reverse(); const b = bboxOf(ring); b.ring = ring; b.isRect = !!isRect; b.key = (isRect ? 'r' : 'p') + ring.map((p) => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join(';'); return b; };
+  const rect = (b) => mk([[b.minx, b.miny], [b.maxx, b.miny], [b.maxx, b.maxy], [b.minx, b.maxy]], true);
   if (c.mode === 'project') {
     const pg = projectGeom(); if (!pg) return null;
     const parts = geomToParts(pg, P); const b = { minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
-    parts.polys.forEach((p) => bboxOf(p[0], b)); if (!isFinite(b.minx)) return null; return buf(b, c.buffer);
+    parts.polys.forEach((p) => bboxOf(p[0], b)); if (!isFinite(b.minx)) return null; const d = c.buffer; return rect({ minx: b.minx - d, miny: b.miny - d, maxx: b.maxx + d, maxy: b.maxy + d });
   }
-  if (c.mode === 'map' && c.mapRect) return c.mapRect;
-  if (c.mode === 'drawn' && c.drawn) return c.drawn;
+  if (c.mode === 'map') { if (c.mapLL) return rect(bboxOf(c.mapLL.map((q) => P.forward(q)))); if (c.mapRect) return rect(c.mapRect); }
+  if (c.mode === 'drawn') { if (c.ringLL) return mk(c.ringLL.map((q) => P.forward(q)), false); if (c.drawn) return rect(c.drawn); }
   return null;
+}
+const areaRing = (R) => R.ring || rectPoly(R)[0].slice(0, 4);
+function inRing(p, ring) { let ins = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const a = ring[i], b = ring[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) ins = !ins; } return ins; }
+function ringConvex(ring) { let s = 0; for (let i = 0; i < ring.length; i++) { const a = ring[i], b = ring[(i + 1) % ring.length], c = ring[(i + 2) % ring.length]; const z = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (Math.abs(z) < 1e-9) continue; if (s && Math.sign(z) !== s) return false; s = Math.sign(z); } return true; }
+function clipLineRing(pts, ring) { // polilinha × polígono qualquer: divide nos cruzamentos e guarda os trechos de dentro
+  const out = []; let cur = null;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1]; const ts = [0, 1]; const dx = b[0] - a[0], dy = b[1] - a[1];
+    for (let k = 0; k < ring.length; k++) { const c = ring[k], d = ring[(k + 1) % ring.length]; const ex = d[0] - c[0], ey = d[1] - c[1]; const den = dx * ey - dy * ex; if (Math.abs(den) < 1e-12) continue; const t = ((c[0] - a[0]) * ey - (c[1] - a[1]) * ex) / den, u = ((c[0] - a[0]) * dy - (c[1] - a[1]) * dx) / den; if (t > 1e-9 && t < 1 - 1e-9 && u >= 0 && u <= 1) ts.push(t); }
+    ts.sort((x, y) => x - y);
+    for (let k = 0; k < ts.length - 1; k++) { const t0 = ts[k], t1 = ts[k + 1]; if (t1 - t0 < 1e-9) continue; const m = [a[0] + dx * (t0 + t1) / 2, a[1] + dy * (t0 + t1) / 2];
+      if (!inRing(m, ring)) { if (cur) { out.push(cur); cur = null; } continue; }
+      const p0 = [a[0] + dx * t0, a[1] + dy * t0], p1 = [a[0] + dx * t1, a[1] + dy * t1];
+      if (!cur) cur = [p0]; else { const l = cur[cur.length - 1]; if (Math.hypot(l[0] - p0[0], l[1] - p0[1]) > 1e-6) { out.push(cur); cur = [p0]; } } cur.push(p1); }
+  }
+  if (cur) out.push(cur); return out.filter((l) => l.length >= 2);
+}
+function clipFaceRing(face, ring) { // face 3D × polígono convexo (Sutherland–Hodgman, interpolando z)
+  let poly = face;
+  for (let k = 0; k < ring.length && poly.length; k++) {
+    const c = ring[k], d = ring[(k + 1) % ring.length]; const ex = d[0] - c[0], ey = d[1] - c[1]; const side = (p) => ex * (p[1] - c[1]) - ey * (p[0] - c[0]); const res = [];
+    for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; const sa = side(a), sb = side(b);
+      if (sa >= 0) res.push(a); if ((sa >= 0) !== (sb >= 0)) { const t = sa / (sa - sb); res.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]); } }
+    poly = res;
+  }
+  return poly.length >= 3 ? poly : null;
+}
+function clipFaceZ(face, h) { // guarda a parte da face abaixo da altura h
+  const res = []; for (let i = 0; i < face.length; i++) { const a = face[i], b = face[(i + 1) % face.length]; const ia = a[2] <= h, ib = b[2] <= h; if (ia) res.push(a); if (ia !== ib) { const t = (h - a[2]) / (b[2] - a[2]); res.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, h]); } }
+  return res.length >= 3 ? res : null;
 }
 function projectGeom() {
   if (S.mode === 'demo') return DEMO.project.geometry;
@@ -1160,23 +1218,36 @@ function projectGeom() {
 }
 function applyArea(items, R) {
   if (!R) return items;
-  const out = []; const pc = PC(); const rp = rectPoly(R);
+  const out = []; const pc = PC(); const ring = areaRing(R); const rp = [[...ring, ring[0]]]; const cutAll = S.area.cutAll !== false; const convex = R.isRect || ringConvex(ring);
   for (const it of items) {
-    const b = itemBBox(it); if (!bbHit(b, R)) continue;
-    const inside = b.minx >= R.minx && b.maxx <= R.maxx && b.miny >= R.miny && b.maxy <= R.maxy;
-    if (it.src === 'vol' || it.src === 'flat' || inside) { out.push(it); continue; }
-    if (it.kind === 'tree') { if (it.pos[0] >= R.minx && it.pos[0] <= R.maxx && it.pos[1] >= R.miny && it.pos[1] <= R.maxy) out.push(it); continue; }
-    if (it.kind === 'mesh') { out.push(it); continue; }
-    if (it.kind === 'line') { clipLine(it.pts, R).forEach((pts) => out.push({ ...it, pts, _bb: null })); continue; }
-    if (!pc) { out.push(it); continue; }
-    try {
-      const res = pc.intersection(it.poly.map((r) => [...r, r[0]]), rp);
-      res.forEach((mp) => { const o = orientPoly(mp); if (o.length) out.push({ ...it, poly: o, _bb: null }); });
-    } catch (e) { out.push(it); }
+    if (!cutAll && (it.src === 'vol' || it.src === 'flat')) { out.push(it); continue; }
+    if (it._clip && it._clip.key === R.key) { for (const o of it._clip.out) out.push(o); continue; }
+    const b = itemBBox(it); let res;
+    if (!bbHit(b, R)) res = [];
+    else if (R.isRect && b.minx >= R.minx && b.maxx <= R.maxx && b.miny >= R.miny && b.maxy <= R.maxy) res = [it];
+    else if (it.kind === 'tree') res = inRing(it.pos, ring) ? [it] : [];
+    else if (it.kind === 'mesh') {
+      const faces = []; for (const f of it.faces) { if (convex) { const c = clipFaceRing(f, ring); if (c) faces.push(c); } else { let cx = 0, cy = 0; f.forEach((p) => { cx += p[0]; cy += p[1]; }); if (inRing([cx / f.length, cy / f.length], ring)) faces.push(f); } }
+      res = faces.length ? [{ ...it, faces, _bb: null, _clip: null }] : [];
+    }
+    else if (it.kind === 'line') res = (R.isRect ? clipLine(it.pts, R) : clipLineRing(it.pts, ring)).map((pts) => ({ ...it, pts, _bb: null, _clip: null }));
+    else if (!pc) res = [it];
+    else { try { res = []; pc.intersection(it.poly.map((r) => [...r, r[0]]), rp).forEach((mp) => { const o = orientPoly(mp); if (o.length) res.push({ ...it, poly: o, _bb: null, _clip: null }); }); } catch (e) { res = [it]; } }
+    it._clip = { key: R.key, out: res };
+    for (const o of res) out.push(o);
   }
   return out;
 }
-
+function cutItems(items, h) { // corte horizontal: só o que está abaixo da altura h
+  const out = [];
+  for (const it of items) {
+    if (it.kind === 'prism') { if (it.z0 >= h - 1e-6) continue; out.push(it.z1 > h + 1e-6 ? { ...it, z1: h, cutTop: true, _clip: null } : it); }
+    else if (it.kind === 'tree') { if (h <= 0.2) continue; if (it.zc - it.r > h) out.push({ ...it, trunk: Math.min(it.trunk, h), noCanopy: true }); else out.push(it); }
+    else if (it.kind === 'mesh') { if (it._zc && it._zc.h === h) { if (it._zc.o) out.push(it._zc.o); continue; } const faces = []; for (const f of it.faces) { const c = clipFaceZ(f, h); if (c) faces.push(c); } const o = faces.length ? { ...it, faces, _bb: null } : null; it._zc = { h, o }; if (o) out.push(o); }
+    else if ((it.z || 0) <= h + 1e-6) out.push(it);
+  }
+  return out;
+}
 
 /* ---------------- RENDER ---------------- */
 let rafId = 0, pendingFast = false;
@@ -1232,6 +1303,7 @@ function render(fast = false) {
 
   let items = allItems().filter((it) => isVis(it.lk) && scnVisible(it));
   items = applyArea(items, R);
+  const cutH = S.view.cutOn && isFinite(+S.view.cutH) ? +S.view.cutH : null; if (cutH != null) items = cutItems(items, cutH);
   const ground = []; const faces = []; const lineOps = []; const edges = [];
   const faceStroke = (L, col, opaque) => (fast ? { stroke: L.stroke, sw: L.strokeW, dash: L.dash } : opaque && col !== 'none' ? { stroke: col, sw: 0.6, dash: 'solid' } : { stroke: 'none', sw: 0, dash: 'solid' });
   const prj = (r, z) => r.map((p) => V.P(p[0], p[1], z));
@@ -1245,13 +1317,13 @@ function render(fast = false) {
   const addFace = (rings3, op, extra, mesh) => { const f = { rings3, op, extra, mesh }; faces.push(f); return f; };
 
   if (st.soil?.on && R && !V.plan) { // corte do solo: laterais do bloco de terreno sob a área do modelo
-    const d = Math.max(0.5, +st.soil.depth || 6), c4 = rectPoly(R)[0].slice(0, 4); const sc0 = st.soil.color || '#C8B89A';
-    for (let i = 0; i < 4; i++) { const a = c4[i], b = c4[(i + 1) % 4]; const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1; const nx = dy / len, ny = -dx / len;
+    const d = Math.max(0.5, +st.soil.depth || 6), c4 = areaRing(R); const sc0 = st.soil.color || '#C8B89A';
+    for (let i = 0; i < c4.length; i++) { const a = c4[i], b = c4[(i + 1) % c4.length]; const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1; const nx = dy / len, ny = -dx / len;
       if (nx * V.fx + ny * V.fy > -1e-4) continue; const lam = (nx * Lx + ny * Ly) / Ll; const tone = st.shade * (1 - (lam + 1) / 2) * 1.25;
       ground.push({ t: 'poly', g: 'Corte do solo', rings: [[V.P(a[0], a[1], 0), V.P(b[0], b[1], 0), V.P(b[0], b[1], -d), V.P(a[0], a[1], -d)]], fill: mix(sc0, '#000000', Math.min(0.6, Math.max(0, tone))), fop: 1, stroke: st.soil.line || '#5D4A33', sw: 0.8, dash: 'solid' }); }
   }
-  if (st.ground && R) ground.push({ t: 'poly', g: 'Terreno', rings: [prj(rectPoly(R)[0].slice(0, 4), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
-  if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ground.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null }); }
+  if (st.ground && R) ground.push({ t: 'poly', g: 'Terreno', rings: [prj(areaRing(R), 0)], fill: st.groundFill, fop: 1, stroke: 'none', sw: 0 });
+  if (S.raster && isVis('raster')) { const m = rasterMatrix(V, 0); if (m) ground.push({ t: 'img', g: 'Imagem do mapa', m, op: st.rasterOp, clip: R ? [prj(areaRing(R), 0)] : null }); }
 
   // flats → ops (ground) or faces (elevated)
   const flatOps = (it) => {
@@ -1280,6 +1352,7 @@ function render(fast = false) {
   const pri = (it) => { const n = lkName(it.lk); return n in BPRI ? BPRI[n] : it.lk.startsWith('map|') ? 4 : 5; };
   const lineish = (i) => (i.kind === 'line' || i.ink ? 1 : 0);
   flats.filter((i) => (i.z || 0) <= 0.05).sort((a, b) => lineish(a) - lineish(b) || (a.z || 0) - (b.z || 0) || pri(a) - pri(b) || (a.so || 0) - (b.so || 0) || (a.lk < b.lk ? -1 : a.lk > b.lk ? 1 : 0)).forEach((it) => ground.push(...flatOps(it)));
+  if (R && st.areaLine?.on && (st.areaLine.w ?? 1.2) > 0) { const rg = areaRing(R); ground.push({ t: 'line', g: 'Limite do modelo', pts: [...rg, rg[0]].map((p) => V.P(p[0], p[1], 0)), stroke: st.areaLine.color || '#1B1B1B', sw: st.areaLine.w ?? 1.2, dash: st.areaLine.dash || 'dash' }); }
   for (const it of flats.filter((i) => (i.z || 0) > 0.05)) {
     const z = it.z;
     for (const o of flatOps(it)) {
@@ -1308,10 +1381,10 @@ function render(fast = false) {
       for (let k = 0; k < 18; k++) { const a = (k / 18) * Math.PI * 2; const A = r * Math.cos(a), B = (r / sa) * Math.sin(a); ring.push(V.P(c0[0] + px * A + ux * B, c0[1] + py * A + uy * B, 0)); }
       polys.push(ring); polys.push([V.P(x - px * 0.2, y - py * 0.2, 0), V.P(x + px * 0.2, y + py * 0.2, 0), sh([x + px * 0.2, y + py * 0.2], it.trunk), sh([x - px * 0.2, y - py * 0.2], it.trunk)]);
     }
-    ground.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op, clip: R ? [prj(rectPoly(R)[0].slice(0, 4), 0)] : null });
+    ground.push({ t: 'shadow', g: 'Sombra projetada', polys, color: st.sh.color, op: st.sh.op, clip: R ? [prj(areaRing(R), 0)] : null });
   }
 
-  let nVol = 0;
+  let nVol = 0, cutUsed = false;
   // conjuntos: volumes que se tocam/sobrepõem (torre + pavimentos + varandas) formam um só contorno de perfil
   const gidOf = new Map();
   { const par = prismsAll.map((_, i) => i); const fnd = (i) => (par[i] === i ? i : (par[i] = fnd(par[i])));
@@ -1351,28 +1424,31 @@ function render(fast = false) {
     if (!V.elev) {
       const top = it.poly.map((r) => r.map((p) => P3(p[0], p[1], it.z1)));
       const extra = (S.raster && st.drapeRoofs && isVis('raster')) ? (() => { const m = rasterMatrix(V, it.z1); return m ? [{ t: 'img', g, m, op: st.rasterOp, clip: top }] : null; })() : null;
-      topF = addFace(top, { t: 'poly', g, rings: top, fill, fop: L.fillOp, ...faceStroke(L, fill, opaque) }, extra); topF.opaque = opaque; topF.gid = gid; topF.pl = [0, 0, 1, it.z1];
+      const ct = it.cutTop ? (st.cut || {}) : null; const topFill = ct && ct.mode === 'custom' ? (ct.color || '#1B1B1B') : fill;
+      const extra2 = ct && ct.hatch && ct.hatch !== 'none' ? [...(extra || []), { t: 'poly', g, rings: top, fill: `url(#kvhatch-${ct.hatch})`, fop: 1, stroke: 'none', sw: 0, noMerge: true }] : extra;
+      if (ct) cutUsed = true;
+      topF = addFace(top, { t: 'poly', g, rings: top, fill: topFill, fop: L.fillOp, ...faceStroke(L, topFill, opaque) }, extra2); topF.opaque = opaque; topF.gid = gid; topF.pl = [0, 0, 1, it.z1];
     }
     // arestas (desenhadas uma vez só, depois das faces, só onde visíveis)
     if (!fast) {
       const pf = perfilOf(st.perfilGroup !== false ? domOf.get(gid).lk : it.lk); const wS = pf.w, wI = L.strokeW; const c = L.stroke, dash = L.dash;
-      const E = (a, b, z0, z1, sil, fs) => { if (c === 'none' || (wS <= 0 && wI <= 0)) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS, wI, sil, dash, pc: pf.c, pdash: pf.dash, g, fs: fs.filter(Boolean) }); };
+      const cw = st.cut?.lineW; const E = (a, b, z0, z1, sil, fs, cut) => { if (c === 'none' || (wS <= 0 && wI <= 0)) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS: cut && cw != null && cw !== '' ? +cw : wS, wI, sil, cut, dash, pc: cut && st.cut?.lineC ? st.cut.lineC : pf.c, pdash: cut ? 'solid' : pf.dash, g, fs: fs.filter(Boolean) }); };
       it.poly.forEach((ring, ri) => {
         const fr = front[ri]; const wf = wallF[ri]; const n = ring.length;
         for (let i = 0; i < n; i++) {
           const a = ring[i], b = ring[(i + 1) % n]; const ip = (i - 1 + n) % n; const prev = fr[ip];
-          if (V.plan) { E(a, b, it.z1, it.z1, true, [topF]); continue; }
+          if (V.plan) { E(a, b, it.z1, it.z1, true, [topF], !!it.cutTop); continue; }
           if (V.elev) { if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip]]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); if (fr[i]) { E(a, b, it.z1, it.z1, true, [wf[i]]); E(a, b, it.z0, it.z0, true, [wf[i]]); } continue; }
           if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip], topF]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]);
-          E(a, b, it.z1, it.z1, !fr[i], [topF, wf[i]]);
+          E(a, b, it.z1, it.z1, !fr[i] || !!it.cutTop, [topF, wf[i]], !!it.cutTop);
           if (fr[i]) E(a, b, it.z0, it.z0, true, [wf[i]]);
         }
       });
       // linhas de pavimento nas fachadas visíveis
       const wF = L.floorW ?? L.strokeW, cF = L.floorC || L.stroke;
-      if (it.lv > 1 && wF > 0 && !V.plan) it.poly.forEach((ring, ri) => { const fr = front[ri]; const wf = wallF[ri]; const n = ring.length; const st2 = (it.z1 - it.z0) / it.lv;
+      if (it.lv > 1 && wF > 0 && !V.plan) it.poly.forEach((ring, ri) => { const fr = front[ri]; const wf = wallF[ri]; const n = ring.length; const st2 = it.fstep || (it.z1 - it.z0) / it.lv;
         for (let i = 0; i < n; i++) { if (!fr[i] || !wf[i]) continue; const a = ring[i], b = ring[(i + 1) % n];
-          for (let k = 1; k < it.lv; k++) { const z = it.z0 + k * st2; edges.push({ a: [a[0], a[1], z], b: [b[0], b[1], z], c: cF, wS: 0, wI: wF, sil: false, floor: true, dash: 'solid', g, fs: [wf[i]] }); } } });
+          for (let k = 1; k < it.lv; k++) { const z = it.z0 + k * st2; if (z >= it.z1 - 1e-6) break; edges.push({ a: [a[0], a[1], z], b: [b[0], b[1], z], c: cF, wS: 0, wI: wF, sil: false, floor: true, dash: 'solid', g, fs: [wf[i]] }); } } });
     }
   }
   // meshes (envoltórias, objetos 3D)
@@ -1402,6 +1478,7 @@ function render(fast = false) {
     const b0 = P3(x, y, 0), b1 = P3(x, y, it.trunk); const tw = 0.18;
     const trunk = [[b0[0] - tw, b0[1], b0[2]], [b0[0] + tw, b0[1], b0[2]], [b1[0] + tw, b1[1], b1[2]], [b1[0] - tw, b1[1], b1[2]]];
     addFace([trunk], { t: 'poly', g, rings: [trunk], fill: mix(L.stroke, '#ffffff', 0.15), fop: 1, stroke: 'none', sw: 0 }, null).opaque = true;
+    if (it.noCanopy) continue;
     const c = P3(x, y, it.zc); const ring = [];
     for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2; ring.push([c[0] + it.r * Math.cos(a), c[1] + it.r * Math.sin(a), c[2] - it.r * 0.7]); }
     const fill = fillOf(it);
@@ -1494,7 +1571,7 @@ function render(fast = false) {
         }
         if (vis) {
           let isP = e.sil;
-          if (isP && grp) { const g1 = at(Math.floor(fx + nx), Math.floor(fy + ny), gOp), g2 = at(Math.floor(fx - nx), Math.floor(fy - ny), gOp); isP = g1 !== g2; }
+          if (isP && grp && !e.cut) { const g1 = at(Math.floor(fx + nx), Math.floor(fy + ny), gOp), g2 = at(Math.floor(fx - nx), Math.floor(fy - ny), gOp); isP = g1 !== g2; }
           use = isP ? eP : eI;
         }
         if (use !== curE) { const last = cur ? cur[cur.length - 1] : null; close(); if (use) { cur = [last || p]; curE = use; } }
@@ -1520,6 +1597,9 @@ function render(fast = false) {
     try { return PC().intersection(polys.map((p) => p.map((r) => [...r, r[0]])), rectPoly(PRR)).map((pp) => pp.map((r) => 'M' + r.slice(0, -1).map(F).join('L') + 'Z').join('')).join(''); } catch (e) { return plain(); }
   };
   const clipLineD = (pts) => clipLine(pts.map(toF), PRR).map((l) => 'M' + l.map(F).join('L')).join('');
+  if (cutUsed) { const ct = st.cut || {}; const sp = Math.max(2, +ct.spacing || 7), hc = ct.hatchColor || '#1B1B1B', hw = Math.max(0.2, +ct.hatchW || 0.6);
+    defs.push(`<pattern id="kvhatch-diag" patternUnits="userSpaceOnUse" width="${sp}" height="${sp}" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="${sp}" stroke="${hc}" stroke-width="${hw}"/></pattern>`);
+    defs.push(`<pattern id="kvhatch-cross" patternUnits="userSpaceOnUse" width="${sp}" height="${sp}" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="${sp}" stroke="${hc}" stroke-width="${hw}"/><line x1="0" y1="0" x2="${sp}" y2="0" stroke="${hc}" stroke-width="${hw}"/></pattern>`); }
   if (PR) defs.push(`<clipPath id="kvcrop"><rect x="${fmt(PR.x)}" y="${fmt(PR.y)}" width="${fmt(PR.w)}" height="${fmt(PR.h)}"/></clipPath>`);
   const emit = (o) => {
     open(o.g);
@@ -1577,7 +1657,7 @@ function render(fast = false) {
   const bgRect = PR ? `<rect id="L_Fundo" x="${fmt(PR.x)}" y="${fmt(PR.y)}" width="${fmt(PR.w)}" height="${fmt(PR.h)}" fill="${st.bgT ? 'none' : st.bg}"/>` : st.bgT ? '' : `<rect id="L_Fundo" x="-10" y="-10" width="${W + 20}" height="${H + 20}" fill="${st.bg}"/>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join('')}</defs>${bgRect}${out}${north}</svg>`;
   S.lastSVG = svg; if (!fast && !S._pubRect && typeof schedulePublish === 'function') schedulePublish();
-  const host = $('#drawing'); host.setAttribute('viewBox', `0 0 ${W} ${H}`); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  const host = $('#drawing'); host.setAttribute('viewBox', navVB()); host.innerHTML = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
   host.style.background = 'transparent';
   $('#hud').textContent = `${S.edit ? 'EDITANDO · ' : '🔒 '}${S.versions[S.av]?.name || ''} · ${presetName()} · az ${Math.round(S.view.az)}°${S.view.proj === 'ortho' ? ` · el ${(+S.view.el).toFixed(1)}°` : ''} · ${Math.round(S.view.zoom * 100)}% · ${nVol} vol${sun ? (sunUp ? ` · sol ${Math.round(sun.az)}°/${Math.round(sun.alt)}°` : ' · sol abaixo do horizonte') : ''}${fast ? ' · prévia' : ''}`;
   if (sun) $('#sunInfo').textContent = sunUp ? `Sol: az ${Math.round(sun.az)}°, alt ${Math.round(sun.alt)}°` : 'Sol abaixo do horizonte';
@@ -1585,7 +1665,7 @@ function render(fast = false) {
 }
 function drawEmpty() {
   const host = $('#drawing'); host.style.background = 'transparent';
-  host.setAttribute('viewBox', `0 0 ${S.W} ${S.H}`);
+  host.setAttribute('viewBox', navVB());
   host.innerHTML = `<text x="800" y="490" text-anchor="middle" font-family="Hind, sans-serif" font-size="34" fill="#747878">Nada para desenhar ainda</text><text x="800" y="540" text-anchor="middle" font-family="Hind, sans-serif" font-size="24" fill="#747878">Desenhe no Giraffe ou ligue camadas na aba Conteúdo</text>`;
   S.lastSVG = ''; $('#hud').textContent = 'Sem conteúdo';
 }
@@ -1645,10 +1725,19 @@ function fitRatio() {
   c.rect = clampRect({ x: cx - w / 2, y: cy - h / 2, w, h });
 }
 function clampRect(r) { r.w = Math.min(r.w, S.W); r.h = Math.min(r.h, S.H); r.x = Math.max(0, Math.min(S.W - r.w, r.x)); r.y = Math.max(0, Math.min(S.H - r.h, r.y)); return r; }
-function pxUnit() { const el = $('#overlay'); const b = el.getBoundingClientRect(); return Math.max(S.W / b.width, S.H / b.height) || 1; }
+/* lupa de visualização: aproxima/move só a exibição (viewBox), sem alterar a vista salva */
+const NAV = { z: 1, x: 800, y: 500 };
+function navVB() { const w = S.W / NAV.z, h = S.H / NAV.z; NAV.x = Math.max(w / 2, Math.min(S.W - w / 2, NAV.x)); NAV.y = Math.max(h / 2, Math.min(S.H - h / 2, NAV.y)); return `${(NAV.x - w / 2).toFixed(2)} ${(NAV.y - h / 2).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`; }
+function applyNav() {
+  const vb = navVB(); $('#drawing').setAttribute('viewBox', vb); $('#overlay').setAttribute('viewBox', vb);
+  const zoomed = NAV.z > 1.001; $('#btnNavReset').hidden = !zoomed; $('#btnExitEdit').hidden = !S.edit; $('#navInfo').hidden = !zoomed; if (zoomed) $('#navInfo').textContent = `Lupa ${Math.round(NAV.z * 100)}%`;
+}
+function navZoom(f, at) { const z = Math.max(1, Math.min(60, NAV.z * f)); if (at) { NAV.x = at.x - (at.x - NAV.x) * (NAV.z / z); NAV.y = at.y - (at.y - NAV.y) * (NAV.z / z); } NAV.z = z; if (z <= 1.001) { NAV.z = 1; NAV.x = S.W / 2; NAV.y = S.H / 2; } applyNav(); drawOverlay(); }
+function navReset() { NAV.z = 1; NAV.x = S.W / 2; NAV.y = S.H / 2; applyNav(); drawOverlay(); }
+function pxUnit() { const el = $('#overlay'); const b = el.getBoundingClientRect(); return Math.max(S.W / NAV.z / b.width, S.H / NAV.z / b.height) || 1; }
 function drawOverlay() {
   const c = S.cropUI; const ov = $('#overlay'); const W = S.W, H = S.H;
-  if (!c.on || !c.rect) { ov.setAttribute('viewBox', `0 0 ${W} ${H}`); ov.innerHTML = ''; return; }
+  if (!c.on || !c.rect) { ov.setAttribute('viewBox', navVB()); ov.innerHTML = ''; return; }
   const r = c.rect; const u = pxUnit(); const showH = S.tool === 'crop';
   const maskFill = c.showOut ? 'rgba(0,0,0,0.5)' : (S.style.bgT ? 'var(--md-sys-color-surface-container)' : S.style.bg);
   let h = `<path d="M-20 -20H${W + 20}V${H + 20}H-20Z M${r.x} ${r.y}v${r.h}h${r.w}v${-r.h}Z" fill="${maskFill}" fill-rule="evenodd"/>`;
@@ -1658,7 +1747,7 @@ function drawOverlay() {
     for (const [hx, hy] of handlePts(r)) h += `<rect x="${hx - hs / 2}" y="${hy - hs / 2}" width="${hs}" height="${hs}" fill="#FFFFFF" stroke="#00677C" stroke-width="${1.5 * u}"/>`;
     h += `<text x="${r.x + 6 * u}" y="${r.y - 6 * u > 14 * u ? r.y - 6 * u : r.y + 16 * u}" font-family="Hind, sans-serif" font-size="${12 * u}" fill="#00ACCD">${Math.round(r.w)}×${Math.round(r.h)}</text>`;
   }
-  ov.setAttribute('viewBox', `0 0 ${W} ${H}`); ov.innerHTML = h;
+  ov.setAttribute('viewBox', navVB()); ov.innerHTML = h;
 }
 function handlePts(r) { return [[r.x, r.y], [r.x + r.w / 2, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h / 2], [r.x + r.w, r.y + r.h], [r.x + r.w / 2, r.y + r.h], [r.x, r.y + r.h], [r.x, r.y + r.h / 2]]; }
 const HANDLE_IDS = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -2066,20 +2155,44 @@ async function useMapArea() {
   if (S.mode === 'demo') { S.area.mapRect = { minx: -110, miny: -90, maxx: 110, maxy: 90 }; }
   else {
     const b = await currentMapBounds(); const P = ensureProjector(b[0]);
-    const pts = [[b[0][0], b[0][1]], [b[1][0], b[0][1]], [b[1][0], b[1][1]], [b[0][0], b[1][1]]].map((c) => P.forward(c));
-    S.area.mapRect = bboxOf(pts);
+    S.area.mapLL = [[b[0][0], b[0][1]], [b[1][0], b[0][1]], [b[1][0], b[1][1]], [b[0][0], b[1][1]]]; S.area.mapRect = bboxOf(S.area.mapLL.map((c) => P.forward(c)));
   }
   S.area.mode = 'map'; syncUI(); render(); persist(); scheduleAreaRefresh();
 }
+/* limite desenhado como elemento do Giraffe (layer KV Axonometria · Limite): aparece no mapa e pode ser editado lá */
+const AREA_LAYER = 'KV Axonometria · Limite';
+function areaFeature(list) { const pid = projId(); return (list || S.gs?.get('rawSections')?.features || []).find((f) => f?.properties?.kv_axo_area && (!f.properties.kv_axo_project || String(f.properties.kv_axo_project) === pid) && /Polygon/.test(f.geometry?.type || '')) || null; }
+function followAreaFeature(list) {
+  const f = areaFeature(list); if (!f) return;
+  S.area.rawId = featId(f);
+  const g = f.geometry; const rg = (g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0]).map((q) => [+q[0], +q[1]]);
+  const key = rg.map((q) => q[0].toFixed(7) + ',' + q[1].toFixed(7)).join(';');
+  if (key !== (S.area.ringLL || []).map((q) => (+q[0]).toFixed(7) + ',' + (+q[1]).toFixed(7)).join(';')) {
+    const first = !S.area.ringLL; S.area.ringLL = rg;
+    if (!first) { log('Limite do modelo editado no Giraffe: área atualizada'); setTimeout(() => { render(); persist(); scheduleAreaRefresh(); }, 0); }
+  }
+}
+async function putAreaOnMap(ringLL) {
+  if (S.mode !== 'giraffe' || !ringLL || ringLL.length < 3) return false;
+  const old = areaFeature(); if (old) { try { await call('deleteRawSections', [[featId(old)]], 15000); } catch (e) { /* segue */ } }
+  const ring = ringLL.slice(); if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) ring.push(ring[0]);
+  const props = { kv_axo_area: true, kv_axo_project: projId(), name: 'Limite da Axonometria', usage: 'Limite da Axonometria', color: '#00ACCD', fillOpacity: 0.04, stroke: '#00ACCD', strokeWidth: 2, strokeDasharray: [6, 3] };
+  const feat = (layerId) => ({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: { ...props, layerId } });
+  try { await call('createDrawingLayer', [AREA_LAYER], 15000); } catch (e) { /* já existe ou sem permissão */ }
+  for (const lid of [AREA_LAYER, 'default']) { try { await call('createRawSection', [feat(lid)], 20000); log(`Limite criado no Giraffe (layer “${lid}”)`); return true; } catch (e) { /* tenta o próximo */ } }
+  toast('Não consegui criar o limite no mapa do Giraffe; ele continua salvo só na Axonometria.'); return false;
+}
+async function removeAreaFromMap() { const f = areaFeature(); if (!f) return; try { await call('deleteRawSections', [[featId(f)]], 15000); S.area.rawId = null; log('Limite removido do mapa do Giraffe'); } catch (e) { toast('Não consegui remover o limite do mapa.'); } }
 async function drawArea() {
-  if (S.mode === 'demo') { S.area.drawn = { minx: -70, miny: -60, maxx: 80, maxy: 70 }; S.area.mode = 'drawn'; syncUI(); render(); return; }
+  if (S.mode === 'demo') { S.area.ringLL = [[-70, -60], [80, -50], [95, 40], [10, 75], [-60, 50]].map((p) => DEMO.P.inverse(p)); S.area.drawn = null; S.area.mode = 'drawn'; syncUI(); render(); persist(); return; }
   toast('Desenhe a área no mapa do Giraffe.');
   try {
     const r = await call('getUserDrawnPolygon', [], 180000);
     const g = r?.geometry || r?.features?.[0]?.geometry || (r?.type === 'Polygon' ? r : null);
     if (!g) throw new Error('nenhum polígono');
     const P = ensureProjector(firstCoord(g)); const parts = geomToParts(g, P);
-    S.area.drawn = bboxOf(parts.polys[0][0]); S.area.mode = 'drawn'; syncUI(); render(); persist(); scheduleAreaRefresh();
+    const rg = g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0]; S.area.ringLL = rg.map((q) => [q[0], q[1]]); S.area.drawn = bboxOf(parts.polys[0][0]); S.area.mode = 'drawn'; syncUI(); render(); persist(); scheduleAreaRefresh();
+    if (S.area.onMap !== false) putAreaOnMap(S.area.ringLL);
   } catch (e) { toast('Desenho cancelado ou indisponível.'); }
 }
 
@@ -2302,7 +2415,7 @@ async function exportAllPNG() {
 }
 
 /* ---------------- PERSISTENCE ---------------- */
-function snapshot() { return { app: 'KV Axonometria', version: VERSION, common: { style: S.style, lstyle: S.lstyle, colorMap: S.colorMap, usageMap: S.usageMap, cropUI: S.cropUI, area: { mode: S.area.mode, buffer: S.area.buffer }, autoSync: S.autoSync }, versions: S.versions, av: S.av }; }
+function snapshot() { return { app: 'KV Axonometria', version: VERSION, common: { style: S.style, lstyle: S.lstyle, colorMap: S.colorMap, usageMap: S.usageMap, cropUI: S.cropUI, area: { mode: S.area.mode, buffer: S.area.buffer, ringLL: S.area.ringLL || null, mapLL: S.area.mapLL || null, cutAll: S.area.cutAll !== false, onMap: S.area.onMap !== false }, autoSync: S.autoSync }, versions: S.versions, av: S.av }; }
 function loadSnapshot(o) {
   if (!o) return; const c = o.common || {};
   if (c.style) { const sh = { ...S.style.sh, ...(c.style.sh || {}) }; Object.assign(S.style, c.style, { sh }); }
@@ -2472,6 +2585,10 @@ function syncUI() {
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
   $('#north').checked = st.north; $('#northBox').hidden = !st.north; $('#northStyle').value = st.northStyle || 'crossN'; $('#northC1').value = st.northC1 || '#1B1B1B'; $('#northC2').value = st.northC2 || '#FFFFFF'; $('#northLabel').checked = st.northLabel !== false; $('#northPos').value = st.northPos || 'br';
   const so = st.soil || {}; $('#soilOn').checked = !!so.on; $('#soilColor').value = so.color || '#C8B89A'; $('#soilLine').value = so.line || '#5D4A33'; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
+  { const mz = Math.max(10, ...S.items.filter((i) => i.kind === 'prism').map((i) => i.z1)); $('#cutH').max = String(Math.ceil(mz + 1)); if (v.cutH == null) v.cutH = Math.min(3, mz); }
+  $('#cutOn').checked = !!v.cutOn; $('#fCutH').hidden = !v.cutOn;
+  const ct = st.cut || {}; $('#cutMode').value = ct.mode || 'element'; $('#cutColor').value = ct.color || '#1B1B1B'; $('#cutHatch').value = ct.hatch || 'none'; $('#cutHatchC').value = ct.hatchColor || '#1B1B1B'; $('#cutLineW').value = ct.lineW ?? ''; $('#cutLineC').value = ct.lineC || st.northC1 || '#1B1B1B';
+  const al = st.areaLine || {}; $('#cutAll').checked = S.area.cutAll !== false; $('#areaOnMap').checked = S.area.onMap !== false; $('#areaLineOn').checked = !!al.on; $('#fAreaLine').hidden = !al.on; $('#areaLineC').value = al.color || '#1B1B1B'; $('#areaLineW').value = al.w ?? 1.2; $('#areaLineD').value = al.dash || 'dash';
   $('#cropOn').checked = c.on; $('#cropRatio').value = c.ratio; $('#cropShowOut').checked = c.showOut; $('#fCropCustom').hidden = c.ratio !== 'custom'; $('#cropCW').value = c.cw; $('#cropCH').value = c.ch;
   $('#shOn').checked = st.sh.on; $('#shBox').hidden = !st.sh.on; $('#shDay').value = st.sh.day; $('#fShDate').hidden = st.sh.day !== 'custom'; $('#shDate').value = st.sh.date;
   $('#shTimeOut').textContent = hhmm(st.sh.min); $('#shTime').setAttribute('aria-valuetext', hhmm(st.sh.min)); $('#shColor').value = st.sh.color; $('#shTz').value = st.sh.tz;
@@ -2539,9 +2656,9 @@ function wireUI() {
   $$('.quadrow button[data-az]').forEach((b) => (b.onclick = () => { setAz(+b.dataset.az + (S.view._off || 0)); syncUI(); render(); persist(); }));
   $('#rotL').onclick = () => { setAz(S.view.az - 15); syncUI(); render(); persist(); };
   $('#rotR').onclick = () => { setAz(S.view.az + 15); syncUI(); render(); persist(); };
-  $('#zoomIn').onclick = () => { setZoom(S.view.zoom * 1.25); syncUIQuick(); render(); persist(); };
-  $('#zoomOut').onclick = () => { setZoom(S.view.zoom / 1.25); syncUIQuick(); render(); persist(); };
-  $('#zoomFit').onclick = () => { S.view.zoom = 1; S.view.panX = 0; S.view.panY = 0; syncUIQuick(); render(); persist(); };
+  $('#zoomIn').onclick = () => { if (!S.edit) { navZoom(1.25); return; } setZoom(S.view.zoom * 1.25); syncUIQuick(); render(); persist(); };
+  $('#zoomOut').onclick = () => { if (!S.edit) { navZoom(0.8); return; } setZoom(S.view.zoom / 1.25); syncUIQuick(); render(); persist(); };
+  $('#zoomFit').onclick = () => { if (!S.edit) { navReset(); return; } S.view.zoom = 1; S.view.panX = 0; S.view.panY = 0; syncUIQuick(); render(); persist(); };
   $$('[data-tool]').forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
   $('#btnEdit').onclick = () => setEdit(!S.edit);
   $('#btnUndo').onclick = () => histGo(-1); $('#btnRedo').onclick = () => histGo(1);
@@ -2552,6 +2669,18 @@ function wireUI() {
   });
 
   // crop
+  $('#cutOn').onchange = (e) => { S.view.cutOn = e.target.checked; syncUI(); render(); persist(); };
+  bindRange('cutH', () => S.view.cutH ?? 3, (v) => { S.view.cutH = v; }, viewChanged);
+  const cutS = () => (S.style.cut = S.style.cut || { mode: 'element', color: '#1B1B1B', hatch: 'none', hatchColor: '#1B1B1B', spacing: 7 });
+  $('#cutMode').onchange = (e) => { cutS().mode = e.target.value; render(); persist(); }; $('#cutHatch').onchange = (e) => { cutS().hatch = e.target.value; render(); persist(); };
+  $('#cutColor').oninput = (e) => { cutS().color = e.target.value; cutS().mode = 'custom'; $('#cutMode').value = 'custom'; scheduleRender(); persist(); }; $('#cutHatchC').oninput = (e) => { cutS().hatchColor = e.target.value; scheduleRender(); persist(); };
+  $('#cutLineW').onchange = (e) => { cutS().lineW = e.target.value === '' ? null : +e.target.value; render(); persist(); }; $('#cutLineC').oninput = (e) => { cutS().lineC = e.target.value; scheduleRender(); persist(); };
+  bindRange('cutSpacing', () => (S.style.cut?.spacing ?? 7), (v) => { cutS().spacing = v; }, (f) => { scheduleRender(f); if (!f) persist(); });
+  const alS = () => (S.style.areaLine = S.style.areaLine || { on: false, color: '#1B1B1B', w: 1.2, dash: 'dash' });
+  $('#cutAll').onchange = (e) => { S.area.cutAll = e.target.checked; render(); persist(); };
+  $('#areaOnMap').onchange = async (e) => { S.area.onMap = e.target.checked; persist(); if (e.target.checked) { if (S.area.ringLL && !areaFeature()) await putAreaOnMap(S.area.ringLL); } else await removeAreaFromMap(); };
+  $('#areaLineOn').onchange = (e) => { alS().on = e.target.checked; syncUI(); render(); persist(); };
+  $('#areaLineC').oninput = (e) => { alS().color = e.target.value; scheduleRender(); persist(); }; $('#areaLineW').onchange = (e) => { alS().w = Math.max(0.1, +e.target.value || 1.2); render(); persist(); }; $('#areaLineD').onchange = (e) => { alS().dash = e.target.value; render(); persist(); };
   $('#cropOn').onchange = (e) => { S.cropUI.on = e.target.checked; if (S.cropUI.on && !S.cropUI.rect) fitRatio(); render(); persist(); };
   $('#cropRatio').onchange = (e) => { S.cropUI.ratio = e.target.value; S.cropUI.on = true; fitRatio(); syncUI(); render(); persist(); };
   const custom = () => { S.cropUI.cw = Math.max(1, +$('#cropCW').value || 1); S.cropUI.ch = Math.max(1, +$('#cropCH').value || 1); fitRatio(); render(); persist(); };
@@ -2562,15 +2691,19 @@ function wireUI() {
 
   // stage pointer
   const stage = $('#stage'); let drag = null;
-  stage.addEventListener('dblclick', (e) => { e.preventDefault(); setEdit(!S.edit); toast(S.edit ? 'Edição da vista ativada.' : 'Vista travada.'); });
+  stage.addEventListener('dblclick', (e) => { if (e.target.closest('.stage-actions')) return; e.preventDefault(); setEdit(!S.edit); toast(S.edit ? 'Edição da vista ativada — use “Concluir edição” para travar.' : 'Vista travada.'); });
+  $('#btnExitEdit').onclick = () => { setEdit(false); toast('Vista travada.'); };
+  $('#btnNavReset').onclick = () => navReset();
   stage.addEventListener('pointerdown', (e) => {
-    if (!S.edit) { lockedHint(); return; }
+    if (e.target.closest('.stage-actions')) return;
+    if (!S.edit) { stage.setPointerCapture(e.pointerId); drag = { kind: 'nav', x: e.clientX, y: e.clientY, nx: NAV.x, ny: NAV.y, u: pxUnit() }; return; }
     const p = toFrame(e); stage.setPointerCapture(e.pointerId);
     if (S.tool === 'crop') { if (!S.cropUI.on) { S.cropUI.on = true; syncUI(); } const mode = cropHit(p); drag = { kind: 'crop', mode, p0: p, r0: { ...(S.cropUI.rect || { x: p.x, y: p.y, w: 0, h: 0 }) } }; }
     else drag = { kind: S.tool, x: e.clientX, y: e.clientY, az: S.view.az, el: S.view.el, px: S.view.panX, py: S.view.panY, u: pxUnit() };
   });
   stage.addEventListener('pointermove', (e) => {
     if (!drag) { if (!S.edit) { stage.style.cursor = ''; return; } if (S.tool === 'crop') { const m = cropHit(toFrame(e)); stage.style.cursor = { move: 'move', new: 'crosshair', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize' }[m]; } else stage.style.cursor = ''; return; }
+    if (drag.kind === 'nav') { NAV.x = drag.nx - (e.clientX - drag.x) * drag.u; NAV.y = drag.ny - (e.clientY - drag.y) * drag.u; applyNav(); return; }
     if (drag.kind === 'crop') { cropDrag(drag, toFrame(e)); drawOverlay(); return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.kind === 'pan') { S.view.panX = drag.px + dx * drag.u; S.view.panY = drag.py + dy * drag.u; scheduleRender(true); return; }
@@ -2578,11 +2711,11 @@ function wireUI() {
     if (S.view.proj === 'ortho') { S.view.el = Math.max(0, Math.min(90, drag.el + dy * 0.3)); if (Math.abs(dy) > 2) S.view.preset = 'custom'; }
     syncUIQuick(); scheduleRender(true);
   });
-  const end = () => { if (!drag) return; const k = drag.kind; drag = null; if (k === 'crop') { render(); } else { syncUI(); render(false); } persist(); };
+  const end = () => { if (!drag) return; const k = drag.kind; drag = null; if (k === 'nav') return; if (k === 'crop') { render(); } else { syncUI(); render(false); } persist(); };
   stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
-  stage.addEventListener('wheel', (e) => { if (!S.edit) { lockedHint(); return; } e.preventDefault(); setZoom(S.view.zoom * Math.exp(-e.deltaY * 0.0015), toFrame(e)); syncUIQuick(); scheduleRender(true); clearTimeout(stage._wt); stage._wt = setTimeout(() => { render(false); persist(); }, 250); }, { passive: false });
+  stage.addEventListener('wheel', (e) => { if (!S.edit) { e.preventDefault(); navZoom(Math.exp(-e.deltaY * 0.0015), toFrame(e)); return; } e.preventDefault(); setZoom(S.view.zoom * Math.exp(-e.deltaY * 0.0015), toFrame(e)); syncUIQuick(); scheduleRender(true); clearTimeout(stage._wt); stage._wt = setTimeout(() => { render(false); persist(); }, 250); }, { passive: false });
   stage.addEventListener('keydown', (e) => {
-    if (!S.edit) return;
+    if (!S.edit) { const k = e.key, st = 60 / NAV.z; let u = true; if (k === '+' || k === '=') navZoom(1.25); else if (k === '-') navZoom(0.8); else if (k === '0' || k === 'Escape') navReset(); else if (k === 'ArrowLeft') { NAV.x -= st; applyNav(); } else if (k === 'ArrowRight') { NAV.x += st; applyNav(); } else if (k === 'ArrowUp') { NAV.y -= st; applyNav(); } else if (k === 'ArrowDown') { NAV.y += st; applyNav(); } else u = false; if (u) e.preventDefault(); return; }
     const k = e.key; let used = true; const v = S.view; const step = 40;
     if (S.tool === 'pan') { if (k === 'ArrowLeft') v.panX += step; else if (k === 'ArrowRight') v.panX -= step; else if (k === 'ArrowUp') v.panY += step; else if (k === 'ArrowDown') v.panY -= step; else used = false; }
     else if (k === 'ArrowLeft') setAz(v.az + 5); else if (k === 'ArrowRight') setAz(v.az - 5);
@@ -2705,7 +2838,9 @@ function setEdit(on) {
   S.edit = !!on; const b = $('#btnEdit'); b.setAttribute('aria-pressed', String(S.edit)); b.setAttribute('aria-label', S.edit ? 'Travar a vista' : 'Editar a vista'); b.title = S.edit ? 'Travar a vista (duplo clique na vista)' : 'Editar a vista (duplo clique na vista)';
   $('#stage').dataset.edit = S.edit ? '1' : '0'; $$('[data-tool]').forEach((x) => (x.disabled = !S.edit));
   if (!S.edit) { S.tool = 'orbit'; syncUI(); }
-  drawOverlay(); render();
+  const zt = S.edit ? ['Afastar a vista', 'Aproximar a vista', 'Enquadrar o terreno'] : ['Afastar (lupa)', 'Aproximar (lupa)', 'Ver a vista inteira'];
+  ['zoomOut', 'zoomIn', 'zoomFit'].forEach((id, i) => { const b2 = $('#' + id); b2.title = zt[i]; b2.setAttribute('aria-label', zt[i]); });
+  drawOverlay(); render(); applyNav();
 }
 function lockedHint() { const now = Date.now(); if (now - lockHintT > 4000) { lockHintT = now; toast('Vista travada. Clique em Editar (lápis) ou dê duplo clique na vista.'); } }
 
