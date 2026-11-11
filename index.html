@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V35</title>
+<title>KV Axonometria — Beta V36</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -331,6 +331,7 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
       <select id="colorMode"><option value="paleta">Por layer (paleta)</option><option value="giraffe">Cores do Giraffe, por layer</option><option value="uso">Por uso</option></select></div></div>
 
     <h2>Linhas e faces</h2>
+    <label class="check"><input type="checkbox" id="perfilOn" checked>Perfil padrão (contorno mais grosso em todos os layers)</label>
     <div class="field"><label for="contourW">Perfil padrão</label><div class="ctl"><input type="range" id="contourW" min="0" max="6" step="0.1"><input type="number" id="contourWN" min="0" max="12" step="0.1" aria-label="Espessura do perfil"></div></div>
     <label class="check"><input type="checkbox" id="perfilGroup" checked>Perfil só no contorno do conjunto (varandas e volumes encostados não recebem perfil)</label>
     <label class="check"><input type="checkbox" id="mergeCoplanar" checked>Sem linhas de junção entre faces no mesmo plano e da mesma cor</label>
@@ -411,15 +412,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V35 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V36 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V35 */
-/* V35: polígonos 2D acima do chão (lajes, terraços) passam a esconder as arestas atrás deles; junções e pontas
+/* KV Axonometria — Beta V36 */
+/* V36: visibilidade das arestas pela presença das próprias faces (corta exatamente onde somem atrás de outro
+   elemento, inclusive em furos); perfil padrão liga/desliga; perfil individual do layer sempre prevalece.
+   V35: polígonos 2D acima do chão (lajes, terraços) passam a esconder as arestas atrás deles; junções e pontas
    arredondadas sem bicos, com as pontas cortadas recuadas para não passarem do ponto onde a aresta some.
    V34: arestas mais precisas — ponto exato onde a aresta passa a ficar escondida (bisseção), buffer de profundidade
    em dobro na exportação/publicação/lupa, arestas encadeadas (cantos fechados, sem pontas sobrando).
@@ -491,7 +494,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V35';
+const VERSION = 'V36';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1443,7 +1446,7 @@ function render(fast = false) {
     prismsAll.forEach((it, i) => gidOf.set(it, fnd(i))); }
   const domOf = new Map(); // gid → layer do maior volume (define o perfil do conjunto)
   for (const it of prismsAll) { const gid = gidOf.get(it); const b = itemBBox(it); const vol = (b.maxx - b.minx) * (b.maxy - b.miny) * (it.z1 - it.z0); const cur = domOf.get(gid); if (!cur || vol > cur.vol) domOf.set(gid, { vol, lk: it.lk }); }
-  const perfilOf = (lk) => { const L = LS[lk]; return { w: L.contourW ?? st.contourW, c: L.contourC || L.stroke, dash: L.dash }; };
+  const perfilOf = (lk) => { const L = LS[lk]; return { w: L.contourW ?? (st.perfilOn === false ? 0 : st.contourW), c: L.contourC || L.stroke, dash: L.dash, own: L.contourW != null }; };
   for (const it of prismsAll) {
     nVol++;
     const L = LS[it.lk]; const g = lkName(it.lk); const fill = fillOf(it); const opaque = L.fillOp >= OPQ && fill !== 'none';
@@ -1475,7 +1478,8 @@ function render(fast = false) {
     }
     // arestas (desenhadas uma vez só, depois das faces, só onde visíveis)
     if (!fast) {
-      const pf = perfilOf(st.perfilGroup !== false ? domOf.get(gid).lk : it.lk); const wS = pf.w, wI = L.strokeW; const c = L.stroke, dash = L.dash;
+      // perfil individual do layer sempre vale; sem individual, o conjunto usa o do layer de maior volume (ou o padrão)
+      const pf = (L.contourW != null || st.perfilGroup === false) ? perfilOf(it.lk) : perfilOf(domOf.get(gid).lk); const wS = pf.w, wI = L.strokeW; const c = L.stroke, dash = L.dash;
       const H0 = st.hid || {}; const hOn = L.hidMode ? L.hidMode === 'on' : !!H0.on; const hW = L.hidW ?? H0.w ?? 0.5;
       const hz = hOn && hW > 0 ? { c: L.hidC || H0.color || '#8E9196', w: hW, dash: H0.dash || 'dash' } : null;
       const cw = st.cut?.lineW; const E = (a, b, z0, z1, sil, fs, cut, back) => { if (back && !hz) return; if (c === 'none' && !hz) return; if (wS <= 0 && wI <= 0 && !hz) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS: cut && cw != null && cw !== '' ? +cw : wS, wI, sil, cut, back, hz, dash, pc: cut && st.cut?.lineC ? st.cut.lineC : pf.c, pdash: cut ? 'solid' : pf.dash, g, fs: fs.filter(Boolean) }); };
@@ -1485,7 +1489,7 @@ function render(fast = false) {
           const a = ring[i], b = ring[(i + 1) % n]; const ip = (i - 1 + n) % n; const prev = fr[ip];
           if (V.plan) { E(a, b, it.z1, it.z1, true, [topF], !!it.cutTop); continue; }
           if (V.elev) { if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip]]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); else E(a, a, it.z0, it.z1, false, [], false, true); if (fr[i]) { E(a, b, it.z1, it.z1, true, [wf[i]]); E(a, b, it.z0, it.z0, true, [wf[i]]); } else { E(a, b, it.z1, it.z1, false, [], false, true); E(a, b, it.z0, it.z0, false, [], false, true); } continue; }
-          if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip], topF]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); else E(a, a, it.z0, it.z1, false, [], false, true);
+          if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip]]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); else E(a, a, it.z0, it.z1, false, [], false, true);
           E(a, b, it.z1, it.z1, !fr[i] || !!it.cutTop, [topF, wf[i]], !!it.cutTop);
           if (fr[i]) E(a, b, it.z0, it.z0, true, [wf[i]]); else E(a, b, it.z0, it.z0, false, [], false, true);
         }
@@ -1621,14 +1625,19 @@ function render(fast = false) {
     for (const e of edges) {
       const A = P3(...e.a), B = P3(...e.b); const ax = tx(A), ay = ty(A), bx = tx(B), by = ty(B); const len = Math.hypot(bx - ax, by - ay); if (len < 0.01) continue;
       const own = new Set(e.fs.map((f) => f.i)); const nx = -(by - ay) / len * 1.8, ny = (bx - ax) / len * 1.8; const n = Math.max(1, Math.ceil(len));
-      const eP = !e.back && e.wS > 0 && e.c !== 'none' ? { ...e, w: e.wS, c: e.pc, dash: e.pdash, perf: true } : null, eI = !e.back && e.wI > 0 && e.c !== 'none' ? { ...e, w: e.wI } : null;
+      const eI = !e.back && e.wI > 0 && e.c !== 'none' ? { ...e, w: e.wI } : null;
+      const eP = !e.back && e.wS > 0 && e.c !== 'none' ? { ...e, w: e.wS, c: e.pc, dash: e.pdash, perf: true } : eI; // sem perfil: contorno vira linha comum
       const eH = e.hz ? { ...e, w: e.hz.w, c: e.hz.c, dash: e.hz.dash, hid: true } : null;
       const P = (t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+      const ownOpq = e.fs.some((f) => f.opaque); const epsC = 0.02 + 0.5 / (sc * q); const mx = nx / 1.8 * 0.9, my = ny / 1.8 * 0.9;
       const stateAt = (t) => {
         const d = A[2] + (B[2] - A[2]) * t; const fx = ax + (bx - ax) * t, fy = ay + (by - ay) * t; const px = Math.floor(fx), py = Math.floor(fy);
-        // visível se uma das próprias faces aparece no ponto, ou se nada opaco está à frente
-        let vis = own.has(at(px, py, idOp)) || own.has(at(px + 1, py, idOp)) || own.has(at(px - 1, py, idOp)) || own.has(at(px, py + 1, idOp)) || own.has(at(px, py - 1, idOp));
-        if (!vis) { const z = at(px, py, zOp); vis = z === -1 || d - eps0 <= z; }
+        // visível só se uma das próprias faces aparece no ponto ou logo ao lado (faces opacas);
+        // arestas de faces transparentes usam o teste de profundidade
+        let vis;
+        if (ownOpq) { vis = own.has(at(px, py, idOp)) || own.has(at(Math.floor(fx + mx), Math.floor(fy + my), idOp)) || own.has(at(Math.floor(fx - mx), Math.floor(fy - my), idOp));
+          if (!vis) { const z = at(px, py, zOp); vis = z === -1 || d - epsC <= z; } } // superfície coplanar por cima (ex.: piso 2D sobre a laje) não esconde a aresta
+        else { const z = at(px, py, zOp); vis = z === -1 || d - eps0 <= z; }
         const visRaw = vis;
         if (vis && seam && !e.floor) { // junção entre faces coplanares da mesma cor (ou a mesma face dos dois lados): sem linha
           const f1 = at(Math.floor(fx + nx), Math.floor(fy + ny), idOp), f2 = at(Math.floor(fx - nx), Math.floor(fy - ny), idOp);
@@ -2508,7 +2517,7 @@ function buildStyleUI() {
         ${lineOnly ? '' : `<div class="field"><label for="${id}o">Opacidade</label><div class="ctl"><input type="range" id="${id}o" data-k="fillOp" min="0" max="1" step="0.05" value="${L.fillOp}"><output class="out">${Math.round(L.fillOp * 100)}%</output></div></div>`}
         ${useOv ? `<div class="field"><label for="${id}u">Preenchimento</label><div class="ctl"><input type="color" id="${id}u" data-k="useFill" value="${toHex(L.useFill || fillOf(its[0]))}" aria-label="Preenchimento personalizado deste layer"><span class="out">${L.useFill ? 'personalizado' : 'pela cor do uso'}</span><button class="icon" data-preset="useFill" aria-label="Voltar às cores de uso neste layer" title="Voltar às cores de uso" ${L.useFill ? '' : 'disabled'}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
-        ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
+        ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="${S.style.perfilOn === false ? 'padrão desligado' : 'padrão (' + S.style.contourW + ')'}" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         ${its.some((i) => i.kind === 'prism' && i.lv > 1) ? `<div class="field"><label for="${id}v">Pavimentos</label><div class="ctl"><input type="number" id="${id}v" data-k="floorW" min="0" max="12" step="0.1" value="${L.floorW ?? ''}" placeholder="= linha (${L.strokeW})" aria-label="Espessura das linhas de pavimento"><input type="color" data-k="floorC" value="${toHex(L.floorC || L.stroke)}" aria-label="Cor das linhas de pavimento"><button class="icon" data-preset="floorC" aria-label="Cor dos pavimentos igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}h">Ocultas</label><div class="ctl"><select id="${id}h" data-k="hidMode" aria-label="Arestas ocultas deste layer"><option value="" ${!L.hidMode ? 'selected' : ''}>Padrão (${S.style.hid?.on ? 'mostrar' : 'esconder'})</option><option value="on" ${L.hidMode === 'on' ? 'selected' : ''}>Mostrar</option><option value="off" ${L.hidMode === 'off' ? 'selected' : ''}>Esconder</option></select><input type="number" data-k="hidW" min="0" max="12" step="0.1" value="${L.hidW ?? ''}" placeholder="${S.style.hid?.w ?? 0.5}" aria-label="Espessura das arestas ocultas deste layer"><input type="color" data-k="hidC" value="${toHex(L.hidC || S.style.hid?.color || '#8E9196')}" aria-label="Cor das arestas ocultas deste layer"><button class="icon" data-preset="hidC" aria-label="Cor das ocultas igual à geral" title="Igual à geral"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
@@ -2742,7 +2751,7 @@ function syncUI() {
   const isPlan = v.proj === 'ortho' && v.el >= 89.5; $('#fPlanRot').hidden = !isPlan; $('#planRot').value = Math.round(((v.az - 180) % 360 + 360) % 360);
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
   const HH = st.hid || {}; $('#hidOn').checked = !!HH.on; $('#hidC').value = HH.color || '#8E9196'; $('#hidW').value = HH.w ?? 0.5; $('#hidDash').value = HH.dash || 'dash';
-  renderStyleLib(); $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
+  renderStyleLib(); $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#perfilOn').checked = st.perfilOn !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
   $('#north').checked = st.north; $('#northBox').hidden = !st.north; $('#northStyle').value = st.northStyle || 'crossN'; $('#northC1').value = st.northC1 || '#1B1B1B'; $('#northC2').value = st.northC2 || '#FFFFFF'; $('#northLabel').checked = st.northLabel !== false; $('#northPos').value = st.northPos || 'br';
   const so = st.soil || {}; $('#soilOn').checked = !!so.on; $('#soilColor').value = so.color || '#C8B89A'; $('#soilLine').value = so.line || '#5D4A33'; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
@@ -2943,6 +2952,7 @@ function wireUI() {
   $('#shLayers').addEventListener('change', (e) => { const lk = e.target.dataset.cast; if (lk == null) return; S.style.sh.noCast[lk] = !e.target.checked; render(); persist(); });
   $('#shColor').oninput = (e) => { S.style.sh.color = e.target.value; scheduleRender(); persist(); };
   const sty = (id, k, prop = 'value') => ($('#' + id).oninput = (e) => { S.style[k] = e.target[prop]; scheduleRender(); drawOverlay(); persist(); });
+  $('#perfilOn').onchange = (e) => { S.style.perfilOn = e.target.checked; render(); persist(); buildStyleUI(); };
   $('#perfilGroup').onchange = (e) => { S.style.perfilGroup = e.target.checked; render(); persist(); };
   $('#mergeCoplanar').onchange = (e) => { S.style.mergeCoplanar = e.target.checked; render(); persist(); };
   $('#northStyle').innerHTML = NORTH_STYLES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
