@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V31</title>
+<title>KV Axonometria — Beta V33</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -343,6 +343,11 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="field"><label for="cutSpacing">Espaçamento</label><div class="ctl"><input type="range" id="cutSpacing" min="2" max="30" step="0.5"><input type="number" id="cutSpacingN" min="2" max="80" step="0.5" aria-label="Espaçamento da hachura"></div></div>
     <div class="field"><label for="cutLineW">Linha de corte</label><div class="ctl"><input type="number" id="cutLineW" min="0" max="12" step="0.1" placeholder="= perfil" aria-label="Espessura da linha de corte"><input type="color" id="cutLineC" aria-label="Cor da linha de corte"></div></div>
     <p class="hint">Vale quando o Corte horizontal está ligado na aba Vista.</p>
+    <h2>Arestas ocultas</h2>
+    <label class="check"><input type="checkbox" id="hidOn">Mostrar as arestas escondidas dos volumes (tracejadas)</label>
+    <div class="field"><label for="hidW">Linha</label><div class="ctl"><input type="color" id="hidC" aria-label="Cor das arestas ocultas"><input type="number" id="hidW" min="0" max="12" step="0.1" aria-label="Espessura das arestas ocultas"><select id="hidDash" aria-label="Traço das arestas ocultas"><option value="dash">Tracejado</option><option value="dot">Pontilhado</option><option value="dashdot">Traço-ponto</option><option value="solid">Contínuo</option></select></div></div>
+    <p class="hint">Vale para todos os layers; cada layer pode mostrar, esconder ou ter cor e espessura próprias (Layers, abaixo).</p>
+
     <h2>Sombra projetada</h2>
     <label class="check"><input type="checkbox" id="shOn">Mostrar sombra projetada no terreno</label>
     <div id="shBox">
@@ -406,15 +411,18 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V31 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V33 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V31 */
-/* V31: dados no projeto compactados (estilos dos layers guardados só como diferença de uma base + gzip):
+/* KV Axonometria — Beta V33 */
+/* V33: arestas ocultas (tracejadas) — geral na aba Estilo e por layer (Padrão/Mostrar/Esconder, cor, espessura).
+   V32: linhas acima do chão (ex.: contornos em lajes) ficam ocultas atrás de volumes; lista de layers da aba Estilo
+   reconstruída ao trocar de versão e ao abrir a aba.
+   V31: dados no projeto compactados (estilos dos layers guardados só como diferença de uma base + gzip):
    resolve 'App JSON is too large'.
    V30: estilo por versão (cada vista tem o seu); biblioteca de estilos salvos (renomear, apagar, aplicar à vista);
    contornos de polígonos com estilo do Giraffe também aceitam o traço do layer (antes sumiam).
@@ -479,7 +487,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V31';
+const VERSION = 'V33';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -511,7 +519,7 @@ const S = {
   area: { mode: 'project', buffer: 60, drawn: null, mapRect: null },
   cropUI: { on: true, ratio: '16:9', cw: 16, ch: 9, showOut: true, rect: null },
   style: { palette: 'paper', colorMode: 'paleta', contourW: 1.8, shade: 0.32, bg: '#FFFFFF', bgT: false, ground: false, groundFill: '#F3F3F3', north: true, rasterOp: 0.9, drapeRoofs: false,
-    baseSrc: 'giraffe',
+    baseSrc: 'giraffe', hid: { on: false, color: '#8E9196', w: 0.5, dash: 'dash' },
     sh: { on: false, day: '06-21', date: '', min: 720, tz: -3, op: 0.32, color: '#3A3F55', noCast: {} } },
   lstyle: {}, colorMap: {}, usageMap: {},
   autoSync: true, tool: 'orbit', edit: false,
@@ -1362,15 +1370,16 @@ function render(fast = false) {
     if (it.kind === 'line') {
       const ls = it.ls; const pts = it.pts.map((p) => V.P(p[0], p[1], z));
       // linha comum: cor de Linha do layer; no modo Cores do Giraffe, uma cor substituída na lista do layer tem prioridade
-      if (!ls) { const mapped = st.colorMode === 'giraffe' && it.color ? S.colorMap[it.lk]?.[it.color] : null; out.push({ t: 'line', g, pts, stroke: mapped || L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
+      const w3 = it.pts.map((p) => [p[0], p[1], z]);
+      if (!ls) { const mapped = st.colorMode === 'giraffe' && it.color ? S.colorMap[it.lk]?.[it.color] : null; out.push({ t: 'line', g, pts, w3, stroke: mapped || L.stroke, sw: L.strokeW, dash: L.dash }); return out; }
       const c = inkOf(it, L); const w = ls.w > 0 ? Math.max(L.strokeW, ls.w * 0.35) : L.strokeW;
       const useOwn = ls.dash && !ownDash; // traço do layer (não contínuo) tem prioridade sobre o tracejado vindo do Giraffe/DXF
-      out.push({ t: 'line', g, pts, stroke: c, sw: w, dashArr: useOwn ? ls.dash.map((d) => d * w).join(' ') : null, dash: useOwn ? null : L.dash, cap: ownDash ? (L.dash === 'dot' ? 'round' : 'butt') : ls.cap });
+      out.push({ t: 'line', g, pts, w3, stroke: c, sw: w, dashArr: useOwn ? ls.dash.map((d) => d * w).join(' ') : null, dash: useOwn ? null : L.dash, cap: ownDash ? (L.dash === 'dot' ? 'round' : 'butt') : ls.cap });
       const arrow = (a, b, len, ang) => {
         const dx = a[0] - b[0], dy = a[1] - b[1]; const l = Math.hypot(dx, dy) || 1; const ux = dx / l, uy = dy / l; const h = (ang / 2) * D2R; const L2 = len || 6;
         const w1 = [a[0] - L2 * (ux * Math.cos(h) - uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) + ux * Math.sin(h))];
         const w2 = [a[0] - L2 * (ux * Math.cos(h) + uy * Math.sin(h)), a[1] - L2 * (uy * Math.cos(h) - ux * Math.sin(h))];
-        out.push({ t: 'line', g, pts: [w1, a, w2].map((p) => V.P(p[0], p[1], z)), stroke: c, sw: w, dash: 'solid', cap: ls.cap });
+        out.push({ t: 'line', g, pts: [w1, a, w2].map((p) => V.P(p[0], p[1], z)), w3: [w1, a, w2].map((p) => [p[0], p[1], z]), stroke: c, sw: w, dash: 'solid', cap: ls.cap });
       };
       const P0 = it.pts; if (ls.aE) arrow(P0[P0.length - 1], P0[P0.length - 2], ls.aEL, ls.aEA); if (ls.aS) arrow(P0[0], P0[1], ls.aSL, ls.aSA);
       return out;
@@ -1463,16 +1472,18 @@ function render(fast = false) {
     // arestas (desenhadas uma vez só, depois das faces, só onde visíveis)
     if (!fast) {
       const pf = perfilOf(st.perfilGroup !== false ? domOf.get(gid).lk : it.lk); const wS = pf.w, wI = L.strokeW; const c = L.stroke, dash = L.dash;
-      const cw = st.cut?.lineW; const E = (a, b, z0, z1, sil, fs, cut) => { if (c === 'none' || (wS <= 0 && wI <= 0)) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS: cut && cw != null && cw !== '' ? +cw : wS, wI, sil, cut, dash, pc: cut && st.cut?.lineC ? st.cut.lineC : pf.c, pdash: cut ? 'solid' : pf.dash, g, fs: fs.filter(Boolean) }); };
+      const H0 = st.hid || {}; const hOn = L.hidMode ? L.hidMode === 'on' : !!H0.on; const hW = L.hidW ?? H0.w ?? 0.5;
+      const hz = hOn && hW > 0 ? { c: L.hidC || H0.color || '#8E9196', w: hW, dash: H0.dash || 'dash' } : null;
+      const cw = st.cut?.lineW; const E = (a, b, z0, z1, sil, fs, cut, back) => { if (back && !hz) return; if (c === 'none' && !hz) return; if (wS <= 0 && wI <= 0 && !hz) return; edges.push({ a: [a[0], a[1], z0], b: [b[0], b[1], z1], c, wS: cut && cw != null && cw !== '' ? +cw : wS, wI, sil, cut, back, hz, dash, pc: cut && st.cut?.lineC ? st.cut.lineC : pf.c, pdash: cut ? 'solid' : pf.dash, g, fs: fs.filter(Boolean) }); };
       it.poly.forEach((ring, ri) => {
         const fr = front[ri]; const wf = wallF[ri]; const n = ring.length;
         for (let i = 0; i < n; i++) {
           const a = ring[i], b = ring[(i + 1) % n]; const ip = (i - 1 + n) % n; const prev = fr[ip];
           if (V.plan) { E(a, b, it.z1, it.z1, true, [topF], !!it.cutTop); continue; }
-          if (V.elev) { if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip]]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); if (fr[i]) { E(a, b, it.z1, it.z1, true, [wf[i]]); E(a, b, it.z0, it.z0, true, [wf[i]]); } continue; }
-          if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip], topF]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]);
+          if (V.elev) { if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip]]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); else E(a, a, it.z0, it.z1, false, [], false, true); if (fr[i]) { E(a, b, it.z1, it.z1, true, [wf[i]]); E(a, b, it.z0, it.z0, true, [wf[i]]); } else { E(a, b, it.z1, it.z1, false, [], false, true); E(a, b, it.z0, it.z0, false, [], false, true); } continue; }
+          if (fr[i] !== prev) E(a, a, it.z0, it.z1, true, [wf[i], wf[ip], topF]); else if (fr[i]) E(a, a, it.z0, it.z1, false, [wf[i], wf[ip]]); else E(a, a, it.z0, it.z1, false, [], false, true);
           E(a, b, it.z1, it.z1, !fr[i] || !!it.cutTop, [topF, wf[i]], !!it.cutTop);
-          if (fr[i]) E(a, b, it.z0, it.z0, true, [wf[i]]);
+          if (fr[i]) E(a, b, it.z0, it.z0, true, [wf[i]]); else E(a, b, it.z0, it.z0, false, [], false, true);
         }
       });
       // linhas de pavimento nas fachadas visíveis
@@ -1578,6 +1589,26 @@ function render(fast = false) {
     }
   } else order = faces.map((f) => f.i).sort((a, b) => faces[b].d - faces[a].d);
 
+  // linhas acima do chão: só os trechos não encobertos por faces opacas
+  if (!fast && zOp && lineOps.length) {
+    const epsL = 0.15 + 1.5 / (sc * q); const keep = [];
+    const simp = (pc) => pc.filter((p, i) => { if (i === 0 || i === pc.length - 1) return true; const a = pc[i - 1], b = pc[i + 1]; return Math.abs((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) > 1e-9; });
+    for (const o of lineOps) {
+      if (!o.w3) { keep.push(o); continue; }
+      const pieces = []; let cur = null;
+      for (let s = 0; s < o.w3.length - 1; s++) {
+        const A = P3(...o.w3[s]), B = P3(...o.w3[s + 1]); const ax = tx(A), ay = ty(A), bx = tx(B), by = ty(B); const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)));
+        for (let k = s === 0 ? 0 : 1; k <= n; k++) {
+          const t = k / n; const p = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; const d = A[2] + (B[2] - A[2]) * t;
+          const px = Math.floor(ax + (bx - ax) * t), py = Math.floor(ay + (by - ay) * t); const zz = px < 0 || py < 0 || px >= ZW || py >= ZH ? Infinity : zOp[py * ZW + px];
+          if (d - epsL <= zz) { if (!cur) cur = [p]; else cur.push(p); } else if (cur) { if (cur.length > 1) pieces.push(cur); cur = null; }
+        }
+      }
+      if (cur && cur.length > 1) pieces.push(cur);
+      pieces.forEach((pc) => keep.push({ ...o, pts: simp(pc) }));
+    }
+    lineOps.length = 0; keep.forEach((o) => lineOps.push(o));
+  }
   // visible silhouette segments
   const silPaths = [];
   if (!fast && zOp && edges.length) {
@@ -1586,7 +1617,8 @@ function render(fast = false) {
     for (const e of edges) {
       const A = P3(...e.a), B = P3(...e.b); const ax = tx(A), ay = ty(A), bx = tx(B), by = ty(B); const len = Math.hypot(bx - ax, by - ay); if (len < 0.01) continue;
       const own = new Set(e.fs.map((f) => f.i)); const nx = -(by - ay) / len * 1.8, ny = (bx - ax) / len * 1.8; const n = Math.max(1, Math.ceil(len));
-      const eP = e.wS > 0 ? { ...e, w: e.wS, c: e.pc, dash: e.pdash, perf: true } : null, eI = e.wI > 0 ? { ...e, w: e.wI } : null;
+      const eP = !e.back && e.wS > 0 && e.c !== 'none' ? { ...e, w: e.wS, c: e.pc, dash: e.pdash, perf: true } : null, eI = !e.back && e.wI > 0 && e.c !== 'none' ? { ...e, w: e.wI } : null;
+      const eH = e.hz ? { ...e, w: e.hz.w, c: e.hz.c, dash: e.hz.dash, hid: true } : null;
       let cur = null, curE = null;
       const close = () => { if (cur && cur.length > 1 && curE) silPaths.push({ pts: cur, e: curE }); cur = null; curE = null; };
       for (let k = 0; k <= n; k++) {
@@ -1595,7 +1627,7 @@ function render(fast = false) {
         // visível se uma das próprias faces aparece no ponto, ou se nada opaco está à frente
         let vis = own.has(at(px, py, idOp)) || own.has(at(px + 1, py, idOp)) || own.has(at(px - 1, py, idOp)) || own.has(at(px, py + 1, idOp)) || own.has(at(px, py - 1, idOp));
         if (!vis) { const z = at(px, py, zOp); vis = z === -1 || d - eps0 <= z; }
-        let use = null;
+        let use = null; const visRaw = vis;
         if (vis && seam && !e.floor) { // junção entre faces coplanares da mesma cor (ou a mesma face dos dois lados): sem linha
           const f1 = at(Math.floor(fx + nx), Math.floor(fy + ny), idOp), f2 = at(Math.floor(fx - nx), Math.floor(fy - ny), idOp);
           if (f1 >= 0 && f2 >= 0) { const F1 = faces[f1], F2 = faces[f2]; if (F1 === F2 || (F1.pl && F2.pl && F1.op.fill === F2.op.fill && Math.abs(F1.pl[0] - F2.pl[0]) + Math.abs(F1.pl[1] - F2.pl[1]) + Math.abs(F1.pl[2] - F2.pl[2]) < 2e-3 && Math.abs(F1.pl[3] - F2.pl[3]) < 0.05)) vis = false; }
@@ -1604,7 +1636,7 @@ function render(fast = false) {
           let isP = e.sil;
           if (isP && grp && !e.cut) { const g1 = at(Math.floor(fx + nx), Math.floor(fy + ny), gOp), g2 = at(Math.floor(fx - nx), Math.floor(fy - ny), gOp); isP = g1 !== g2; }
           use = isP ? eP : eI;
-        }
+        } else if (!visRaw && eH) use = eH; // trecho escondido atrás de faces opacas
         if (use !== curE) { const last = cur ? cur[cur.length - 1] : null; close(); if (use) { cur = [last || p]; curE = use; } }
         if (use) { if (cur.length < 2) cur.push(p); else cur[1] = p; }
       }
@@ -1668,9 +1700,9 @@ function render(fast = false) {
   flush();
   if (silPaths.length) {
     if (curG !== null) out += '</g>'; curG = null;
-    const byG = {}; silPaths.forEach((s) => { const k = s.e.g; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}|${s.e.perf ? 'P' : 'I'}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
+    const byG = {}; silPaths.forEach((s) => { const k = s.e.hid ? s.e.g + ' · ocultas' : s.e.g + ' · arestas'; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}|${s.e.perf ? 'P' : 'I'}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
     for (const [g, groups] of Object.entries(byG)) {
-      const nm = g + ' · arestas';
+      const nm = g;
       out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash, pf] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; const dd = ps.map((pts) => (PR ? clipLineD(pts) : 'M' + pts.map(T).join('L'))).join(''); return dd ? `<path d="${dd}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${dash === 'dot' ? 'round' : pf === 'P' && !da ? 'round' : 'butt'}" stroke-linejoin="round"/>` : ''; }).join('') + '</g>';
     }
   }
@@ -2330,7 +2362,7 @@ function renderVersions() {
     <button class="icon" data-act="dup" data-i="${i}" aria-label="Duplicar ${esc(v.name)}" title="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
     <button class="icon" data-act="del" data-i="${i}" aria-label="Excluir ${esc(v.name)}" title="Excluir" ${S.versions.length < 2 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('');
 }
-function switchVersion(i) { setActive(i); sanitizeView(); renderVersions(); syncUI(); buildLayerUI(); render(); persist(); ensureCapturedForVisible(); }
+function switchVersion(i) { setActive(i); sanitizeView(); renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render(); persist(); ensureCapturedForVisible(); }
 function duplicateVersion(i) {
   const v = S.versions[i]; const n = S.versions.length + 1;
   S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis }, visInit: true, style: cloneJ(v.style), lstyle: cloneJ(v.lstyle), colorMap: cloneJ(v.colorMap), usageMap: cloneJ(v.usageMap) });
@@ -2427,6 +2459,7 @@ function buildStyleUI() {
         <div class="field"><label for="${id}s">Linha</label><div class="ctl"><input type="color" id="${id}s" data-k="stroke" value="${toHex(L.stroke)}"><input type="number" data-k="strokeW" min="0" max="12" step="0.1" value="${L.strokeW}" aria-label="Espessura da linha"></div></div>
         ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}p">Perfil</label><div class="ctl"><input type="number" id="${id}p" data-k="contourW" min="0" max="12" step="0.1" value="${L.contourW ?? ''}" placeholder="padrão (${S.style.contourW})" aria-label="Espessura do perfil deste layer"><input type="color" data-k="contourC" value="${toHex(L.contourC || L.stroke)}" aria-label="Cor do perfil deste layer"><button class="icon" data-preset="contourC" aria-label="Cor do perfil igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         ${its.some((i) => i.kind === 'prism' && i.lv > 1) ? `<div class="field"><label for="${id}v">Pavimentos</label><div class="ctl"><input type="number" id="${id}v" data-k="floorW" min="0" max="12" step="0.1" value="${L.floorW ?? ''}" placeholder="= linha (${L.strokeW})" aria-label="Espessura das linhas de pavimento"><input type="color" data-k="floorC" value="${toHex(L.floorC || L.stroke)}" aria-label="Cor das linhas de pavimento"><button class="icon" data-preset="floorC" aria-label="Cor dos pavimentos igual à da linha" title="Igual à linha"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
+        ${its.some((i) => i.kind === 'prism') ? `<div class="field"><label for="${id}h">Ocultas</label><div class="ctl"><select id="${id}h" data-k="hidMode" aria-label="Arestas ocultas deste layer"><option value="" ${!L.hidMode ? 'selected' : ''}>Padrão (${S.style.hid?.on ? 'mostrar' : 'esconder'})</option><option value="on" ${L.hidMode === 'on' ? 'selected' : ''}>Mostrar</option><option value="off" ${L.hidMode === 'off' ? 'selected' : ''}>Esconder</option></select><input type="number" data-k="hidW" min="0" max="12" step="0.1" value="${L.hidW ?? ''}" placeholder="${S.style.hid?.w ?? 0.5}" aria-label="Espessura das arestas ocultas deste layer"><input type="color" data-k="hidC" value="${toHex(L.hidC || S.style.hid?.color || '#8E9196')}" aria-label="Cor das arestas ocultas deste layer"><button class="icon" data-preset="hidC" aria-label="Cor das ocultas igual à geral" title="Igual à geral"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div></div>` : ''}
         <div class="field"><label for="${id}d">Traço</label><div class="ctl"><select id="${id}d" data-k="dash">${DASH_OPTS.map(([v, l]) => `<option value="${v}" ${L.dash === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
         ${cm === 'giraffe' && !lk.startsWith('ctx|') && Object.keys(colors).length ? `<div class="colors"><div class="lbl" style="font-size:13px;color:var(--md-sys-color-on-surface-variant)">Cores deste layer</div>${Object.keys(colors).map((c) => `<div class="crow"><span class="orig" style="background:${c}" title="Original ${c}"></span><span class="arrow" aria-hidden="true">→</span><input type="color" data-cmap="${c}" value="${toHex(S.colorMap[lk]?.[c] || c)}" aria-label="Substituir ${c}"><span class="ct">${c} · ${colors[c]}</span><button class="icon" data-creset="${c}" aria-label="Voltar à cor original ${c}" title="Cor original"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9a8 8 0 1 1 1 9"/><path d="M5 4v5h5"/></svg></button></div>`).join('')}</div>` : ''}
       </div></details></div>`;
@@ -2657,6 +2690,7 @@ function syncUI() {
   $('#fEl').hidden = v.proj !== 'ortho'; $('#fK').hidden = v.proj === 'ortho';
   const isPlan = v.proj === 'ortho' && v.el >= 89.5; $('#fPlanRot').hidden = !isPlan; $('#planRot').value = Math.round(((v.az - 180) % 360 + 360) % 360);
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
+  const HH = st.hid || {}; $('#hidOn').checked = !!HH.on; $('#hidC').value = HH.color || '#8E9196'; $('#hidW').value = HH.w ?? 0.5; $('#hidDash').value = HH.dash || 'dash';
   renderStyleLib(); $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
   $('#north').checked = st.north; $('#northBox').hidden = !st.north; $('#northStyle').value = st.northStyle || 'crossN'; $('#northC1').value = st.northC1 || '#1B1B1B'; $('#northC2').value = st.northC2 || '#FFFFFF'; $('#northLabel').checked = st.northLabel !== false; $('#northPos').value = st.northPos || 'br';
@@ -2701,7 +2735,7 @@ function wireUI() {
   $('#btnTheme').onclick = () => { setTheme(!root.classList.contains('dark')); drawOverlay(); };
 
   const tabs = $$('[role=tab]');
-  const sel = (t) => { tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; $('#' + x.getAttribute('aria-controls')).hidden = !on; }); $('#scroll').scrollTop = 0; };
+  const sel = (t) => { tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; $('#' + x.getAttribute('aria-controls')).hidden = !on; }); $('#scroll').scrollTop = 0; if (t.id === 'tab-estilo') buildStyleUI(); if (t.id === 'tab-conteudo') buildLayerUI(); };
   tabs.forEach((t, i) => { t.onclick = () => sel(t); t.onkeydown = (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; sel(n); n.focus(); } }; });
 
   // versions
@@ -2837,6 +2871,11 @@ function wireUI() {
     else if (b.dataset.libact === 'update') { Object.assign(it, libSnapshot(), { savedAt: Date.now() }); persist(); toast(`“${it.name}” atualizado com o estilo da vista ativa.`); }
     else if (b.dataset.libact === 'del') { L.splice(i, 1); renderStyleLib(); persist(); toast(`“${it.name}” apagado.`); } });
   $('#styleLibList').addEventListener('change', (e) => { const i = e.target.dataset.libren; if (i == null) return; const it = (S.styleLib || [])[+i]; if (it) { it.name = e.target.value.trim() || it.name; renderStyleLib(); persist(); } });
+  const hid = () => (S.style.hid = S.style.hid || { on: false, color: '#8E9196', w: 0.5, dash: 'dash' });
+  $('#hidOn').onchange = (e) => { hid().on = e.target.checked; render(); persist(); buildStyleUI(); };
+  $('#hidC').oninput = (e) => { hid().color = e.target.value; scheduleRender(); persist(); };
+  $('#hidW').onchange = (e) => { hid().w = Math.max(0, +e.target.value || 0); render(); persist(); };
+  $('#hidDash').onchange = (e) => { hid().dash = e.target.value; render(); persist(); };
   $('#btnApplyPalette').onclick = () => { const r = applyPalette($('#palette').value); syncUI(); buildStyleUI(); render(); persist(); toast(r ? 'Paleta aplicada com as edições que ela tinha.' : 'Paleta aplicada (padrão).'); };
   $('#btnResetPalette').onclick = () => { applyPalette(S.style.palette, true); syncUI(); buildStyleUI(); render(); persist(); toast('Estilos dos layers voltaram ao padrão da paleta.'); };
   $('#colorMode').onchange = (e) => { S.style.colorMode = e.target.value; buildStyleUI(); render(); persist(); };
@@ -2870,7 +2909,7 @@ function wireUI() {
     const det = e.target.closest('details'); if (!det) return; const lk = det.dataset.lk;
     if (e.target.dataset.cmap) { (S.colorMap[lk] = S.colorMap[lk] || {})[e.target.dataset.cmap] = e.target.value; scheduleRender(); persist(); return; }
     const k = e.target.dataset.k; if (!k) return;
-    if ((k === 'contourW' || k === 'floorW') && e.target.value === '') { delete S.lstyle[lk][k]; scheduleRender(); persist(); return; }
+    if ((k === 'contourW' || k === 'floorW' || k === 'hidW' || k === 'hidMode') && e.target.value === '') { delete S.lstyle[lk][k]; scheduleRender(); persist(); return; }
     const v = e.target.type === 'range' || e.target.type === 'number' ? +e.target.value : e.target.value; S.lstyle[lk][k] = v;
     const sw = det.querySelector('.sw'); if (k === 'fill') sw.style.background = v; if (k === 'stroke') sw.style.borderColor = v;
     if (k === 'fillOp') { const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = Math.round(v * 100) + '%'; }
