@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V30</title>
+<title>KV Axonometria — Beta V31</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -406,15 +406,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V30 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V31 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V30 */
-/* V30: estilo por versão (cada vista tem o seu); biblioteca de estilos salvos (renomear, apagar, aplicar à vista);
+/* KV Axonometria — Beta V31 */
+/* V31: dados no projeto compactados (estilos dos layers guardados só como diferença de uma base + gzip):
+   resolve 'App JSON is too large'.
+   V30: estilo por versão (cada vista tem o seu); biblioteca de estilos salvos (renomear, apagar, aplicar à vista);
    contornos de polígonos com estilo do Giraffe também aceitam o traço do layer (antes sumiam).
    V29: modo Por uso — preenchimento personalizado por layer e volta ao padrão (layer e uso); tipo de traço do
    layer passa a valer para linhas importadas (DXF) e linhas com estilo do Giraffe.
@@ -477,7 +479,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V30';
+const VERSION = 'V31';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -2482,6 +2484,32 @@ function projId() { const p = S.gs?.get('project'); return String(p?.properties?
 function storeKey() { return 'kv-axono:' + (projId() || 'sem-id'); }
 function sharedData() { const s = snapshot(); const common = { ...s.common }; delete common.autoSync; const cs = {}; COMMON_STYLE_KEYS.forEach((k) => { if (S.style[k] !== undefined) cs[k] = S.style[k]; }); delete common.style; delete common.lstyle; delete common.colorMap; delete common.usageMap; common.commonStyle = cs; return clone({ common, versions: s.versions }); }
 function projectApp() { return S.gs?.get('selectedProjectApp') || null; }
+/* ---- compactação dos dados no projeto: estilos de layer repetidos viram uma base comum + diferenças; tudo em gzip/base64 */
+function packShared(d) {
+  const out = clone(d); const all = [];
+  const each = (fn) => { out.versions.forEach((v) => { fn(v); Object.values(v.style?.palStore || {}).forEach(fn); }); (out.common.styleLib || []).forEach(fn); };
+  each((o) => { if (o.lstyle) all.push(o.lstyle); });
+  const cnt = {}; for (const ls of all) for (const [k, val] of Object.entries(ls)) { const s = stableStr(val); (cnt[k] = cnt[k] || {})[s] = (cnt[k][s] || 0) + 1; }
+  const base = {}; for (const [k, m] of Object.entries(cnt)) { let best = null, bn = 0; for (const [s, n] of Object.entries(m)) if (n > bn) { bn = n; best = s; } base[k] = JSON.parse(best); }
+  each((o) => { if (!o.lstyle) return; const dd = {}; for (const [k, val] of Object.entries(o.lstyle)) if (stableStr(val) !== stableStr(base[k])) dd[k] = val; o.lstyleD = dd; o.lsKeys = Object.keys(o.lstyle).length === Object.keys(base).length ? undefined : Object.keys(o.lstyle); delete o.lstyle; });
+  out.common.lsBase = base; return out;
+}
+function unpackShared(d) {
+  if (!d?.common?.lsBase) return d; d = clone(d); const base = d.common.lsBase;
+  const un = (o) => { if (!o.lstyleD) return; const ls = {}; for (const k of (o.lsKeys || Object.keys(base))) if (base[k]) ls[k] = clone(base[k]); Object.assign(ls, o.lstyleD); o.lstyle = ls; delete o.lstyleD; delete o.lsKeys; };
+  d.versions.forEach((v) => { un(v); Object.values(v.style?.palStore || {}).forEach(un); }); (d.common.styleLib || []).forEach(un);
+  delete d.common.lsBase; return d;
+}
+async function gzB64(str) { const buf = await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer(); const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+async function gunzB64(b64) { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+const RC = { key: null, data: null };
+async function getRemote() {
+  const pub = projectApp()?.public || {}; const m = pub[PSTORE]; if (!m) return null;
+  if (!m.z) return validRemote(unpackShared(m)); // formato antigo, sem compactação
+  const zs = pub[PSTORE + 'Z']; if (!zs) return null; const key = m.rev + ':' + zs.length;
+  if (RC.key !== key) { try { RC.data = unpackShared(JSON.parse(await gunzB64(zs))); RC.key = key; } catch (e) { log('Dados do projeto ilegíveis: ' + e.message, true); return null; } }
+  return validRemote({ ...m, ...clone(RC.data) });
+}
 function validRemote(d) { if (!d || !d.common || !Array.isArray(d.versions)) return null; if (d.projectId && projId() && String(d.projectId) !== projId()) { log('Dados salvos de outro projeto ignorados (' + d.projectId + ')', true); return null; } return d; }
 async function userName() {
   if (SY.user) return SY.user;
@@ -2548,7 +2576,7 @@ async function syncPush(manual) {
   if (SY.busy) { SY.again = true; return; } SY.busy = true;
   try {
     const me = await userName(); const keep = S.versions[S.av]?.id;
-    const remote = validRemote(pa.public?.[PSTORE]);
+    const remote = await getRemote();
     if (remote && remote.rev !== SY.baseRev) { // alguém gravou desde a última leitura: junta antes
       const conflicts = []; const base = remote.parentRev === SY.baseRev || !SY.prevBase ? SY.base : SY.prevBase;
       const merged = mergeShared(base, sharedData(), remote, conflicts); applyShared(merged, keep);
@@ -2560,17 +2588,19 @@ async function syncPush(manual) {
     const local = sharedData();
     if (remote && stableStr(local) === stableStr({ common: SY.base?.common, versions: SY.base?.versions }) && !manual) { setSaveStatus('ok'); return; }
     const rev = Date.now().toString(36) + '-' + SESSION;
-    const data = { app: 'KV Axonometria', version: VERSION, fmt: 13, projectId: projId(), savedAt: Date.now(), savedBy: me, rev, parentRev: remote?.rev || null, ...local };
+    const data = { app: 'KV Axonometria', version: VERSION, fmt: 15, z: 1, projectId: projId(), savedAt: Date.now(), savedBy: me, rev, parentRev: remote?.rev || null };
     setSaveStatus('saving');
+    const z = await gzB64(JSON.stringify(packShared(local))); RC.key = rev + ':' + z.length; RC.data = clone(local);
+    log(`Dados para o projeto: ${(z.length / 1024).toFixed(1)} kB compactados (${(JSON.stringify(local).length / 1024).toFixed(0)} kB originais)`);
     const cur = projectApp() || pa;
-    await call('updateProjectApp', [cur.app, { ...cur, public: { ...(cur.public || {}), [PSTORE]: data } }], 20000);
+    await call('updateProjectApp', [cur.app, { ...cur, public: { ...(cur.public || {}), [PSTORE]: data, [PSTORE + 'Z']: z } }], 20000);
     SY.prevBase = SY.base; SY.base = clone(local); SY.baseRev = rev; SY.lastWrittenRev = rev; SY.meta = { savedAt: data.savedAt, savedBy: me };
     saveLocal(); setSaveStatus('ok'); log(`Enviado ao projeto (rev ${rev})`);
   } catch (e) { setSaveStatus('err', e.message); }
   finally { SY.busy = false; if (SY.again) { SY.again = false; saveToProject(); } }
 }
-function syncPull(manual) {
-  const remote = validRemote(projectApp()?.public?.[PSTORE]);
+async function syncPull(manual) {
+  const remote = await getRemote();
   if (!remote) { if (manual) toast('Ainda não há vistas salvas neste projeto.'); return; }
   if (remote.rev && remote.rev === SY.baseRev) { if (manual) toast('Você já está com a versão mais recente do projeto.'); return; }
   if ((remote.savedAt || 0) < (SY.meta?.savedAt || 0)) { if (manual) toast('O Giraffe ainda está mostrando uma versão anterior. Recarregue a página do Giraffe (F5) se persistir.'); return; }
@@ -2586,11 +2616,11 @@ function syncPull(manual) {
   else if (!manual) toast(`Vistas atualizadas${remote.savedBy ? ' por ' + remote.savedBy : ''}.`);
   if (stableStr(sharedData()) !== stableStr(SY.base)) saveToProject(); // ainda há alterações nossas a enviar
 }
-function restore() {
+async function restore() {
   let local = null; try { local = JSON.parse(localStorage.getItem(storeKey()) || 'null'); } catch (e) { /* */ }
   if (local && !local.fmt && local.common) local = { fmt: 12, shared: { common: local.common, versions: local.versions }, av: local.versions?.[local.av || 0]?.id, autoSync: local.common.autoSync, base: null };
   if (local?.autoSync != null) S.autoSync = local.autoSync;
-  const remote = S.mode === 'giraffe' ? validRemote(projectApp()?.public?.[PSTORE]) : null;
+  const remote = S.mode === 'giraffe' ? await getRemote() : null;
   if (remote) {
     const pending = local?.shared && (!local.base || stableStr(local.shared) !== stableStr(local.base));
     const conflicts = [];
@@ -2605,7 +2635,7 @@ function restore() {
   } else if (S.mode === 'giraffe') saveToProject(true);
 }
 function onProjectAppChange() {
-  const d = validRemote(projectApp()?.public?.[PSTORE]); if (!d) return;
+  const d = projectApp()?.public?.[PSTORE]; if (!d) return; if (d.projectId && projId() && String(d.projectId) !== projId()) return;
   if (d.rev && (d.rev === SY.baseRev || d.rev === SY.lastWrittenRev)) return;
   if ((d.savedAt || 0) < (SY.meta?.savedAt || 0)) { log('Versão do projeto mais antiga que a atual ignorada (' + d.rev + ')'); return; }
   syncPull(false);
@@ -3060,7 +3090,7 @@ async function enterGiraffe(reason) {
   S.gs.addListener(['selectedProjectApp'], onProjectAppChange);
   S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
   S.lstyle = {}; S.colorMap = {}; S.usageMap = {}; initVersions();
-  restore(); if (!S.cropUI.rect) fitRatio();
+  await restore(); if (!S.cropUI.rect) fitRatio();
   sync(false); listViews(); renderVersions(); syncUI();
   if (!S.items.length) fetchBundleFallback();
   if (sanitizeView()) { syncUI(); render(); }
@@ -3082,7 +3112,7 @@ async function boot() {
   if (!giraffeEntered) {
     $('#modeLabel').innerHTML = 'Vistas para diagramas <span class="badge">Demonstração</span>';
     log(inFrame ? `Sem resposta do Giraffe: demonstração (mensagens: ${MSG.n}, tipos: ${Object.keys(MSG.types).join(', ') || 'nenhum'})` : 'Fora do Giraffe: modo demonstração com dados sintéticos.');
-    restore(); if (!S.cropUI.rect) fitRatio();
+    await restore(); if (!S.cropUI.rect) fitRatio();
     S.mapItems['Meio-fio'] = DEMO.buildLayer('Meio-fio'); S.mapItems['3D Buildings'] = DEMO.context().map((i) => ({ ...i, src: 'map', layer: '3D Buildings', lk: 'map|3D Buildings' })); S.raster = await DEMO.raster();
     if (S.vis['map|Meio-fio'] == null) S.vis['map|Meio-fio'] = true; if (S.vis['map|3D Buildings'] == null) S.vis['map|3D Buildings'] = true;
     if (!giraffeEntered) { sync(false); listViews(); renderVersions(); syncUI(); histReset(); setEdit(false); }
