@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V29</title>
+<title>KV Axonometria — Beta V30</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -317,6 +317,11 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
 
   <!-- ESTILO -->
   <section class="panel" id="p-estilo" role="tabpanel" aria-labelledby="tab-estilo" hidden>
+    <h2>Estilos salvos</h2>
+    <p class="hint">O estilo (tudo desta aba) é de cada vista. Salve o da vista ativa para reaplicar em outras vistas.</p>
+    <div class="field"><label for="libName">Nome</label><div class="ctl"><input type="text" id="libName" placeholder="Ex.: Diagrama ciano"><button id="btnLibSave">Salvar</button></div></div>
+    <div class="list" id="styleLibList"></div>
+
     <h2>Padrão gráfico</h2>
     <div class="field"><label for="palette">Paleta base</label><div class="ctl">
       <select id="palette"><option value="paper">Papel — branco e preto</option><option value="kv">Destaque KV — projeto em ciano</option><option value="mono">Cinzas</option></select><button id="btnApplyPalette">Aplicar</button></div></div>
@@ -401,15 +406,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V29 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V30 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V29 */
-/* V29: modo Por uso — preenchimento personalizado por layer e volta ao padrão (layer e uso); tipo de traço do
+/* KV Axonometria — Beta V30 */
+/* V30: estilo por versão (cada vista tem o seu); biblioteca de estilos salvos (renomear, apagar, aplicar à vista);
+   contornos de polígonos com estilo do Giraffe também aceitam o traço do layer (antes sumiam).
+   V29: modo Por uso — preenchimento personalizado por layer e volta ao padrão (layer e uso); tipo de traço do
    layer passa a valer para linhas importadas (DXF) e linhas com estilo do Giraffe.
    V28: limite do modelo como polígono (o desenho feito no mapa), cortando todo o conteúdo (volumes, linhas, terreno);
    linha do perímetro; lupa de visualização com a vista travada (roda/arrastar) + botões na vista; corte horizontal
@@ -470,7 +477,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V29';
+const VERSION = 'V30';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -509,8 +516,20 @@ const S = {
   log: [], lastSVG: '', W: 1600, H: 1000, fit: null,
 };
 const newView = () => ({ preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1, zoom: 1, panX: 0, panY: 0, _off: 0 });
+const STYLE0 = JSON.parse(JSON.stringify(S.style)); // valores padrão do estilo (para completar estilos antigos)
+const COMMON_STYLE_KEYS = ['baseSrc', 'autoPub', 'areaLine']; // ficam iguais em todas as versões (não são da aba Estilo)
+const cloneJ = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
+function syncVerStyle() { const v = S.versions[S.av]; if (!v) return; v.style = S.style; v.lstyle = S.lstyle; v.colorMap = S.colorMap; v.usageMap = S.usageMap; }
 function initVersions() { S.versions = [{ id: 'v' + Date.now() + Math.random().toString(36).slice(2, 6), name: 'Vista 1', view: newView(), vis: {} }]; setActive(0); }
-function setActive(i) { S.av = Math.max(0, Math.min(S.versions.length - 1, i)); S.view = S.versions[S.av].view; S.vis = S.versions[S.av].vis; }
+function setActive(i) {
+  const prev = S.style; S.av = Math.max(0, Math.min(S.versions.length - 1, i)); const v = S.versions[S.av];
+  // cada versão tem o seu estilo; versões antigas (sem estilo) recebem uma cópia do estilo atual
+  if (!v.style) v.style = cloneJ(S.style); if (!v.lstyle) v.lstyle = cloneJ(S.lstyle || {}); if (!v.colorMap) v.colorMap = cloneJ(S.colorMap || {}); if (!v.usageMap) v.usageMap = cloneJ(S.usageMap || {});
+  for (const k of Object.keys(STYLE0)) if (v.style[k] === undefined) v.style[k] = cloneJ(STYLE0[k]);
+  v.style.sh = { ...cloneJ(STYLE0.sh), ...(v.style.sh || {}) };
+  if (prev && prev !== v.style) for (const k of COMMON_STYLE_KEYS) if (prev[k] !== undefined) v.style[k] = cloneJ(prev[k]);
+  S.view = v.view; S.vis = v.vis; S.style = v.style; S.lstyle = v.lstyle; S.colorMap = v.colorMap; S.usageMap = v.usageMap;
+}
 
 /* ---------------- LAYER KEYS & VISIBILITY ---------------- */
 function lkOf(src, layer) { return src === 'vol' || src === 'flat' ? 'draw|' + layer : src === 'map' ? 'map|' + layer : 'ctx|Entorno'; }
@@ -861,6 +880,7 @@ function applyPalette(pal, reset) {
   st.palette = pal; const saved = !reset && st.palStore[pal];
   if (saved) { S.lstyle = JSON.parse(JSON.stringify(saved.lstyle || {})); S.colorMap = JSON.parse(JSON.stringify(saved.colorMap || {})); if (saved.shade != null) st.shade = saved.shade; }
   else { for (const lk of Object.keys(S.lstyle)) S.lstyle[lk] = specialStyle(lk) || defaultLayerStyle(layerKind(lk), pal); S.colorMap = {}; if (pal === 'mono') st.shade = 0.25; }
+  syncVerStyle();
   return !!saved;
 }
 function fillOf(it) {
@@ -1090,7 +1110,7 @@ function pushFeature(list, f, src, P, opts = {}) {
       let lv = 0; if (p.hideFloors !== true && String(p.hideFloors) !== 'true') { const L0 = Math.round(+p.levels || 0), f2 = +(p.floorToFloor ?? p.floor_to_floor ?? 0); lv = L0 > 1 ? L0 : f2 > 0.5 ? Math.round((z1 - z0) / f2) : 0; if (lv > 400) lv = 0; }
       list.push({ ...meta, kind: 'prism', poly: o, z0, z1, lv, fstep: lv > 1 ? (z1 - z0) / lv : 0 });
     }
-    else { list.push({ ...meta, kind: 'poly', poly: o, z: z0, noStroke: !!olG }); pushInk(z0); }
+    else { list.push({ ...meta, kind: 'poly', poly: o, z: z0, noStroke: !!olG }); if (pushInk(z0)) for (const r of o) list.push({ ...meta, color: inkHex, kind: 'line', pts: [...r, r[0]], z: z0, ls: { w: +p.strokeWidth || 0, dash: null, cap: null }, alt: true }); }
   }
   if (parts.lines.length) {
     const inked = pushInk(z0);
@@ -2283,6 +2303,20 @@ async function publishAll(force, manual) {
   finally { pubBusy = false; renderPubList(); if (pubAgain) { pubAgain = false; schedulePublish(); } }
 }
 
+/* ---------------- BIBLIOTECA DE ESTILOS ---------------- */
+function libSnapshot() { const st = cloneJ(S.style); COMMON_STYLE_KEYS.forEach((k) => delete st[k]); delete st.palStore; return { style: st, lstyle: cloneJ(S.lstyle), colorMap: cloneJ(S.colorMap), usageMap: cloneJ(S.usageMap) }; }
+function renderStyleLib() {
+  const box = $('#styleLibList'); if (!box) return; const L = S.styleLib || [];
+  box.innerHTML = L.length ? L.map((e, i) => `<div class="saved-item"><input type="text" value="${esc(e.name)}" data-libren="${i}" aria-label="Nome do estilo ${i + 1}">
+    <button class="icon" data-libact="apply" data-i="${i}" aria-label="Aplicar ${esc(e.name)} à vista ativa" title="Aplicar à vista ativa"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></button>
+    <button class="icon" data-libact="update" data-i="${i}" aria-label="Substituir ${esc(e.name)} pelo estilo atual" title="Substituir pelo estilo atual"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5l2 2"/><path d="M20 4v5h-5"/></svg></button>
+    <button class="icon" data-libact="del" data-i="${i}" aria-label="Apagar ${esc(e.name)}" title="Apagar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('') : '<div class="empty">Nenhum estilo salvo.</div>';
+}
+function applyLibStyle(e) {
+  const v = S.versions[S.av]; const keep = {}; COMMON_STYLE_KEYS.forEach((k) => (keep[k] = S.style[k]));
+  v.style = { ...cloneJ(STYLE0), ...cloneJ(e.style), ...cloneJ(keep), palStore: S.style.palStore }; v.lstyle = cloneJ(e.lstyle || {}); v.colorMap = cloneJ(e.colorMap || {}); v.usageMap = cloneJ(e.usageMap || {});
+  setActive(S.av); syncUI(); buildStyleUI(); render(); persist(); toast(`Estilo “${e.name}” aplicado a “${v.name}”.`);
+}
 function renderVersions() {
   setTimeout(renderPubList, 0);
   $('#verSel').innerHTML = S.versions.map((v, i) => `<option value="${i}" ${i === S.av ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
@@ -2297,7 +2331,7 @@ function renderVersions() {
 function switchVersion(i) { setActive(i); sanitizeView(); renderVersions(); syncUI(); buildLayerUI(); render(); persist(); ensureCapturedForVisible(); }
 function duplicateVersion(i) {
   const v = S.versions[i]; const n = S.versions.length + 1;
-  S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis }, visInit: true });
+  S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis }, visInit: true, style: cloneJ(v.style), lstyle: cloneJ(v.lstyle), colorMap: cloneJ(v.colorMap), usageMap: cloneJ(v.usageMap) });
   switchVersion(i + 1); toast(`Nova versão “Vista ${n}” criada a partir de “${v.name}”.`);
 }
 
@@ -2426,11 +2460,11 @@ async function exportAllPNG() {
 }
 
 /* ---------------- PERSISTENCE ---------------- */
-function snapshot() { return { app: 'KV Axonometria', version: VERSION, common: { style: S.style, lstyle: S.lstyle, colorMap: S.colorMap, usageMap: S.usageMap, cropUI: S.cropUI, area: { mode: S.area.mode, buffer: S.area.buffer, ringLL: S.area.ringLL || null, mapLL: S.area.mapLL || null, cutAll: S.area.cutAll !== false, onMap: S.area.onMap !== false }, autoSync: S.autoSync }, versions: S.versions, av: S.av }; }
+function snapshot() { return { app: 'KV Axonometria', version: VERSION, common: { style: S.style, lstyle: S.lstyle, colorMap: S.colorMap, usageMap: S.usageMap, cropUI: S.cropUI, area: { mode: S.area.mode, buffer: S.area.buffer, ringLL: S.area.ringLL || null, mapLL: S.area.mapLL || null, cutAll: S.area.cutAll !== false, onMap: S.area.onMap !== false }, styleLib: S.styleLib || [], autoSync: S.autoSync }, versions: S.versions, av: S.av }; }
 function loadSnapshot(o) {
   if (!o) return; const c = o.common || {};
   if (c.style) { const sh = { ...S.style.sh, ...(c.style.sh || {}) }; Object.assign(S.style, c.style, { sh }); }
-  if (c.lstyle) S.lstyle = { ...S.lstyle, ...c.lstyle }; if (c.colorMap) S.colorMap = c.colorMap; if (c.usageMap) S.usageMap = { ...S.usageMap, ...c.usageMap };
+  if (c.lstyle) S.lstyle = { ...S.lstyle, ...c.lstyle }; if (c.colorMap) S.colorMap = c.colorMap; if (c.usageMap) S.usageMap = { ...S.usageMap, ...c.usageMap }; syncVerStyle(); if (Array.isArray(c.styleLib)) S.styleLib = c.styleLib;
   if (c.cropUI) Object.assign(S.cropUI, c.cropUI); if (c.area) Object.assign(S.area, c.area); if (c.autoSync != null) S.autoSync = c.autoSync;
   if (Array.isArray(o.versions) && o.versions.length) { S.versions = o.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); setActive(o.av || 0); }
 }
@@ -2446,7 +2480,7 @@ const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 const vKey = (v) => (v ? stableStr({ ...v, updatedAt: undefined, updatedBy: undefined }) : null);
 function projId() { const p = S.gs?.get('project'); return String(p?.properties?.id ?? p?.id ?? (S.mode === 'demo' ? 'demo' : '')); }
 function storeKey() { return 'kv-axono:' + (projId() || 'sem-id'); }
-function sharedData() { const s = snapshot(); const common = { ...s.common }; delete common.autoSync; return clone({ common, versions: s.versions }); }
+function sharedData() { const s = snapshot(); const common = { ...s.common }; delete common.autoSync; const cs = {}; COMMON_STYLE_KEYS.forEach((k) => { if (S.style[k] !== undefined) cs[k] = S.style[k]; }); delete common.style; delete common.lstyle; delete common.colorMap; delete common.usageMap; common.commonStyle = cs; return clone({ common, versions: s.versions }); }
 function projectApp() { return S.gs?.get('selectedProjectApp') || null; }
 function validRemote(d) { if (!d || !d.common || !Array.isArray(d.versions)) return null; if (d.projectId && projId() && String(d.projectId) !== projId()) { log('Dados salvos de outro projeto ignorados (' + d.projectId + ')', true); return null; } return d; }
 async function userName() {
@@ -2493,7 +2527,8 @@ function mergeShared(b, l, r, conflicts) {
 function applyShared(d, keepId) {
   if (!d || !d.common) return; d = clone(d); const c = d.common;
   if (c.style) S.style = { ...S.style, ...c.style, sh: { ...S.style.sh, ...(c.style.sh || {}) } };
-  S.lstyle = c.lstyle || {}; S.colorMap = c.colorMap || {}; S.usageMap = c.usageMap || {}; if (c.cropUI) S.cropUI = { ...S.cropUI, ...c.cropUI }; if (c.area) Object.assign(S.area, c.area);
+  if (c.commonStyle) S.style = { ...S.style, ...c.commonStyle };
+  if (c.lstyle || c.style) { S.lstyle = c.lstyle || {}; S.colorMap = c.colorMap || {}; S.usageMap = c.usageMap || {}; } if (c.cropUI) S.cropUI = { ...S.cropUI, ...c.cropUI }; if (c.area) Object.assign(S.area, c.area); if (Array.isArray(c.styleLib)) S.styleLib = c.styleLib;
   if (Array.isArray(d.versions) && d.versions.length) { S.versions = d.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); const k = keepId ? S.versions.findIndex((v) => v.id === keepId) : -1; setActive(k >= 0 ? k : Math.min(S.av || 0, S.versions.length - 1)); }
 }
 function applyFull(o, keepId) { // histórico / importação (formato completo)
@@ -2592,7 +2627,7 @@ function syncUI() {
   $('#fEl').hidden = v.proj !== 'ortho'; $('#fK').hidden = v.proj === 'ortho';
   const isPlan = v.proj === 'ortho' && v.el >= 89.5; $('#fPlanRot').hidden = !isPlan; $('#planRot').value = Math.round(((v.az - 180) % 360 + 360) % 360);
   $('#areaMode').value = S.area.mode; $('#fBuffer').hidden = S.area.mode !== 'project';
-  $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
+  renderStyleLib(); $('#palette').value = st.palette; $('#perfilGroup').checked = st.perfilGroup !== false; $('#mergeCoplanar').checked = st.mergeCoplanar !== false; $('#baseSrc').value = st.baseSrc || 'giraffe'; $('#colorMode').value = st.colorMode;
   $('#bg').value = st.bg; $('#bgT').checked = st.bgT; $('#ground').checked = st.ground; $('#groundFill').value = st.groundFill;
   $('#north').checked = st.north; $('#northBox').hidden = !st.north; $('#northStyle').value = st.northStyle || 'crossN'; $('#northC1').value = st.northC1 || '#1B1B1B'; $('#northC2').value = st.northC2 || '#FFFFFF'; $('#northLabel').checked = st.northLabel !== false; $('#northPos').value = st.northPos || 'br';
   const so = st.soil || {}; $('#soilOn').checked = !!so.on; $('#soilColor').value = so.color || '#C8B89A'; $('#soilLine').value = so.line || '#5D4A33'; $('#drapeRoofs').checked = st.drapeRoofs; $('#autoSync').checked = S.autoSync;
@@ -2766,6 +2801,12 @@ function wireUI() {
 
   // style
   $('#lyrSearch').oninput = filterLayerUI; $('#styleSearch').oninput = filterStyleUI; $('#styleOnlyOn').onchange = filterStyleUI;
+  $('#btnLibSave').onclick = () => { S.styleLib = S.styleLib || []; const name = $('#libName').value.trim() || `Estilo ${S.styleLib.length + 1}`; S.styleLib.push({ id: 's' + Date.now() + SESSION, name, savedAt: Date.now(), ...libSnapshot() }); $('#libName').value = ''; renderStyleLib(); persist(); toast(`Estilo “${name}” salvo.`); };
+  $('#styleLibList').addEventListener('click', (e) => { const b = e.target.closest('button[data-libact]'); if (!b) return; const i = +b.dataset.i; const L = S.styleLib || []; const it = L[i]; if (!it) return;
+    if (b.dataset.libact === 'apply') applyLibStyle(it);
+    else if (b.dataset.libact === 'update') { Object.assign(it, libSnapshot(), { savedAt: Date.now() }); persist(); toast(`“${it.name}” atualizado com o estilo da vista ativa.`); }
+    else if (b.dataset.libact === 'del') { L.splice(i, 1); renderStyleLib(); persist(); toast(`“${it.name}” apagado.`); } });
+  $('#styleLibList').addEventListener('change', (e) => { const i = e.target.dataset.libren; if (i == null) return; const it = (S.styleLib || [])[+i]; if (it) { it.name = e.target.value.trim() || it.name; renderStyleLib(); persist(); } });
   $('#btnApplyPalette').onclick = () => { const r = applyPalette($('#palette').value); syncUI(); buildStyleUI(); render(); persist(); toast(r ? 'Paleta aplicada com as edições que ela tinha.' : 'Paleta aplicada (padrão).'); };
   $('#btnResetPalette').onclick = () => { applyPalette(S.style.palette, true); syncUI(); buildStyleUI(); render(); persist(); toast('Estilos dos layers voltaram ao padrão da paleta.'); };
   $('#colorMode').onchange = (e) => { S.style.colorMode = e.target.value; buildStyleUI(); render(); persist(); };
@@ -3018,7 +3059,7 @@ async function enterGiraffe(reason) {
   S.gs.addListener(['views'], () => listViews());
   S.gs.addListener(['selectedProjectApp'], onProjectAppChange);
   S.gs.addListener(['projectOrigin'], () => { S.projector = null; onModelChange(); });
-  initVersions(); S.lstyle = {}; S.colorMap = {}; S.usageMap = {};
+  S.lstyle = {}; S.colorMap = {}; S.usageMap = {}; initVersions();
   restore(); if (!S.cropUI.rect) fitRatio();
   sync(false); listViews(); renderVersions(); syncUI();
   if (!S.items.length) fetchBundleFallback();
