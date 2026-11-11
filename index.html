@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V33</title>
+<title>KV Axonometria — Beta V34</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -411,15 +411,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V33 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V34 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V33 */
-/* V33: arestas ocultas (tracejadas) — geral na aba Estilo e por layer (Padrão/Mostrar/Esconder, cor, espessura).
+/* KV Axonometria — Beta V34 */
+/* V34: arestas mais precisas — ponto exato onde a aresta passa a ficar escondida (bisseção), buffer de profundidade
+   em dobro na exportação/publicação/lupa, arestas encadeadas (cantos fechados, sem pontas sobrando).
+   V33: arestas ocultas (tracejadas) — geral na aba Estilo e por layer (Padrão/Mostrar/Esconder, cor, espessura).
    V32: linhas acima do chão (ex.: contornos em lajes) ficam ocultas atrás de volumes; lista de layers da aba Estilo
    reconstruída ao trocar de versão e ao abrir a aba.
    V31: dados no projeto compactados (estilos dos layers guardados só como diferença de uma base + gzip):
@@ -487,7 +489,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V33';
+const VERSION = 'V34';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1528,7 +1530,7 @@ function render(fast = false) {
   }
 
   // ---- visibility: software depth buffer → painter order + visible silhouettes
-  const q = fast ? 0.5 : 1; const ZW = Math.ceil(W * q), ZH = Math.ceil(H * q);
+  const q = fast ? 0.5 : (S._hiQ || NAV.z > 1.5) ? 2 : 1; const ZW = Math.ceil(W * q), ZH = Math.ceil(H * q);
   const tx = (p) => (p[0] * sc + ox) * q, ty = (p) => (p[1] * sc + oy) * q;
   faces.forEach((f, i) => { f.i = i; let s = 0, n = 0; for (const r of f.rings3) for (const p of r) { s += p[2]; n++; } f.d = n ? s / n : 0; });
   let order;
@@ -1619,28 +1621,47 @@ function render(fast = false) {
       const own = new Set(e.fs.map((f) => f.i)); const nx = -(by - ay) / len * 1.8, ny = (bx - ax) / len * 1.8; const n = Math.max(1, Math.ceil(len));
       const eP = !e.back && e.wS > 0 && e.c !== 'none' ? { ...e, w: e.wS, c: e.pc, dash: e.pdash, perf: true } : null, eI = !e.back && e.wI > 0 && e.c !== 'none' ? { ...e, w: e.wI } : null;
       const eH = e.hz ? { ...e, w: e.hz.w, c: e.hz.c, dash: e.hz.dash, hid: true } : null;
-      let cur = null, curE = null;
-      const close = () => { if (cur && cur.length > 1 && curE) silPaths.push({ pts: cur, e: curE }); cur = null; curE = null; };
-      for (let k = 0; k <= n; k++) {
-        const t = k / n; const p = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; const d = A[2] + (B[2] - A[2]) * t;
-        const fx = ax + (bx - ax) * t, fy = ay + (by - ay) * t; const px = Math.floor(fx), py = Math.floor(fy);
+      const P = (t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+      const stateAt = (t) => {
+        const d = A[2] + (B[2] - A[2]) * t; const fx = ax + (bx - ax) * t, fy = ay + (by - ay) * t; const px = Math.floor(fx), py = Math.floor(fy);
         // visível se uma das próprias faces aparece no ponto, ou se nada opaco está à frente
         let vis = own.has(at(px, py, idOp)) || own.has(at(px + 1, py, idOp)) || own.has(at(px - 1, py, idOp)) || own.has(at(px, py + 1, idOp)) || own.has(at(px, py - 1, idOp));
         if (!vis) { const z = at(px, py, zOp); vis = z === -1 || d - eps0 <= z; }
-        let use = null; const visRaw = vis;
+        const visRaw = vis;
         if (vis && seam && !e.floor) { // junção entre faces coplanares da mesma cor (ou a mesma face dos dois lados): sem linha
           const f1 = at(Math.floor(fx + nx), Math.floor(fy + ny), idOp), f2 = at(Math.floor(fx - nx), Math.floor(fy - ny), idOp);
-          if (f1 >= 0 && f2 >= 0) { const F1 = faces[f1], F2 = faces[f2]; if (F1 === F2 || (F1.pl && F2.pl && F1.op.fill === F2.op.fill && Math.abs(F1.pl[0] - F2.pl[0]) + Math.abs(F1.pl[1] - F2.pl[1]) + Math.abs(F1.pl[2] - F2.pl[2]) < 2e-3 && Math.abs(F1.pl[3] - F2.pl[3]) < 0.05)) vis = false; }
+          if (f1 >= 0 && f2 >= 0) { const F1 = faces[f1], F2 = faces[f2];
+            // só é junção se as duas faces encostam de fato na aresta (profundidade contínua dos dois lados)
+            const tol = eps0 * 4 + 0.1, z1 = at(Math.floor(fx + nx), Math.floor(fy + ny), zOp), z2 = at(Math.floor(fx - nx), Math.floor(fy - ny), zOp);
+            const touch = Math.abs(z1 - d) < tol && Math.abs(z2 - d) < tol;
+            if (F1 === F2 || (touch && F1.pl && F2.pl && F1.op.fill === F2.op.fill && Math.abs(F1.pl[0] - F2.pl[0]) + Math.abs(F1.pl[1] - F2.pl[1]) + Math.abs(F1.pl[2] - F2.pl[2]) < 2e-3 && Math.abs(F1.pl[3] - F2.pl[3]) < 0.05)) vis = false; }
         }
         if (vis) {
           let isP = e.sil;
-          if (isP && grp && !e.cut) { const g1 = at(Math.floor(fx + nx), Math.floor(fy + ny), gOp), g2 = at(Math.floor(fx - nx), Math.floor(fy - ny), gOp); isP = g1 !== g2; }
-          use = isP ? eP : eI;
-        } else if (!visRaw && eH) use = eH; // trecho escondido atrás de faces opacas
-        if (use !== curE) { const last = cur ? cur[cur.length - 1] : null; close(); if (use) { cur = [last || p]; curE = use; } }
-        if (use) { if (cur.length < 2) cur.push(p); else cur[1] = p; }
+          if (isP && grp && !e.cut) {
+            const sx1 = Math.floor(fx + nx), sy1 = Math.floor(fy + ny), sx2 = Math.floor(fx - nx), sy2 = Math.floor(fy - ny);
+            const g1 = at(sx1, sy1, gOp), g2 = at(sx2, sy2, gOp);
+            // contorno do conjunto, ou salto grande de profundidade (uma massa do conjunto na frente de outra, longe atrás)
+            const za = at(sx1, sy1, zOp), zb = at(sx2, sy2, zOp); const jump = Math.max(za === -1 ? 1e9 : Math.abs(za - d), zb === -1 ? 1e9 : Math.abs(zb - d));
+            isP = g1 !== g2 || jump > 4;
+          }
+          return isP ? eP : eI;
+        }
+        return !visRaw && eH ? eH : null; // trecho escondido atrás de faces opacas
+      };
+      // percorre a aresta; onde o estado muda, acha o ponto exato da troca por bisseção (sem sobras nem falhas)
+      let prevT = 0, prevU = stateAt(0), start = prevU ? 0 : null;
+      for (let k = 1; k <= n; k++) {
+        const t = k / n; const u = stateAt(t);
+        if (u !== prevU) {
+          let lo = prevT, hi = t; for (let it = 0; it < 7; it++) { const m = (lo + hi) / 2; if (stateAt(m) === prevU) lo = m; else hi = m; }
+          const tb = (lo + hi) / 2;
+          if (prevU && tb - start > 1e-6) silPaths.push({ pts: [P(start), P(tb)], e: prevU });
+          start = u ? tb : null; prevU = u;
+        }
+        prevT = t;
       }
-      close();
+      if (prevU && start != null && 1 - start > 1e-6) silPaths.push({ pts: [P(start), P(1)], e: prevU });
     }
   }
 
@@ -1703,7 +1724,7 @@ function render(fast = false) {
     const byG = {}; silPaths.forEach((s) => { const k = s.e.hid ? s.e.g + ' · ocultas' : s.e.g + ' · arestas'; const kk = `${s.e.c}|${s.e.w}|${s.e.dash}|${s.e.perf ? 'P' : 'I'}`; ((byG[k] = byG[k] || {})[kk] = byG[k][kk] || []).push(s.pts); });
     for (const [g, groups] of Object.entries(byG)) {
       const nm = g;
-      out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash, pf] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; const dd = ps.map((pts) => (PR ? clipLineD(pts) : 'M' + pts.map(T).join('L'))).join(''); return dd ? `<path d="${dd}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${dash === 'dot' ? 'round' : pf === 'P' && !da ? 'round' : 'butt'}" stroke-linejoin="round"/>` : ''; }).join('') + '</g>';
+      out += `<g id="${esc(safeId(nm))}" data-name="${esc(nm)}">` + Object.entries(groups).map(([kk, ps]) => { const [c, w, dash, pf] = kk.split('|'); const ww = +w; const da = DASH[dash] ? ` stroke-dasharray="${DASH[dash].split(' ').map((x) => +(x * Math.max(1, ww / 1.2)).toFixed(2)).join(' ')}"` : ''; const dd = chainSegs(ps).map((c) => (PR ? clipLineD(c.pts) : 'M' + c.pts.map(T).join('L') + (c.closed ? 'Z' : ''))).join(''); return dd ? `<path d="${dd}" fill="none" stroke="${c}" stroke-width="${ww}"${da} stroke-linecap="${dash === 'dot' ? 'round' : 'butt'}" stroke-linejoin="miter" stroke-miterlimit="3"/>` : ''; }).join('') + '</g>';
     }
   }
   if (curG !== null) out += '</g>';
@@ -1769,6 +1790,27 @@ function northSVG(style, R, c1, c2, label) {
   if (!hasN) N(style === 'construct' ? -R * 1.3 - gap * 0.3 : -R - gap);
   return s;
 }
+/* junta trechos que se tocam numa só polilinha (cantos fechados com junção, sem sobras de ponta) */
+function chainSegs(ps) {
+  const key = (p) => Math.round(p[0] * 2000) + ',' + Math.round(p[1] * 2000);
+  const ends = new Map(); const used = new Uint8Array(ps.length);
+  ps.forEach((s, i) => { for (const p of [s[0], s[s.length - 1]]) { const k = key(p); if (!ends.has(k)) ends.set(k, []); ends.get(k).push(i); } });
+  const take = (k) => { const l = ends.get(k); if (!l) return -1; for (const i of l) if (!used[i]) return i; return -1; };
+  const out = [];
+  for (let i = 0; i < ps.length; i++) {
+    if (used[i]) continue; used[i] = 1; let line = ps[i].slice();
+    for (let dir = 0; dir < 2; dir++) {
+      for (;;) {
+        const endK = key(line[line.length - 1]); const j = take(endK); if (j < 0) break; used[j] = 1;
+        const s = ps[j]; line = key(s[0]) === endK ? line.concat(s.slice(1)) : line.concat(s.slice(0, -1).reverse());
+      }
+      line.reverse();
+    }
+    const closed = line.length > 3 && key(line[0]) === key(line[line.length - 1]);
+    out.push({ pts: closed ? line.slice(0, -1) : line, closed });
+  }
+  return out;
+}
 function presetName() { const o = $('#preset').selectedOptions[0]; return o ? o.textContent : ''; }
 
 /* ---------------- CROP OVERLAY ---------------- */
@@ -1795,7 +1837,8 @@ function applyNav() {
   const vb = navVB(); $('#drawing').setAttribute('viewBox', vb); $('#overlay').setAttribute('viewBox', vb);
   const zoomed = NAV.z > 1.001; $('#btnNavReset').hidden = !zoomed; $('#btnExitEdit').hidden = !S.edit; $('#navInfo').hidden = !zoomed; if (zoomed) $('#navInfo').textContent = `Lupa ${Math.round(NAV.z * 100)}%`;
 }
-function navZoom(f, at) { const z = Math.max(1, Math.min(60, NAV.z * f)); if (at) { NAV.x = at.x - (at.x - NAV.x) * (NAV.z / z); NAV.y = at.y - (at.y - NAV.y) * (NAV.z / z); } NAV.z = z; if (z <= 1.001) { NAV.z = 1; NAV.x = S.W / 2; NAV.y = S.H / 2; } applyNav(); drawOverlay(); }
+let navT = null;
+function navZoom(f, at) { const was = NAV.z > 1.5; const z = Math.max(1, Math.min(60, NAV.z * f)); clearTimeout(navT); navT = setTimeout(() => { if ((NAV.z > 1.5) !== was || NAV.z > 1.5) render(false); }, 350); if (at) { NAV.x = at.x - (at.x - NAV.x) * (NAV.z / z); NAV.y = at.y - (at.y - NAV.y) * (NAV.z / z); } NAV.z = z; if (z <= 1.001) { NAV.z = 1; NAV.x = S.W / 2; NAV.y = S.H / 2; } applyNav(); drawOverlay(); }
 function navReset() { NAV.z = 1; NAV.x = S.W / 2; NAV.y = S.H / 2; applyNav(); drawOverlay(); }
 function pxUnit() { const el = $('#overlay'); const b = el.getBoundingClientRect(); return Math.max(S.W / NAV.z / b.width, S.H / NAV.z / b.height) || 1; }
 function drawOverlay() {
@@ -2285,9 +2328,9 @@ async function pubUpload(name, obj) {
 }
 function renderVersionSVG(i) {
   const cur = S.av; setActive(i); const c = S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: S.W, h: S.H }; const r = { x: +c.x.toFixed(2), y: +c.y.toFixed(2), w: +c.w.toFixed(2), h: +c.h.toFixed(2) };
-  S._pubRect = r; let o = null;
+  S._pubRect = r; S._hiQ = true; let o = null;
   try { render(false); if (S.lastSVG) o = { svg: S.lastSVG.replace(/^<svg[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-generator="KV Axonometria Beta ${VERSION}" viewBox="${r.x} ${r.y} ${r.w} ${r.h}" width="${Math.round(r.w)}" height="${Math.round(r.h)}">`), w: r.w, h: r.h, upm: S.fit ? S.fit.s0 * S.view.zoom : null, view: { az: S.view.az, el: S.view.el, proj: S.view.proj, preset: S.view.preset } }; }
-  finally { S._pubRect = null; setActive(cur); }
+  finally { S._pubRect = null; S._hiQ = false; setActive(cur); }
   return o;
 }
 function setPubStatus(t, err) { const el = $('#pubStatus'); if (el) { el.textContent = t; el.dataset.state = err ? 'err' : 'ok'; } }
@@ -2474,7 +2517,7 @@ function download(name, blob) { const a = document.createElement('a'); a.href = 
 const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
 const fileBase = () => `KV_axonometria_${(S.versions[S.av]?.name || 'vista').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_')}_${stamp()}`;
 function croppedSVG() {
-  render(false); if (!S.lastSVG) return null;
+  S._hiQ = true; try { render(false); } finally { S._hiQ = false; } if (!S.lastSVG) return null;
   const c = S.cropUI.on && S.cropUI.rect ? S.cropUI.rect : { x: 0, y: 0, w: S.W, h: S.H };
   const r = { x: +c.x.toFixed(2), y: +c.y.toFixed(2), w: +c.w.toFixed(2), h: +c.h.toFixed(2) };
   return { svg: S.lastSVG.replace(/^<svg[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-generator="KV Axonometria Beta ${VERSION}" viewBox="${r.x} ${r.y} ${r.w} ${r.h}" width="${Math.round(r.w)}" height="${Math.round(r.h)}">`), w: r.w, h: r.h };
