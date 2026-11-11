@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V36</title>
+<title>KV Axonometria — Beta V37</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -412,15 +412,16 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V36 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V37 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V36 */
-/* V36: visibilidade das arestas pela presença das próprias faces (corta exatamente onde somem atrás de outro
+/* KV Axonometria — Beta V37 */
+/* V37: 'perfil só no contorno do conjunto' volta à regra da V17 (sem perfil interno por salto de profundidade).
+   V36: visibilidade das arestas pela presença das próprias faces (corta exatamente onde somem atrás de outro
    elemento, inclusive em furos); perfil padrão liga/desliga; perfil individual do layer sempre prevalece.
    V35: polígonos 2D acima do chão (lajes, terraços) passam a esconder as arestas atrás deles; junções e pontas
    arredondadas sem bicos, com as pontas cortadas recuadas para não passarem do ponto onde a aresta some.
@@ -494,7 +495,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V36';
+const VERSION = 'V37';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1652,9 +1653,8 @@ function render(fast = false) {
           if (isP && grp && !e.cut) {
             const sx1 = Math.floor(fx + nx), sy1 = Math.floor(fy + ny), sx2 = Math.floor(fx - nx), sy2 = Math.floor(fy - ny);
             const g1 = at(sx1, sy1, gOp), g2 = at(sx2, sy2, gOp);
-            // contorno do conjunto, ou salto grande de profundidade (uma massa do conjunto na frente de outra, longe atrás)
-            const za = at(sx1, sy1, zOp), zb = at(sx2, sy2, zOp); const jump = Math.max(za === -1 ? 1e9 : Math.abs(za - d), zb === -1 ? 1e9 : Math.abs(zb - d));
-            isP = g1 !== g2 || jump > 4;
+            // perfil só onde o conjunto encontra o fundo ou outro conjunto (como na V17)
+            isP = g1 !== g2;
           }
           return isP ? eP : eI;
         }
