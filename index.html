@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V37</title>
+<title>KV Axonometria — Beta V38</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -412,15 +412,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V37 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V38 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V37 */
-/* V37: 'perfil só no contorno do conjunto' volta à regra da V17 (sem perfil interno por salto de profundidade).
+/* KV Axonometria — Beta V38 */
+/* V38: Área do modelo (e a linha do limite) passa a ser de cada vista (cópias herdam e compartilham o limite
+   desenhado); ao abrir, alterações locais antigas não sobrescrevem o que já está salvo no projeto.
+   V37: 'perfil só no contorno do conjunto' volta à regra da V17 (sem perfil interno por salto de profundidade).
    V36: visibilidade das arestas pela presença das próprias faces (corta exatamente onde somem atrás de outro
    elemento, inclusive em furos); perfil padrão liga/desliga; perfil individual do layer sempre prevalece.
    V35: polígonos 2D acima do chão (lajes, terraços) passam a esconder as arestas atrás deles; junções e pontas
@@ -495,7 +497,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V37';
+const VERSION = 'V38';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -535,7 +537,7 @@ const S = {
 };
 const newView = () => ({ preset: 'iso', az: 225, el: 35.264, proj: 'ortho', k: 1, zoom: 1, panX: 0, panY: 0, _off: 0 });
 const STYLE0 = JSON.parse(JSON.stringify(S.style)); // valores padrão do estilo (para completar estilos antigos)
-const COMMON_STYLE_KEYS = ['baseSrc', 'autoPub', 'areaLine']; // ficam iguais em todas as versões (não são da aba Estilo)
+const COMMON_STYLE_KEYS = ['baseSrc', 'autoPub']; // ficam iguais em todas as versões (não são da aba Estilo)
 const cloneJ = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 function syncVerStyle() { const v = S.versions[S.av]; if (!v) return; v.style = S.style; v.lstyle = S.lstyle; v.colorMap = S.colorMap; v.usageMap = S.usageMap; }
 function initVersions() { S.versions = [{ id: 'v' + Date.now() + Math.random().toString(36).slice(2, 6), name: 'Vista 1', view: newView(), vis: {} }]; setActive(0); }
@@ -546,7 +548,9 @@ function setActive(i) {
   for (const k of Object.keys(STYLE0)) if (v.style[k] === undefined) v.style[k] = cloneJ(STYLE0[k]);
   v.style.sh = { ...cloneJ(STYLE0.sh), ...(v.style.sh || {}) };
   if (prev && prev !== v.style) for (const k of COMMON_STYLE_KEYS) if (prev[k] !== undefined) v.style[k] = cloneJ(prev[k]);
-  S.view = v.view; S.vis = v.vis; S.style = v.style; S.lstyle = v.lstyle; S.colorMap = v.colorMap; S.usageMap = v.usageMap;
+  // a Área do modelo também é de cada vista (versões antigas recebem uma cópia da área que estava valendo)
+  if (!v.area) { const a = S.area || {}; v.area = cloneJ({ mode: a.mode || 'project', buffer: a.buffer ?? 60, ringLL: a.ringLL || null, mapLL: a.mapLL || null, cutAll: a.cutAll !== false, onMap: a.onMap !== false, areaId: a.areaId || null }); }
+  S.view = v.view; S.vis = v.vis; S.style = v.style; S.lstyle = v.lstyle; S.colorMap = v.colorMap; S.usageMap = v.usageMap; S.area = v.area;
 }
 
 /* ---------------- LAYER KEYS & VISIBILITY ---------------- */
@@ -2284,28 +2288,40 @@ async function useMapArea() {
 }
 /* limite desenhado como elemento do Giraffe (layer KV Axonometria · Limite): aparece no mapa e pode ser editado lá */
 const AREA_LAYER = 'KV Axonometria · Limite';
-function areaFeature(list) { const pid = projId(); return (list || S.gs?.get('rawSections')?.features || []).find((f) => f?.properties?.kv_axo_area && (!f.properties.kv_axo_project || String(f.properties.kv_axo_project) === pid) && /Polygon/.test(f.geometry?.type || '')) || null; }
+const areaFeats = (list) => { const pid = projId(); return (list || S.gs?.get('rawSections')?.features || []).filter((f) => f?.properties?.kv_axo_area && (!f.properties.kv_axo_project || String(f.properties.kv_axo_project) === pid) && /Polygon/.test(f.geometry?.type || '')); };
+const aidOf = (f) => String(f.properties.kv_axo_id || 'legacy');
+function areaFeature(list, aid = S.area.areaId || 'legacy') { return areaFeats(list).find((f) => aidOf(f) === aid) || null; }
 function followAreaFeature(list) {
-  const f = areaFeature(list); if (!f) return;
-  S.area.rawId = featId(f);
-  const g = f.geometry; const rg = (g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0]).map((q) => [+q[0], +q[1]]);
-  const key = rg.map((q) => q[0].toFixed(7) + ',' + q[1].toFixed(7)).join(';');
-  if (key !== (S.area.ringLL || []).map((q) => (+q[0]).toFixed(7) + ',' + (+q[1]).toFixed(7)).join(';')) {
-    const first = !S.area.ringLL; S.area.ringLL = rg;
-    if (!first) { log('Limite do modelo editado no Giraffe: área atualizada'); setTimeout(() => { render(); persist(); scheduleAreaRefresh(); }, 0); }
+  // cada limite desenhado no mapa pertence às vistas que o usam (a vista onde foi desenhado e as cópias dela)
+  let touched = false;
+  for (const f of areaFeats(list)) {
+    const aid = aidOf(f); const g = f.geometry; const rg = (g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0]).map((q) => [+q[0], +q[1]]);
+    const key = rg.map((q) => q[0].toFixed(7) + ',' + q[1].toFixed(7)).join(';');
+    for (const v of S.versions) {
+      const a = v.area; if (!a || (a.areaId || 'legacy') !== aid || a.mode !== 'drawn') continue;
+      if (key !== (a.ringLL || []).map((q) => (+q[0]).toFixed(7) + ',' + (+q[1]).toFixed(7)).join(';')) { const first = !a.ringLL; a.ringLL = rg; if (!first) touched = true; }
+    }
   }
+  if (touched) { log('Limite do modelo editado no Giraffe: área atualizada'); setTimeout(() => { render(); persist(); scheduleAreaRefresh(); }, 0); }
 }
+const areaUsedElsewhere = (aid) => S.versions.some((v, i) => i !== S.av && v.area && (v.area.areaId || 'legacy') === aid && v.area.mode === 'drawn');
 async function putAreaOnMap(ringLL) {
   if (S.mode !== 'giraffe' || !ringLL || ringLL.length < 3) return false;
-  const old = areaFeature(); if (old) { try { await call('deleteRawSections', [[featId(old)]], 15000); } catch (e) { /* segue */ } }
+  const oldId = S.area.areaId || 'legacy'; const old = areaFeature(null, oldId);
+  if (old && !areaUsedElsewhere(oldId)) { try { await call('deleteRawSections', [[featId(old)]], 15000); } catch (e) { /* segue */ } }
   const ring = ringLL.slice(); if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) ring.push(ring[0]);
-  const props = { kv_axo_area: true, kv_axo_project: projId(), name: 'Limite da Axonometria', usage: 'Limite da Axonometria', color: '#00ACCD', fillOpacity: 0.04, stroke: '#00ACCD', strokeWidth: 2, strokeDasharray: [6, 3] };
+  const aid = 'a' + Date.now().toString(36) + SESSION; S.area.areaId = aid;
+  const props = { kv_axo_area: true, kv_axo_id: aid, kv_axo_project: projId(), name: 'Limite da Axonometria · ' + (S.versions[S.av]?.name || ''), usage: 'Limite da Axonometria', color: '#00ACCD', fillOpacity: 0.04, stroke: '#00ACCD', strokeWidth: 2, strokeDasharray: [6, 3] };
   const feat = (layerId) => ({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: { ...props, layerId } });
   try { await call('createDrawingLayer', [AREA_LAYER], 15000); } catch (e) { /* já existe ou sem permissão */ }
-  for (const lid of [AREA_LAYER, 'default']) { try { await call('createRawSection', [feat(lid)], 20000); log(`Limite criado no Giraffe (layer “${lid}”)`); return true; } catch (e) { /* tenta o próximo */ } }
+  for (const lid of [AREA_LAYER, 'default']) { try { await call('createRawSection', [feat(lid)], 20000); log(`Limite criado no Giraffe (layer “${lid}”)`); persist(); return true; } catch (e) { /* tenta o próximo */ } }
   toast('Não consegui criar o limite no mapa do Giraffe; ele continua salvo só na Axonometria.'); return false;
 }
-async function removeAreaFromMap() { const f = areaFeature(); if (!f) return; try { await call('deleteRawSections', [[featId(f)]], 15000); S.area.rawId = null; log('Limite removido do mapa do Giraffe'); } catch (e) { toast('Não consegui remover o limite do mapa.'); } }
+async function removeAreaFromMap() {
+  const aid = S.area.areaId || 'legacy'; const f = areaFeature(null, aid); if (!f) return;
+  if (areaUsedElsewhere(aid)) { log('Limite mantido no mapa: outra vista usa o mesmo limite'); return; }
+  try { await call('deleteRawSections', [[featId(f)]], 15000); log('Limite removido do mapa do Giraffe'); } catch (e) { toast('Não consegui remover o limite do mapa.'); }
+}
 async function drawArea() {
   if (S.mode === 'demo') { S.area.ringLL = [[-70, -60], [80, -50], [95, 40], [10, 75], [-60, 50]].map((p) => DEMO.P.inverse(p)); S.area.drawn = null; S.area.mode = 'drawn'; syncUI(); render(); persist(); return; }
   toast('Desenhe a área no mapa do Giraffe.');
@@ -2315,7 +2331,7 @@ async function drawArea() {
     if (!g) throw new Error('nenhum polígono');
     const P = ensureProjector(firstCoord(g)); const parts = geomToParts(g, P);
     const rg = g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0]; S.area.ringLL = rg.map((q) => [q[0], q[1]]); S.area.drawn = bboxOf(parts.polys[0][0]); S.area.mode = 'drawn'; syncUI(); render(); persist(); scheduleAreaRefresh();
-    if (S.area.onMap !== false) putAreaOnMap(S.area.ringLL);
+    if (S.area.onMap !== false) putAreaOnMap(S.area.ringLL); else S.area.areaId = null;
   } catch (e) { toast('Desenho cancelado ou indisponível.'); }
 }
 
@@ -2422,10 +2438,10 @@ function renderVersions() {
     <button class="icon" data-act="dup" data-i="${i}" aria-label="Duplicar ${esc(v.name)}" title="Duplicar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
     <button class="icon" data-act="del" data-i="${i}" aria-label="Excluir ${esc(v.name)}" title="Excluir" ${S.versions.length < 2 ? 'disabled' : ''}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>`).join('');
 }
-function switchVersion(i) { setActive(i); sanitizeView(); renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render(); persist(); ensureCapturedForVisible(); }
+function switchVersion(i) { setActive(i); sanitizeView(); scheduleAreaRefresh(); renderVersions(); syncUI(); buildLayerUI(); buildStyleUI(); render(); persist(); ensureCapturedForVisible(); }
 function duplicateVersion(i) {
   const v = S.versions[i]; const n = S.versions.length + 1;
-  S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis }, visInit: true, style: cloneJ(v.style), lstyle: cloneJ(v.lstyle), colorMap: cloneJ(v.colorMap), usageMap: cloneJ(v.usageMap) });
+  S.versions.splice(i + 1, 0, { id: 'v' + Date.now() + SESSION, name: `Vista ${n}`, view: JSON.parse(JSON.stringify(v.view)), vis: { ...v.vis }, visInit: true, style: cloneJ(v.style), lstyle: cloneJ(v.lstyle), colorMap: cloneJ(v.colorMap), usageMap: cloneJ(v.usageMap), area: cloneJ(v.area) });
   switchVersion(i + 1); toast(`Nova versão “Vista ${n}” criada a partir de “${v.name}”.`);
 }
 
@@ -2560,7 +2576,7 @@ function loadSnapshot(o) {
   if (!o) return; const c = o.common || {};
   if (c.style) { const sh = { ...S.style.sh, ...(c.style.sh || {}) }; Object.assign(S.style, c.style, { sh }); }
   if (c.lstyle) S.lstyle = { ...S.lstyle, ...c.lstyle }; if (c.colorMap) S.colorMap = c.colorMap; if (c.usageMap) S.usageMap = { ...S.usageMap, ...c.usageMap }; syncVerStyle(); if (Array.isArray(c.styleLib)) S.styleLib = c.styleLib;
-  if (c.cropUI) Object.assign(S.cropUI, c.cropUI); if (c.area) Object.assign(S.area, c.area); if (c.autoSync != null) S.autoSync = c.autoSync;
+  if (c.cropUI) Object.assign(S.cropUI, c.cropUI); if (c.area && (o.versions || []).some((v) => !v.area)) S.area = { ...S.area, ...c.area }; if (c.autoSync != null) S.autoSync = c.autoSync;
   if (Array.isArray(o.versions) && o.versions.length) { S.versions = o.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); setActive(o.av || 0); }
 }
 const PSTORE = 'kvAxono'; const SESSION = Math.random().toString(36).slice(2, 8);
@@ -2575,7 +2591,7 @@ const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 const vKey = (v) => (v ? stableStr({ ...v, updatedAt: undefined, updatedBy: undefined }) : null);
 function projId() { const p = S.gs?.get('project'); return String(p?.properties?.id ?? p?.id ?? (S.mode === 'demo' ? 'demo' : '')); }
 function storeKey() { return 'kv-axono:' + (projId() || 'sem-id'); }
-function sharedData() { const s = snapshot(); const common = { ...s.common }; delete common.autoSync; const cs = {}; COMMON_STYLE_KEYS.forEach((k) => { if (S.style[k] !== undefined) cs[k] = S.style[k]; }); delete common.style; delete common.lstyle; delete common.colorMap; delete common.usageMap; common.commonStyle = cs; return clone({ common, versions: s.versions }); }
+function sharedData() { const s = snapshot(); const common = { ...s.common }; delete common.autoSync; const cs = {}; COMMON_STYLE_KEYS.forEach((k) => { if (S.style[k] !== undefined) cs[k] = S.style[k]; }); delete common.style; delete common.lstyle; delete common.colorMap; delete common.usageMap; delete common.area; common.commonStyle = cs; return clone({ common, versions: s.versions }); }
 function projectApp() { return S.gs?.get('selectedProjectApp') || null; }
 /* ---- compactação dos dados no projeto: estilos de layer repetidos viram uma base comum + diferenças; tudo em gzip/base64 */
 function packShared(d) {
@@ -2649,7 +2665,7 @@ function applyShared(d, keepId) {
   if (!d || !d.common) return; d = clone(d); const c = d.common;
   if (c.style) S.style = { ...S.style, ...c.style, sh: { ...S.style.sh, ...(c.style.sh || {}) } };
   if (c.commonStyle) S.style = { ...S.style, ...c.commonStyle };
-  if (c.lstyle || c.style) { S.lstyle = c.lstyle || {}; S.colorMap = c.colorMap || {}; S.usageMap = c.usageMap || {}; } if (c.cropUI) S.cropUI = { ...S.cropUI, ...c.cropUI }; if (c.area) Object.assign(S.area, c.area); if (Array.isArray(c.styleLib)) S.styleLib = c.styleLib;
+  if (c.lstyle || c.style) { S.lstyle = c.lstyle || {}; S.colorMap = c.colorMap || {}; S.usageMap = c.usageMap || {}; } if (c.cropUI) S.cropUI = { ...S.cropUI, ...c.cropUI }; if (c.area && (d.versions || []).some((v) => !v.area)) S.area = { ...S.area, ...c.area }; if (Array.isArray(c.styleLib)) S.styleLib = c.styleLib;
   if (Array.isArray(d.versions) && d.versions.length) { S.versions = d.versions.map((v) => ({ ...v, view: { ...newView(), ...v.view }, vis: v.vis || {} })); const k = keepId ? S.versions.findIndex((v) => v.id === keepId) : -1; setActive(k >= 0 ? k : Math.min(S.av || 0, S.versions.length - 1)); }
 }
 function applyFull(o, keepId) { // histórico / importação (formato completo)
@@ -2715,7 +2731,9 @@ async function restore() {
   if (local?.autoSync != null) S.autoSync = local.autoSync;
   const remote = S.mode === 'giraffe' ? await getRemote() : null;
   if (remote) {
-    const pending = local?.shared && (!local.base || stableStr(local.shared) !== stableStr(local.base));
+    // alterações locais só contam se foram feitas depois da última gravação do projeto (cópia antiga de outro dia não sobrescreve)
+    const pending = local?.shared && local.base && stableStr(local.shared) !== stableStr(local.base) && (local.savedAt || 0) > (remote.savedAt || 0);
+    if (local?.shared && !pending && stableStr(local.shared) !== stableStr(local.base || {})) log('Cópia local antiga descartada: vale o que está salvo no projeto');
     const conflicts = [];
     const d = pending && local.base ? mergeShared(local.base, local.shared, remote, conflicts) : pending && !remote.rev ? local.shared : { common: remote.common, versions: remote.versions };
     applyShared(d, local?.av);
