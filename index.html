@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KV Axonometria — Beta V38</title>
+<title>KV Axonometria — Beta V39</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&display=swap');
 :root{font-family:'Hedley New','Hind',system-ui,-apple-system,sans-serif;}
@@ -412,15 +412,17 @@ button.icon.edit{border:1px solid var(--md-sys-color-outline-variant)}
     <div class="row"><button class="primary" id="btnProbeGltf">Testar exportação 3D</button></div>
     <div class="card" id="gltfResult" hidden aria-live="polite"></div>
   </section>
-  <footer class="app-footer">Beta - V38 · © 2026 Königsberger Vannucchi</footer>
+  <footer class="app-footer">Beta - V39 · © 2026 Königsberger Vannucchi</footer>
 </div>
 </aside>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* KV Axonometria — Beta V38 */
-/* V38: Área do modelo (e a linha do limite) passa a ser de cada vista (cópias herdam e compartilham o limite
+/* KV Axonometria — Beta V39 */
+/* V39: SVG publicado para o Pranchas usava preenchimento par-ímpar nas faces agrupadas — faces sobrepostas
+   do mesmo tom se anulavam e 'sumiam' no Pranchas (PNG/SVG exportados não eram afetados).
+   V38: Área do modelo (e a linha do limite) passa a ser de cada vista (cópias herdam e compartilham o limite
    desenhado); ao abrir, alterações locais antigas não sobrescrevem o que já está salvo no projeto.
    V37: 'perfil só no contorno do conjunto' volta à regra da V17 (sem perfil interno por salto de profundidade).
    V36: visibilidade das arestas pela presença das próprias faces (corta exatamente onde somem atrás de outro
@@ -497,7 +499,7 @@ window.addEventListener('message', (e) => {
   try { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; if (d?.type) MSG.types[d.type] = (MSG.types[d.type] || 0) + 1; } catch (err) { /* not json */ }
   if (!SDK_READY && EARLY.length < 400) EARLY.push(e);
 });
-const VERSION = 'V38';
+const VERSION = 'V39';
 const D2R = Math.PI / 180;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -1707,7 +1709,7 @@ function render(fast = false) {
       const d = PR ? clipPolyD(o.rings, o.nz) : o.rings.map(ringD).join(''); if (!d) return; const fill = o.fill === 'none' || o.fop <= 0 ? 'none' : o.fill;
       const sw = o.sw > 0 && o.stroke !== 'none' ? ` stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap}` : ' stroke="none"';
       let clip = ''; if (o.clipCircle) { const id = 'cp' + clipN++; defs.push(`<clipPath id="${id}"><circle cx="${fmt(o.clipCircle.c[0] * sc + ox)}" cy="${fmt(o.clipCircle.c[1] * sc + oy)}" r="${fmt(o.clipCircle.r * sc)}"/></clipPath>`); clip = ` clip-path="url(#${id})"`; }
-      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${+o.fop.toFixed(3)}"` : ''} fill-rule="${o.nz && !PR ? 'nonzero' : 'evenodd'}"${sw} stroke-linejoin="round"${clip}/>`;
+      out += `<path d="${d}" fill="${fill}"${o.fop < 1 && fill !== 'none' ? ` fill-opacity="${+o.fop.toFixed(3)}"` : ''} fill-rule="${o.nz ? 'nonzero' : 'evenodd'}"${sw} stroke-linejoin="round"${clip}/>`;
     } else if (o.t === 'line') {
       const ld = PR ? clipLineD(o.pts) : 'M' + o.pts.map(T).join('L');
       if (o.sw > 0 && ld) out += `<path d="${ld}" fill="none" stroke="${o.stroke}" stroke-width="${o.sw}"${dash}${cap} stroke-linejoin="round"/>`;
